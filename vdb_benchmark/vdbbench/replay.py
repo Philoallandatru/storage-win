@@ -13,7 +13,7 @@ from pathlib import Path, PurePosixPath
 
 import numpy as np
 
-from vdbbench.trace_runner import TRACE_HEADER
+from vdbbench.io_trace import TRACE_HEADER
 
 
 @dataclass(frozen=True)
@@ -146,6 +146,23 @@ def _read_exact(path: Path, size_bytes: int, chunk_size: int, row_number: int) -
             remaining -= len(chunk)
 
 
+def _initial_read_objects(events: list[TraceEvent]) -> dict[str, int]:
+    """Find objects read before their first write and their required size."""
+    first_write_seen: set[str] = set()
+    required_sizes: dict[str, int] = {}
+    for event in events:
+        if event.key in first_write_seen:
+            continue
+        if event.operation == "Write":
+            first_write_seen.add(event.key)
+        else:
+            required_sizes[event.key] = max(
+                required_sizes.get(event.key, 0),
+                event.size_bytes,
+            )
+    return required_sizes
+
+
 def replay_trace(
     *,
     trace_path: str | Path,
@@ -179,6 +196,12 @@ def replay_trace(
             chunk_size=chunk_size,
             random_seed=random_seed,
         )
+    for key, size_bytes in _initial_read_objects(events).items():
+        path = _object_path(root, key)
+        if direct_backend is None:
+            _write_exact(path, size_bytes, rng, chunk_size, fsync_writes)
+        else:
+            direct_backend.write(path, size_bytes)
     first_timestamp = events[0].timestamp
     wall_start = monotonic()
     latencies_ms: list[float] = []

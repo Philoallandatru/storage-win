@@ -122,6 +122,7 @@ class BenchmarkConfig:
     # Connection (used by Milvus backend)
     host: str = "127.0.0.1"
     port: str = "19530"
+    io_trace_log: str = ""
 
     # Pipeline tuning
     max_queue_depth: int = 4

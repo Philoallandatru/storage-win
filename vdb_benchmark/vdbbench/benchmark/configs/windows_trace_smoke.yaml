@@ -1,0 +1,48 @@
+# Small repeatable Milvus run for validating logical trace + Windows replay.
+backend: milvus
+mode: both
+
+database:
+  host: 127.0.0.1
+  port: 19530
+
+dataset:
+  collection_name: windows_trace_smoke
+  num_vectors: 1_000
+  dimension: 128
+  distribution: uniform
+  block_size: 1_000
+  batch_size: 100
+  seed: 42
+
+query:
+  num_query_vectors: 100
+  query_seed: 99
+  query_mode: planted
+  query_noise: 0.05
+
+ground_truth:
+  truth_k: 10
+
+index:
+  index_type: HNSW
+  metric_type: L2
+  index_params:
+    M: 16
+    efConstruction: 100
+  num_shards: 1
+
+search:
+  search_k: 10
+  num_search_rounds: 1
+  search_batch_size: 1
+  search_params:
+    metric_type: L2
+    params:
+      ef: 32
+  log_interval: 25
+
+workflow:
+  force: true
+  compact: false
+  monitor_interval: 1

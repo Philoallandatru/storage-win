@@ -22,6 +22,8 @@ from pymilvus import (
     utility,
 )
 
+from vdbbench.io_trace import TraceWriter
+
 from ..base import CollectionInfo, IndexProgress, VectorDBBackend
 
 logger = logging.getLogger(__name__)
@@ -32,6 +34,8 @@ class MilvusBackend(VectorDBBackend):
 
     def __init__(self) -> None:
         self._collections: Dict[str, Collection] = {}
+        self._collection_bytes: Dict[str, int] = {}
+        self._trace: Optional[TraceWriter] = None
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -50,12 +54,21 @@ class MilvusBackend(VectorDBBackend):
             max_receive_message_length=max_msg,
             max_send_message_length=max_msg,
         )
+        trace_path = kwargs.get("io_trace_log")
+        if trace_path:
+            self._trace = TraceWriter(trace_path)
         logger.info("Connected to Milvus at %s:%s", host, port)
 
     def disconnect(self) -> None:
-        connections.disconnect("default")
-        self._collections.clear()
-        logger.info("Disconnected from Milvus")
+        try:
+            connections.disconnect("default")
+        finally:
+            if self._trace is not None:
+                self._trace.close()
+                self._trace = None
+            self._collections.clear()
+            self._collection_bytes.clear()
+            logger.info("Disconnected from Milvus")
 
     # ------------------------------------------------------------------
     # Collection helpers
@@ -64,6 +77,30 @@ class MilvusBackend(VectorDBBackend):
         if name not in self._collections:
             self._collections[name] = Collection(name=name)
         return self._collections[name]
+
+    def _logical_collection_bytes(self, name: str, col: Collection) -> int:
+        """Return tracked bytes, or estimate an existing collection's size."""
+        if name in self._collection_bytes:
+            return self._collection_bytes[name]
+        try:
+            vector_field = next(
+                field for field in col.schema.fields if field.name == "vector"
+            )
+            dimension = int(vector_field.params["dim"])
+            row_count = int(col.num_entities)
+            size_bytes = row_count * (
+                dimension * np.dtype(np.float32).itemsize
+                + np.dtype(np.int64).itemsize
+            )
+        except (AttributeError, KeyError, StopIteration, TypeError, ValueError):
+            logger.warning(
+                "Could not estimate logical size for collection '%s'; "
+                "Load trace size will be 0 bytes",
+                name,
+            )
+            size_bytes = 0
+        self._collection_bytes[name] = size_bytes
+        return size_bytes
 
     @staticmethod
     def _build_index_params(
@@ -140,6 +177,7 @@ class MilvusBackend(VectorDBBackend):
         logger.info("Index created: %s / %s", index_type, metric_type)
 
         self._collections[name] = col
+        self._collection_bytes[name] = 0
         return CollectionInfo(
             name=name,
             dimension=dimension,
@@ -156,6 +194,7 @@ class MilvusBackend(VectorDBBackend):
         if utility.has_collection(name):
             Collection(name=name).drop()
             self._collections.pop(name, None)
+            self._collection_bytes.pop(name, None)
             logger.info("Dropped collection: %s", name)
 
     # ------------------------------------------------------------------
@@ -168,13 +207,28 @@ class MilvusBackend(VectorDBBackend):
         vectors: np.ndarray,
     ) -> int:
         col = self._get_collection(name)
+        timestamp = time.time()
         col.insert([ids.tolist(), vectors])
+        size_bytes = int(np.asarray(ids).nbytes + np.asarray(vectors).nbytes)
+        self._collection_bytes[name] = (
+            self._collection_bytes.get(name, 0) + size_bytes
+        )
+        if self._trace is not None:
+            self._trace.log(timestamp, "Write", size_bytes, name, "Insert")
         return len(ids)
 
     def flush(self, name: str) -> None:
         col = self._get_collection(name)
         t0 = time.time()
         col.flush()
+        if self._trace is not None:
+            self._trace.log(
+                t0,
+                "Write",
+                self._logical_collection_bytes(name, col),
+                name,
+                "Flush",
+            )
         logger.info("Flush completed in %.2f s", time.time() - t0)
 
     def compact(self, name: str) -> None:
@@ -198,7 +252,16 @@ class MilvusBackend(VectorDBBackend):
         search_params: Optional[Dict[str, Any]] = None,
     ) -> List[List[int]]:
         col = self._get_collection(name)
+        load_timestamp = time.time()
         col.load()
+        if self._trace is not None:
+            self._trace.log(
+                load_timestamp,
+                "Read",
+                self._logical_collection_bytes(name, col),
+                name,
+                "Load",
+            )
         raw = search_params or {}
         if "params" in raw:
             # Already in pymilvus format (has metric_type + params wrapper)
@@ -210,12 +273,20 @@ class MilvusBackend(VectorDBBackend):
                 "params": {k: v for k, v in raw.items()
                            if k != "metric_type"},
             }
+        search_timestamp = time.time()
         results = col.search(
             data=query_vectors.tolist(),
             anns_field="vector",
             param=sp,
             limit=top_k,
         )
+        if self._trace is not None:
+            result_id_bytes = (
+                sum(len(hits) for hits in results)
+                * np.dtype(np.int64).itemsize
+            )
+            size_bytes = int(np.asarray(query_vectors).nbytes + result_id_bytes)
+            self._trace.log(search_timestamp, "Read", size_bytes, name, "Search")
         return [[hit.id for hit in hits] for hits in results]
 
     # ------------------------------------------------------------------

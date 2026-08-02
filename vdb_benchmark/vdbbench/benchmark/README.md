@@ -413,7 +413,8 @@ individually.
 
 The benchmark is config-driven. All parameters live in a YAML file. The CLI
 provides operational flags (`--config`, `--backend`, `--mode`, `--force`,
-`--output-dir`, `--artifacts-dir`) plus introspection (`--what-if`, `--plan`).
+`--output-dir`, `--artifacts-dir`, `--io-trace-log`) plus introspection
+(`--what-if`, `--plan`).
 
 ### YAML Structure
 
@@ -486,6 +487,11 @@ python -m vdbbench.benchmark --config configs/1m_hnsw.yaml --plan
 
 # Dump resolved config (shows env-var sources)
 python -m vdbbench.benchmark --config configs/1m_diskann.yaml --what-if
+
+# Record formal Milvus operations for Windows direct-I/O replay
+python -m vdbbench.benchmark \
+    --config vdbbench/benchmark/configs/windows_trace_smoke.yaml \
+    --io-trace-log results/formal_vdbbench_trace.csv
 ```
 
 ### CLI Flags
@@ -498,6 +504,7 @@ python -m vdbbench.benchmark --config configs/1m_diskann.yaml --what-if
 | `--force` | Drop existing collection before load |
 | `--output-dir PATH` | Directory for output artifacts |
 | `--artifacts-dir PATH` | Directory with prior load artifacts (search mode) |
+| `--io-trace-log PATH` | Record Milvus logical operations to KV-compatible CSV |
 | `--what-if` | Print resolved config and exit |
 | `--plan` | Print execution plan and exit |
 | `--debug` | Enable DEBUG logging |
@@ -510,6 +517,7 @@ python -m vdbbench.benchmark --config configs/1m_diskann.yaml --what-if
 | `ground_truth.npz` | `truth_table` `(nq, truth_k)` int64 | load / both |
 | `search_results.json` | QPS, recall, latencies, intervals | search / both |
 | `benchmark_meta.json` | Full config + per-phase timing | always |
+| User-selected trace CSV | Insert/flush/load/search logical I/O | `--io-trace-log` |
 
 ## Adding a New Backend
 

@@ -8,7 +8,6 @@ filesystem I/O (WAL, object-store traffic, index amplification, and metadata).
 from __future__ import annotations
 
 import argparse
-import csv
 import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -16,57 +15,7 @@ from typing import Any
 
 import numpy as np
 
-
-TRACE_HEADER = [
-    "Timestamp",
-    "Operation",
-    "Object_Size_Bytes",
-    "Tier",
-    "Key",
-    "Phase",
-]
-
-
-class TraceWriter:
-    """Write rows compatible with ``kv_cache_benchmark.kv_cache.tracer``."""
-
-    def __init__(self, path: str | Path):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._handle = self.path.open("w", newline="", encoding="utf-8")
-        self._writer = csv.writer(self._handle)
-        self._writer.writerow(TRACE_HEADER)
-        self.event_count = 0
-
-    def log(
-        self,
-        timestamp: float,
-        operation: str,
-        size_bytes: int,
-        key: str,
-        phase: str,
-    ) -> None:
-        self._writer.writerow(
-            [
-                f"{timestamp:.6f}",
-                operation,
-                int(size_bytes),
-                "Tier-2",
-                key,
-                phase,
-            ]
-        )
-        self._handle.flush()
-        self.event_count += 1
-
-    def close(self) -> None:
-        self._handle.close()
-
-    def __enter__(self) -> TraceWriter:
-        return self
-
-    def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> None:
-        self.close()
+from vdbbench.io_trace import TraceWriter
 
 
 def record_workload(

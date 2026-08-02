@@ -170,6 +170,15 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--artifacts-dir", type=str, dest="artifacts_dir",
                     help="Load query/truth artifacts from this directory "
                          "(required for --mode search without prior load)")
+    p.add_argument(
+        "--io-trace-log",
+        type=str,
+        dest="io_trace_log",
+        help=(
+            "Record Milvus insert/flush/load/search operations to a "
+            "KV-compatible CSV trace"
+        ),
+    )
 
     # Introspection
     p.add_argument("--what-if", action="store_true",
@@ -453,6 +462,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(
             f"Unknown backend '{backend_name}'.  Available: {available}"
         )
+    if flat.get("io_trace_log") and backend_name != "milvus":
+        parser.error("--io-trace-log is only supported for Milvus")
 
     cfg = BenchmarkConfig.from_dict(flat)
 
@@ -536,6 +547,8 @@ def main(argv: list[str] | None = None) -> int:
         elif yaml_val is not None:
             conn_kwargs[k] = yaml_val
         # else: omitted → backend.connect() uses its own default
+    if backend_name == "milvus" and cfg.io_trace_log:
+        conn_kwargs["io_trace_log"] = cfg.io_trace_log
     backend.connect(**conn_kwargs)
 
     try:
