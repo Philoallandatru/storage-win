@@ -71,6 +71,8 @@ vdb-mpi-wrapper = "vdbbench.mpi_wrapper:main"
 vdb-aggregate = "vdbbench.mpi_aggregate:main"
 vdbbench-modular = "vdbbench.benchmark.run_benchmark:main"
 vdbbench-collections = "vdbbench.benchmark.collection_admin:main"
+vdb-trace = "vdbbench.trace_runner:main"
+vdb-replay = "vdbbench.replay:main"
 
 [tool.setuptools]
 packages = {find = {}}
