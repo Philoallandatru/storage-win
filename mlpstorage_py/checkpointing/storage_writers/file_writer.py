@@ -41,7 +41,9 @@ class FileStorageWriter(StorageWriter):
             os.makedirs(dirname, exist_ok=True)
         
         # Open file with appropriate flags
-        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+        # O_BINARY prevents Windows text-mode translation for arbitrary
+        # checkpoint bytes (notably 0x1A, which text readers interpret as EOF).
+        flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_BINARY', 0)
         if use_direct_io and hasattr(os, 'O_DIRECT'):
             flags |= os.O_DIRECT
             self.direct_io = True

@@ -28,6 +28,7 @@ signature.
 from __future__ import annotations
 
 import os
+import shutil
 from typing import Optional
 
 from mlpstorage_py.errors import ErrorCode, FileSystemError
@@ -97,8 +98,12 @@ def check_capacity_4field(
         check_path = parent
 
     try:
-        stat = os.statvfs(check_path)
-        available_bytes = stat.f_bavail * stat.f_frsize
+        # POSIX: os.statvfs; Windows: shutil.disk_usage. Both return bytes.
+        if hasattr(os, "statvfs"):
+            stat = os.statvfs(check_path)
+            available_bytes = stat.f_bavail * stat.f_frsize
+        else:
+            available_bytes = shutil.disk_usage(check_path).free
     except OSError as exc:
         raise FileSystemError(
             f"CAP-01: cannot statvfs {destination_path}: {exc}",

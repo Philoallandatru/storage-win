@@ -48,7 +48,8 @@ import re
 from typing import Any, Dict, List, Mapping, Optional
 from urllib.parse import urlparse
 
-import s3dlio
+# s3dlio is optional (only needed for object-storage URIs); lazily imported
+# at the use sites so Windows / local_fs-only installs don't need it.
 
 from mlpstorage_py import __version__ as _MLPSTORAGE_VERSION
 from mlpstorage_py.config import (
@@ -263,6 +264,17 @@ def _assert_object_hierarchy_absent(model_uri: str, model: str) -> None:
     is chained via ``__cause__`` so the operator can diagnose the
     underlying object-store failure.
     """
+    try:
+        import s3dlio
+    except ImportError as e:
+        raise ConfigurationError(
+            f"Object-storage data_dir {model_uri!r} requires the optional "
+            f"s3dlio dependency (s3dlio is only shipped as a Linux wheel; "
+            f"install it on Linux or use a local file:// data_dir).",
+            parameter="data_dir",
+            actual=model_uri,
+            code=ErrorCode.CONFIG_INVALID_VALUE,
+        ) from e
     try:
         entries = s3dlio.list(model_uri, recursive=False)
     except Exception as e:
@@ -490,6 +502,17 @@ def write_datagen_manifest(
             + "/"
             + DATAGEN_MANIFEST_FILENAME
         )
+        try:
+            import s3dlio
+        except ImportError as e:
+            raise ConfigurationError(
+                f"Object-storage data_dir {data_dir!r} requires the optional "
+                f"s3dlio dependency (s3dlio is only shipped as a Linux wheel; "
+                f"install it on Linux or use a local file:// data_dir).",
+                parameter="data_dir",
+                actual=data_dir,
+                code=ErrorCode.CONFIG_INVALID_VALUE,
+            ) from e
         try:
             s3dlio.put_bytes(manifest_uri, payload)
         except Exception as e:

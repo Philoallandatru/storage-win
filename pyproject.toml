@@ -21,9 +21,12 @@ dependencies = [
     "dlio-benchmark", # Required dependency
     "pydantic>=2.13.4",
     "minio>=7.2.20",
-    "s3torchconnector>=1.5.0",
     "python-dotenv>=1.0.0",
-    "s3dlio>=0.9.112",
+    # s3dlio + s3torchconnector only ship Linux wheels; Windows users on
+    # local_fs storage can skip them. All call sites in mlpstorage_py are
+    # lazy-loaded, so this is safe.
+    "s3dlio>=0.9.112; sys_platform == 'linux'",
+    "s3torchconnector>=1.5.0; sys_platform == 'linux'",
 ]
 
 [project.optional-dependencies]
@@ -122,8 +125,21 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv]
-# s3dlio only ships Linux wheels — restrict resolution to Linux.
-environments = ["sys_platform == 'linux'"]
+# s3dlio only ships Linux wheels; on Windows we must build from source
+# (requires Rust toolchain + MSVC build tools).
+# Temporarily disabled for Windows test run.
+# environments = ["sys_platform == 'linux'"]
+environments = []
+
+# s3dlio and s3torchconnector are only available on Linux (no Windows wheels,
+# s3dlio uses Unix-only std::os::unix APIs). mlpstorage only requires them
+# for object-storage modes, and dlio-benchmark has no actual code references
+# to either, so safe to skip on Windows.
+override-dependencies = [
+    "s3dlio; sys_platform != 'win32'",
+    "s3torchconnector; sys_platform != 'win32'",
+    "s3torchconnectorclient; sys_platform != 'win32'",
+]
 
 [tool.uv.sources]
 torch = [{ index = "pytorch-cpu" }]

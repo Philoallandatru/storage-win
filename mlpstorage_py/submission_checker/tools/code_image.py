@@ -41,6 +41,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -622,7 +623,15 @@ def _write_pointer_atomic(run_leaf: Path, full_hash: str, log) -> None:
         tmp.unlink(missing_ok=True)
         raise
     # Atomic on same fs — after this returns, `dst` is complete.
-    os.rename(str(tmp), str(dst))
+    # Windows shim: os.rename on POSIX fails when dst exists (D-66
+    # first-writer-wins); on Windows it raises FileExistsError. Use
+    # os.replace there (overwrites unconditionally) — Windows results
+    # dirs are typically single-process so the first-writer-wins
+    # semantics don't matter in practice.
+    if sys.platform == "win32":
+        os.replace(str(tmp), str(dst))
+    else:
+        os.rename(str(tmp), str(dst))
     log.debug("wrote pointer file %s → %s:%s", dst, _ALGORITHM, full_hash)
 
 

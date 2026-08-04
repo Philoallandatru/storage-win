@@ -346,11 +346,16 @@ class Benchmark(BenchmarkInterface, abc.ABC):
                 stdout_file = os.path.join(self.run_result_output, stdout_filename)
                 stderr_file = os.path.join(self.run_result_output, stderr_filename)
 
-                with open(stdout_file, 'w+') as fd:
+                # Benchmark output is captured as UTF-8 by the Windows
+                # executor.  Do not fall back to the active console code page
+                # (often GBK), otherwise a Unicode progress line can raise
+                # while writing the sidecar log and make an otherwise
+                # successful DLIO run appear to have failed.
+                with open(stdout_file, 'w+', encoding='utf-8', errors='replace') as fd:
                     self.logger.verbose(f'Command stdout saved to: {stdout_filename}')
                     fd.write(stdout)
 
-                with open(stderr_file, 'w+') as fd:
+                with open(stderr_file, 'w+', encoding='utf-8', errors='replace') as fd:
                     self.logger.verbose(f'Command stderr saved to: {stderr_filename}')
                     fd.write(stderr)
 

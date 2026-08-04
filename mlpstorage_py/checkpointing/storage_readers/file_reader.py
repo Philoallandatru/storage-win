@@ -14,6 +14,7 @@ it back.
 """
 
 import os
+import threading
 from typing import Dict, Any
 from .base import StorageReader
 
@@ -45,7 +46,12 @@ class FileStorageReader(StorageReader):
         self.total_bytes = 0
         self._fadvise_available = hasattr(os, 'posix_fadvise')
 
-        self.fd = os.open(filepath, os.O_RDONLY)
+        # O_BINARY is required on Windows: without it, byte 0x1A is treated
+        # as text EOF and random reads can return zero bytes in the middle of
+        # an otherwise valid checkpoint file.
+        binary_flag = getattr(os, 'O_BINARY', 0)
+        self.fd = os.open(filepath, os.O_RDONLY | binary_flag)
+        self._pread_lock = threading.Lock()
 
         # Disable kernel readahead (RANDOM = no speculative prefetch).
         # With SEQUENTIAL the kernel pre-fills the page cache with pages ahead
@@ -69,9 +75,19 @@ class FileStorageReader(StorageReader):
         Returns:
             Number of bytes actually read.
         """
-        # pread() reads at an arbitrary offset without moving the fd position,
-        # which is safe when multiple reader threads share-nothing file descriptors.
-        data = os.pread(self.fd, size, offset)
+        # pread() reads at an arbitrary offset without moving the fd position.
+        # Windows has no os.pread, so emulate it with a locked seek/read pair;
+        # the lock is necessary because the fallback operates on one handle.
+        if hasattr(os, 'pread'):
+            data = os.pread(self.fd, size, offset)
+        else:
+            with self._pread_lock:
+                current = os.lseek(self.fd, 0, os.SEEK_CUR)
+                try:
+                    os.lseek(self.fd, offset, os.SEEK_SET)
+                    data = os.read(self.fd, size)
+                finally:
+                    os.lseek(self.fd, current, os.SEEK_SET)
         nbytes = len(data)
         self.total_bytes += nbytes
 

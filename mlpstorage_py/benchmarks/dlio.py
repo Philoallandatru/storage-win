@@ -22,7 +22,13 @@ from mlpstorage_py.rules.datagen_hierarchy import (
     validate_supported_model,
     write_datagen_manifest,
 )
-from mlpstorage_py.utils import (read_config_from_file, create_nested_dict, update_nested_dict, generate_mpi_prefix_cmd)
+from mlpstorage_py.utils import (
+    read_config_from_file,
+    create_nested_dict,
+    update_nested_dict,
+    generate_mpi_prefix_cmd,
+    quote_command_token,
+)
 from mlpstorage_py.storage_config import resolve_object_storage_config
 
 
@@ -706,20 +712,20 @@ class DLIOBenchmark(Benchmark, abc.ABC):
     def generate_dlio_command(self):
         self.logger.verboser(f'Generating DLIO command for benchmark {self.BENCHMARK_TYPE.value}')
         cmd = ""
-        cmd = f"{self.base_command_path}"
+        cmd = quote_command_token(self.base_command_path)
         cmd += f" workload={self.config_name}"
 
         # Run directory for Hydra to output log files
-        cmd += f" ++hydra.run.dir={self.run_result_output}"
+        cmd += f" {quote_command_token(f'++hydra.run.dir={self.run_result_output}')}"
         cmd += f" ++hydra.output_subdir={HYDRA_OUTPUT_SUBDIR}"
 
         cmd = self.add_workflow_to_cmd(cmd)
 
         if self.params_dict:
             for key, value in self.params_dict.items():
-                cmd += f" ++workload.{key}={value}"
+                cmd += f" {quote_command_token(f'++workload.{key}={value}')}"
 
-        cmd += f" --config-dir={self.config_path}"
+        cmd += f" {quote_command_token(f'--config-dir={self.config_path}')}"
 
         if self.args.exec_type == EXEC_TYPE.MPI:
             self.logger.debug(f'Generating MPI Command with binary "{self.args.mpi_bin}"')

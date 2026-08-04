@@ -82,6 +82,15 @@ sweep_logs/
 sweep_flux_master.log
 results/
 
+# Local AI SSD planning and benchmark artifacts — documentation source is
+# committed selectively under docs/, but generated workbooks, previews,
+# traces, and run outputs remain local.
+outputs/
+mlps_test_results/
+tmp/
+node_modules/
+reasonix.toml
+
 # Test scripts and helpers not part of the benchmark suite
 test_s3dlio_gen_direct.py
 

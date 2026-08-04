@@ -38,6 +38,7 @@ import signal
 import sys
 import threading
 import yaml
+import ctypes
 from datetime import datetime
 from typing import Any, List, Union, Optional, Dict, Tuple, Set
 
@@ -295,6 +296,41 @@ def remove_nan_values(input_dict: Dict[str, Any]) -> Dict[str, Any]:
     return ret_dict
 
 
+def _split_command(command: str) -> List[str]:
+    """Split a command line using the native parser for the host platform."""
+    if os.name != "nt":
+        return shlex.split(command)
+
+    # CommandLineToArgvW handles quoted paths, embedded spaces, and the
+    # backslash rules used by CreateProcess.  This is more faithful than
+    # ``shlex.split(..., posix=False)`` which leaves quote characters in the
+    # resulting tokens and still splits unquoted Windows paths at spaces.
+    try:
+        shell32 = ctypes.windll.shell32
+        kernel32 = ctypes.windll.kernel32
+        shell32.CommandLineToArgvW.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_int)]
+        shell32.CommandLineToArgvW.restype = ctypes.POINTER(ctypes.c_wchar_p)
+        argc = ctypes.c_int()
+        argv = shell32.CommandLineToArgvW(command, ctypes.byref(argc))
+        if not argv:
+            raise ctypes.WinError()
+        try:
+            return [argv[index] for index in range(argc.value)]
+        finally:
+            kernel32.LocalFree(argv)
+    except (AttributeError, OSError):
+        # Keep a useful fallback for embedded Python builds without shell32.
+        return [token.strip('"') for token in shlex.split(command, posix=False)]
+
+
+def quote_command_token(value: Any) -> str:
+    """Quote one command-line token using the host platform's conventions."""
+    value = str(value)
+    if os.name == "nt":
+        return subprocess.list2cmdline([value])
+    return value
+
+
 class CommandExecutor:
     """
     A class to execute shell commands in a subprocess with live output streaming and signal handling.
@@ -342,11 +378,29 @@ class CommandExecutor:
 
         self.logger.debug(f"DEBUG - Executing command: {command}")
         
-        # Parse command if it's a string
+        # Parse command if it's a string.  POSIX shlex treats Windows
+        # backslashes as escape characters, turning e.g. ``C:\\data`` into
+        # ``C:data``.  Use the Windows command-line parser on Windows so
+        # generated DLIO paths survive intact.
         if isinstance(command, str):
-            cmd_args = shlex.split(command)
+            cmd_args = _split_command(command)
         else:
             cmd_args = command
+
+        # ``select.select`` only accepts sockets on Windows.  The normal
+        # implementation below uses select on subprocess pipes for live
+        # output, so use reader threads for Windows pipes instead.
+        if os.name == "nt":
+            command_text = command if isinstance(command, str) else None
+            if command_text is None and command and command[0].lower() in {"true", "false", "echo", "ls"}:
+                command_text = subprocess.list2cmdline(command)
+            return self._execute_windows(
+                cmd_args,
+                command_text=command_text,
+                print_stdout=print_stdout,
+                print_stderr=print_stderr,
+                watch_signals=watch_signals,
+            )
         
         # Set up signal handlers if requested
         if watch_signals:
@@ -448,6 +502,127 @@ class CommandExecutor:
                     self.process.kill()
             
             # Restore original signal handlers
+            self._restore_signal_handlers()
+
+    def _execute_windows(
+        self,
+        cmd_args: List[str],
+        command_text: Optional[str] = None,
+        print_stdout: bool = False,
+        print_stderr: bool = False,
+        watch_signals: Optional[Set[int]] = None,
+    ) -> Tuple[str, str, int]:
+        """Execute a command while streaming Windows subprocess pipes.
+
+        Windows does not support ``select()`` on anonymous pipes.  Dedicated
+        reader threads preserve the live-output behaviour without relying on
+        Unix file-descriptor semantics.
+        """
+        self._stop_event.clear()
+        self.terminated_by_signal = False
+        self.signal_received = None
+
+        if watch_signals:
+            self._setup_signal_handlers(watch_signals)
+
+        stdout_buffer = io.StringIO()
+        stderr_buffer = io.StringIO()
+
+        def _write_console(output_stream, text):
+            """Write child-process output without letting console encoding stop the drain.
+
+            Windows consoles are still commonly configured for a legacy code page
+            (for example GBK).  Benchmark output can contain Unicode symbols, and
+            an encoding error in a reader thread would close the pipe while the
+            child is still writing.  Treat the live console as best-effort while
+            always retaining the UTF-8 text in the returned buffers.
+            """
+            try:
+                output_stream.write(text)
+                output_stream.flush()
+                return
+            except (UnicodeEncodeError, UnicodeDecodeError, OSError, ValueError):
+                pass
+
+            try:
+                encoding = getattr(output_stream, "encoding", None) or "utf-8"
+                safe_text = text.encode(encoding, errors="replace").decode(
+                    encoding, errors="replace"
+                )
+                output_stream.write(safe_text)
+                output_stream.flush()
+            except (UnicodeEncodeError, UnicodeDecodeError, OSError, ValueError):
+                # Logging to the console must never make the benchmark fail.
+                return
+
+        def _drain(stream, buffer, print_flag, output_stream):
+            try:
+                for line in iter(stream.readline, ""):
+                    buffer.write(line)
+                    if print_flag:
+                        _write_console(output_stream, line)
+            finally:
+                stream.close()
+
+        # A few callers (and the long-standing unit tests) use POSIX shell
+        # built-ins as tiny probes.  Keep those probes working on Windows;
+        # normal benchmark commands continue through CreateProcess with an
+        # argv list and no shell.
+        popen_args = cmd_args
+        use_shell = False
+        if command_text and cmd_args:
+            first = cmd_args[0].lower()
+            if first in {"true", "false"}:
+                popen_args = [
+                    os.environ.get("COMSPEC", "cmd.exe"),
+                    "/d",
+                    "/c",
+                    f"exit {'0' if first == 'true' else '1'}",
+                ]
+            elif first in {"echo", "ls"}:
+                popen_args = command_text
+                use_shell = True
+
+        try:
+            self.process = subprocess.Popen(
+                popen_args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=use_shell,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                bufsize=1,
+            )
+            stdout_thread = threading.Thread(
+                target=_drain,
+                args=(self.process.stdout, stdout_buffer, print_stdout, sys.stdout),
+                daemon=True,
+            )
+            stderr_thread = threading.Thread(
+                target=_drain,
+                args=(self.process.stderr, stderr_buffer, print_stderr, sys.stderr),
+                daemon=True,
+            )
+            stdout_thread.start()
+            stderr_thread.start()
+
+            while self.process.poll() is None and not self._stop_event.is_set():
+                self._stop_event.wait(0.1)
+
+            if self._stop_event.is_set() and self.process.poll() is None:
+                self.process.terminate()
+            return_code = self.process.wait()
+            stdout_thread.join(timeout=2)
+            stderr_thread.join(timeout=2)
+            return stdout_buffer.getvalue(), stderr_buffer.getvalue(), return_code
+        finally:
+            if self.process and self.process.poll() is None:
+                self.process.terminate()
+                try:
+                    self.process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    self.process.kill()
             self._restore_signal_handlers()
     
     def _setup_signal_handlers(self, signals: Set[int]):

@@ -435,8 +435,12 @@ def check_disk_space(path: str, required_bytes: int, logger=None) -> bool:
         check_path = parent
 
     try:
-        stat = os.statvfs(check_path)
-        available_bytes = stat.f_bavail * stat.f_frsize
+        # POSIX: os.statvfs; Windows: shutil.disk_usage. Both return bytes.
+        if hasattr(os, "statvfs"):
+            stat = os.statvfs(check_path)
+            available_bytes = stat.f_bavail * stat.f_frsize
+        else:
+            available_bytes = shutil.disk_usage(check_path).free
     except OSError as e:
         raise FileSystemError(
             f"Cannot check disk space for: {path}",
