@@ -125,7 +125,7 @@ MLPerf 固定选项是：
 
 ## 5. 测试 Case 矩阵
 
-详细、可导入版本见 [`AI_SSD_WORKLOAD_TEST_MATRIX.csv`](AI_SSD_WORKLOAD_TEST_MATRIX.csv)。这是本方案的唯一执行矩阵；旧的 `AI_SSD_TEST_MATRIX.csv` 属于协议型草案，不纳入本轮评审或结果统计。`Now` 表示当前 Windows 主机可执行；`Scaled` 表示需要更多容量/节点；`Experimental` 表示 what-if 或仓库文档尚未正式支持。
+详细、可导入版本见 [`AI_SSD_WORKLOAD_TEST_MATRIX.csv`](AI_SSD_WORKLOAD_TEST_MATRIX.csv)。这是本方案的场景矩阵；每个 Case 按统一字段执行时，以[标准化 Case 设计附录](AI_SSD_TEST_PLAN_CASE_DESIGN.md)中的“家族默认模板 + Case 特有字段”为准。旧的 `AI_SSD_TEST_MATRIX.csv` 属于协议型草案，不纳入本轮评审或结果统计。`Now` 表示当前 Windows 主机可执行；`Scaled` 表示需要更多容量/节点；`Experimental` 表示 what-if 或仓库文档尚未正式支持。
 
 ### 5.1 基础 Case（4）
 
@@ -234,6 +234,8 @@ QoS 默认直接使用仓库 `config.yaml`：Interactive 目标 P95/P99/P99.9/P9
 ## 6. 详细 Case 设计
 
 ### 6.1 通用 Case 模板
+
+完整的字段字典、家族默认模板、72 个 Case 注册表和可展开的 Case 卡片见[标准化 Case 设计附录](AI_SSD_TEST_PLAN_CASE_DESIGN.md)。本节保留为上位计划中的简要模板。
 
 每个 Case 必须实例化以下字段：
 
