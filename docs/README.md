@@ -17,6 +17,15 @@ mlp-storage hosts **four benchmark workloads**:
 | **KV-Cache** | Storage performance for LLM KV-cache offloading (GPU → CPU → NVMe) | [kv_cache_benchmark/README.md](../kv_cache_benchmark/README.md) |
 | **Vector DB** | Vector similarity search storage performance (Milvus) | [vdb_benchmark/README.md](../vdb_benchmark/README.md) |
 
+## AI SSD Test Case Guides
+
+| Reader | Document |
+|---|---|
+| Management / product decision makers | [AI SSD 测试用例说明（管理层版）](AI_SSD_TEST_CASES_EXECUTIVE_GUIDE.md) |
+| Test owners / engineers | [AI SSD 测试用例补充说明（技术与判定版）](AI_SSD_TEST_CASES_SUPPLEMENT.md) |
+| Full scenario plan | [AI SSD 场景测试方案](AI_SSD_TEST_PLAN.md) |
+| Consumer AI PC execution plan | [消费级 AI PC 多阶段测试方案](AI_PC_CONSUMER_SSD_MULTI_STAGE_TEST_PLAN.md) |
+
 ---
 
 ## Where to Start
