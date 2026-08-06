@@ -1,0 +1,1353 @@
+{
+  "AI-BASE-001": {
+    "case_id": "AI-BASE-001",
+    "category": "base",
+    "case_name": "dut_path_capacity",
+    "config": "S0 / 4 块盘 / 卷映射",
+    "purpose": "建立 DUT、数据盘和结果盘的可追踪基线。",
+    "steps": [
+      "确认 DUT、数据盘和结果盘映射，记录 S0 / 4 块盘 / 卷映射。",
+      "采集测试前容量、健康状态和 Windows PhysicalDisk 基线。",
+      "按本 Case 的路径或填充率条件运行，重复记录实际读写。",
+      "对照 路径映射、容量、健康状态，确认路径、容量和性能变化可解释。"
+    ],
+    "test_duration": "约 20–30 分钟",
+    "command": "python ai_ssd_test_cases/test_base_dut_path_capacity.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：DUT、data、result 路径映射正确；结果目录不在 DUT；容量和序列号可追溯。",
+    "metrics": "路径映射、容量、健康状态",
+    "mode": "base"
+  },
+  "AI-BASE-002": {
+    "case_id": "AI-BASE-002",
+    "category": "base",
+    "case_name": "cache_path_modes",
+    "config": "Q1 / Buffered、cold、Direct",
+    "purpose": "区分缓冲、冷缓存和直接访问对结果的影响。",
+    "steps": [
+      "确认 DUT、数据盘和结果盘映射，记录 Q1 / Buffered、cold、Direct。",
+      "采集测试前容量、健康状态和 Windows PhysicalDisk 基线。",
+      "按本 Case 的路径或填充率条件运行，重复记录实际读写。",
+      "对照 PhysicalDisk 实际读字节、吞吐、P99，确认路径、容量和性能变化可解释。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_base_cache_path_modes.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：三种路径独立完成；cold/direct 的实际读字节可解释；不混报 warm-only 结果。",
+    "metrics": "PhysicalDisk 实际读字节、吞吐、P99",
+    "mode": "base"
+  },
+  "AI-BASE-003": {
+    "case_id": "AI-BASE-003",
+    "category": "base",
+    "case_name": "repeatability_monitor_overhead",
+    "config": "Q1 / 3 runs / monitor off-on",
+    "purpose": "验证重复性并量化监控开销。",
+    "steps": [
+      "确认 DUT、数据盘和结果盘映射，记录 Q1 / 3 runs / monitor off-on。",
+      "采集测试前容量、健康状态和 Windows PhysicalDisk 基线。",
+      "按本 Case 的路径或填充率条件运行，重复记录实际读写。",
+      "对照 吞吐 CV、监控前后差异，确认路径、容量和性能变化可解释。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_base_repeatability_monitor_overhead.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：3 次吞吐 CV≤5%；监控开销≤2%；日志和时间覆盖完整。",
+    "metrics": "吞吐 CV、监控前后差异",
+    "mode": "base"
+  },
+  "AI-BASE-004": {
+    "case_id": "AI-BASE-004",
+    "category": "base",
+    "case_name": "fill_level_degradation",
+    "config": "Q1/X / 20、50、80、90% fill",
+    "purpose": "观察 SSD 填充率升高后的性能退化曲线。",
+    "steps": [
+      "确认 DUT、数据盘和结果盘映射，记录 Q1/X / 20、50、80、90% fill。",
+      "采集测试前容量、健康状态和 Windows PhysicalDisk 基线。",
+      "按本 Case 的路径或填充率条件运行，重复记录实际读写。",
+      "对照 吞吐、IOPS、P99、队列，确认路径、容量和性能变化可解释。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_base_fill_level_degradation.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：输出各填充率结果；不得覆盖未授权目录；退化趋势和瓶颈可解释。",
+    "metrics": "吞吐、IOPS、P99、队列",
+    "mode": "base"
+  },
+  "AI-TRN-001": {
+    "case_id": "AI-TRN-001",
+    "category": "training",
+    "case_name": "unet3d_a100_baseline",
+    "config": "UNet3D/A100 NPZ，accelerator 1/2/4",
+    "purpose": "建立大文件训练数据的连续供给基线。",
+    "steps": [
+      "准备 UNet3D/A100 NPZ，accelerator 1/2/4 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、samples/s、GiB/s、AU、P99、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；3 次吞吐 CV≤5%；PhysicalDisk 实际读字节可解释；无数据错误。",
+    "metrics": "samples/s、GiB/s、AU、P99",
+    "mode": "sequential"
+  },
+  "AI-TRN-002": {
+    "case_id": "AI-TRN-002",
+    "category": "training",
+    "case_name": "unet3d_h100_compute_gap",
+    "config": "UNet3D/H100 NPZ，accelerator 1/2/4",
+    "purpose": "验证 compute gap 缩短后的供数稳定性。",
+    "steps": [
+      "准备 UNet3D/H100 NPZ，accelerator 1/2/4 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、AU、吞吐、queue、P99、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_training_unet3d_h100_compute_gap.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；吞吐无持续下降；队列不持续增长；无供数中断。",
+    "metrics": "AU、吞吐、queue、P99",
+    "mode": "sequential"
+  },
+  "AI-TRN-003": {
+    "case_id": "AI-TRN-003",
+    "category": "training",
+    "case_name": "unet3d_b200_large_read",
+    "config": "UNet3D/B200 NPZ，accelerator 1/2/4/8",
+    "purpose": "验证大规模 NPZ 数据长时间连续读取。",
+    "steps": [
+      "准备 UNet3D/B200 NPZ，accelerator 1/2/4/8 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、AU、samples/s、GiB/s、后半程漂移、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_unet3d_b200_large_read.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；后半程吞吐下降≤10%；温度、队列和数据完整性正常。",
+    "metrics": "AU、samples/s、GiB/s、后半程漂移",
+    "mode": "sequential"
+  },
+  "AI-TRN-004": {
+    "case_id": "AI-TRN-004",
+    "category": "training",
+    "case_name": "retinanet_b200_small_files",
+    "config": "RetinaNet/B200 JPEG，accelerator 1/4/8/16",
+    "purpose": "验证百万级 JPEG 小文件的元数据和 IOPS 能力。",
+    "steps": [
+      "准备 RetinaNet/B200 JPEG，accelerator 1/4/8/16 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、files/s、IOPS、P99、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_training_retinanet_b200_small_files.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥85%；files/s 达标；P99 无异常尖峰；无缺文件。",
+    "metrics": "files/s、IOPS、P99、AU",
+    "mode": "small_file"
+  },
+  "AI-TRN-005": {
+    "case_id": "AI-TRN-005",
+    "category": "training",
+    "case_name": "retinanet_mi355_batch_pressure",
+    "config": "RetinaNet/MI355 JPEG，batch/compute sweep",
+    "purpose": "验证 batch 和处理节奏变化下的小文件供给稳定性。",
+    "steps": [
+      "准备 RetinaNet/MI355 JPEG，batch/compute sweep 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、files/s、P99、等待时间、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_training_retinanet_mi355_batch_pressure.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥85%；不同 batch 结果可重复；files/s 无持续下降。",
+    "metrics": "files/s、P99、等待时间、AU",
+    "mode": "small_file"
+  },
+  "AI-TRN-006": {
+    "case_id": "AI-TRN-006",
+    "category": "training",
+    "case_name": "cosmoflow_a100_shuffle",
+    "config": "CosmoFlow/A100 TFRecord，accelerator 1/2/4",
+    "purpose": "验证中小对象随机访问和 shuffle 供数。",
+    "steps": [
+      "准备 CosmoFlow/A100 TFRecord，accelerator 1/2/4 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、IOPS、P99、queue、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_cosmoflow_a100_shuffle.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥70%；shuffle 无供数空洞；IOPS/P99 达标；数据完整。",
+    "metrics": "IOPS、P99、queue、AU",
+    "mode": "shuffle"
+  },
+  "AI-TRN-007": {
+    "case_id": "AI-TRN-007",
+    "category": "training",
+    "case_name": "cosmoflow_h100_high_rate",
+    "config": "CosmoFlow/H100 TFRecord，accelerator 1/2/4/8",
+    "purpose": "验证更高请求速率下的随机读取尾延迟。",
+    "steps": [
+      "准备 CosmoFlow/H100 TFRecord，accelerator 1/2/4/8 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、P99、IOPS、queue、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_cosmoflow_h100_high_rate.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥70%；P99 达标；请求速率提高后无供数中断。",
+    "metrics": "P99、IOPS、queue、AU",
+    "mode": "shuffle"
+  },
+  "AI-TRN-008": {
+    "case_id": "AI-TRN-008",
+    "category": "training",
+    "case_name": "resnet50_a100_tfrecord_samples",
+    "config": "ResNet50/A100 TFRecord，固定 batch/threads",
+    "purpose": "验证 TFRecord 文件内多 sample 读取效率。",
+    "steps": [
+      "准备 ResNet50/A100 TFRecord，固定 batch/threads 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、samples/s、吞吐、P99、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_training_resnet50_a100_tfrecord_samples.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；samples/s 达标；batch 结果稳定；无读取错误。",
+    "metrics": "samples/s、吞吐、P99、AU",
+    "mode": "record"
+  },
+  "AI-TRN-009": {
+    "case_id": "AI-TRN-009",
+    "category": "training",
+    "case_name": "resnet50_h100_tfrecord_rate",
+    "config": "ResNet50/H100 TFRecord，accelerator 1/2/4/8",
+    "purpose": "验证更高 TFRecord 供给速率下的持续吞吐。",
+    "steps": [
+      "准备 ResNet50/H100 TFRecord，accelerator 1/2/4/8 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、throughput、P99、queue、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_resnet50_h100_tfrecord_rate.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；throughput 无持续下降；无供数中断。",
+    "metrics": "throughput、P99、queue、AU",
+    "mode": "record"
+  },
+  "AI-TRN-010": {
+    "case_id": "AI-TRN-010",
+    "category": "training",
+    "case_name": "dlrm_b200_parquet_columns",
+    "config": "DLRM/B200 Parquet，prefetch 0/2/4",
+    "purpose": "验证 Parquet 行组和列裁剪读取表现。",
+    "steps": [
+      "准备 DLRM/B200 Parquet，prefetch 0/2/4 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、row-groups/s、带宽、P99、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_dlrm_b200_parquet_columns.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥70%；row-groups/s 达标；无异常读放大；CPU 不成为主瓶颈。",
+    "metrics": "row-groups/s、带宽、P99、AU",
+    "mode": "columnar",
+    "dimensions": 128
+  },
+  "AI-TRN-011": {
+    "case_id": "AI-TRN-011",
+    "category": "training",
+    "case_name": "dlrm_mi355_parquet_parallel",
+    "config": "DLRM/MI355 Parquet，threads 1/4/8/16",
+    "purpose": "验证 Parquet 并行读取带宽和主机开销。",
+    "steps": [
+      "准备 DLRM/MI355 Parquet，threads 1/4/8/16 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、read BW、CPU、P99、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_dlrm_mi355_parquet_parallel.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU 达标；read BW 随线程变化可解释；CPU、队列和 P99 无异常。",
+    "metrics": "read BW、CPU、P99、AU",
+    "mode": "columnar",
+    "dimensions": 128
+  },
+  "AI-TRN-012": {
+    "case_id": "AI-TRN-012",
+    "category": "training",
+    "case_name": "flux_b200_parquet_large_object",
+    "config": "Flux/B200 Parquet，threads 4/8/16",
+    "purpose": "验证大 Parquet 对象的持续读取带宽。",
+    "steps": [
+      "准备 Flux/B200 Parquet，threads 4/8/16 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、GiB/s、P99、温度、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_training_flux_b200_parquet_large_object.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；GiB/s 达标；吞吐无持续下降；空间余量安全。",
+    "metrics": "GiB/s、P99、温度、AU",
+    "mode": "sequential"
+  },
+  "AI-TRN-013": {
+    "case_id": "AI-TRN-013",
+    "category": "training",
+    "case_name": "flux_mi355_burst_read",
+    "config": "Flux/MI355 Parquet，batch 72，threads sweep",
+    "purpose": "验证长 compute gap 后突发读取的恢复能力。",
+    "steps": [
+      "准备 Flux/MI355 Parquet，batch 72，threads sweep 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、burst latency、恢复时间、AU、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_training_flux_mi355_burst_read.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU≥90%；突发读取在目标窗口内恢复；无供数中断。",
+    "metrics": "burst latency、恢复时间、AU",
+    "mode": "burst"
+  },
+  "AI-TRN-014": {
+    "case_id": "AI-TRN-014",
+    "category": "training",
+    "case_name": "concurrent_accelerator_scaling",
+    "config": "UNet3D/RetinaNet，workers 1/2/4/8/16",
+    "purpose": "定位并发增加后的最大合格供数能力。",
+    "steps": [
+      "准备 UNet3D/RetinaNet，workers 1/2/4/8/16 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、AU、speedup、吞吐、P99、queue、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_training_concurrent_accelerator_scaling.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：输出最大合格并发；AU 达标；speedup 可解释；饱和拐点明确。",
+    "metrics": "AU、speedup、吞吐、P99、queue",
+    "mode": "saturation"
+  },
+  "AI-TRN-015": {
+    "case_id": "AI-TRN-015",
+    "category": "training",
+    "case_name": "reader_thread_scaling",
+    "config": "固定训练数据，read_threads 1/2/4/8/16/32",
+    "purpose": "定位读取线程增加后的 SSD/CPU 饱和拐点。",
+    "steps": [
+      "准备 固定训练数据，read_threads 1/2/4/8/16/32 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、throughput、CPU、queue、P99、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_training_reader_thread_scaling.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：饱和拐点可复现；吞吐 CV≤5%；瓶颈可归因；无持续错误。",
+    "metrics": "throughput、CPU、queue、P99",
+    "mode": "saturation"
+  },
+  "AI-TRN-016": {
+    "case_id": "AI-TRN-016",
+    "category": "training",
+    "case_name": "cache_path_matrix",
+    "config": "warm/cold/--o-direct",
+    "purpose": "量化缓存污染对训练结果的影响。",
+    "steps": [
+      "准备 warm/cold/--o-direct 对应的训练数据，数据盘与结果盘分离。",
+      "固定 seed 和 worker/accelerator 配置，完成不计分预热。",
+      "使用对应 test_training_*.py 运行重复测试并保存每次结果。",
+      "对齐 AU、PhysicalDisk 实际读字节、吞吐、AU、P99、PhysicalDisk 队列和温度，检查后半程退化。"
+    ],
+    "test_duration": "约 45–60 分钟",
+    "command": "python ai_ssd_test_cases/test_training_cache_path_matrix.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：三种路径独立可复现；cold/direct 实际读字节与逻辑量一致；AU 差异可解释。",
+    "metrics": "PhysicalDisk 实际读字节、吞吐、AU、P99",
+    "mode": "cache_matrix"
+  },
+  "AI-CKP-001": {
+    "case_id": "AI-CKP-001",
+    "category": "checkpoint",
+    "case_name": "8b_full_baseline",
+    "config": "8B full，8 ranks，105 GB/checkpoint",
+    "purpose": "建立单节点 8B checkpoint 写入和恢复基线。",
+    "steps": [
+      "准备 8B full，8 ranks，105 GB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、10 save/load、fsync、cold read 和恢复时间。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_checkpoint_8b_full_baseline.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：10 次保存和读取完成；所有分片完整；fsync 成功；最慢 rank 可追溯。",
+    "metrics": "10 save/load、fsync、cold read",
+    "mode": "checkpoint",
+    "shards": 8
+  },
+  "AI-CKP-002": {
+    "case_id": "AI-CKP-002",
+    "category": "checkpoint",
+    "case_name": "70b_subset",
+    "config": "70B subset，8 ranks，114 GB/checkpoint",
+    "purpose": "验证单盘模拟 70B 分片的写入和恢复。",
+    "steps": [
+      "准备 70B subset，8 ranks，114 GB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、最慢 rank、最小吞吐、hash 和恢复时间。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_checkpoint_70b_subset.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：每个 rank 完成；字节数符合配置；hash 一致；无空间或写入错误。",
+    "metrics": "最慢 rank、最小吞吐、hash",
+    "mode": "checkpoint",
+    "shards": 8
+  },
+  "AI-CKP-003": {
+    "case_id": "AI-CKP-003",
+    "category": "checkpoint",
+    "case_name": "70b_full_distributed",
+    "config": "70B full，64 ranks，912 GB/checkpoint",
+    "purpose": "验证多节点并发写入和恢复的 rank skew。",
+    "steps": [
+      "准备 70B full，64 ranks，912 GB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、rank skew、global duration、吞吐 和恢复时间。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_checkpoint_70b_full_distributed.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：所有 rank 完成；global duration 和 skew 可解释；无丢分片或损坏。",
+    "metrics": "rank skew、global duration、吞吐",
+    "mode": "checkpoint",
+    "shards": 64
+  },
+  "AI-CKP-004": {
+    "case_id": "AI-CKP-004",
+    "category": "checkpoint",
+    "case_name": "405b_subset",
+    "config": "405B subset，8 ranks，94 GB/checkpoint",
+    "purpose": "验证大模型 node-local SSD 的 checkpoint 行为。",
+    "steps": [
+      "准备 405B subset，8 ranks，94 GB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、save/load、cold bytes、恢复时间 和恢复时间。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_checkpoint_405b_subset.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：写入、读取和完整性检查通过；容量余量保持安全；冷读方法有记录。",
+    "metrics": "save/load、cold bytes、恢复时间",
+    "mode": "checkpoint",
+    "shards": 8
+  },
+  "AI-CKP-005": {
+    "case_id": "AI-CKP-005",
+    "category": "checkpoint",
+    "case_name": "405b_full_shared",
+    "config": "405B full，512 ranks，5.29 TB/checkpoint",
+    "purpose": "验证 TB 级 shared storage 的并发 checkpoint 扩展。",
+    "steps": [
+      "准备 405B full，512 ranks，5.29 TB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、scale、最慢 rank、global duration 和恢复时间。"
+    ],
+    "test_duration": "约 4–8 小时",
+    "command": "python ai_ssd_test_cases/test_checkpoint_405b_full_shared.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：512 ranks 均完成；无丢分片；skew、吞吐和容量变化可解释。",
+    "metrics": "scale、最慢 rank、global duration",
+    "mode": "checkpoint",
+    "shards": 512
+  },
+  "AI-CKP-006": {
+    "case_id": "AI-CKP-006",
+    "category": "checkpoint",
+    "case_name": "1t_subset",
+    "config": "1T subset，8 ranks，161 GB/checkpoint",
+    "purpose": "验证最大单节点分片的突发写入和恢复。",
+    "steps": [
+      "准备 1T subset，8 ranks，161 GB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、burst、GC、恢复时间 和恢复时间。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_checkpoint_1t_subset.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：突发写入完成；fsync 和 hash 通过；恢复时间达到目标；无持续 GC 异常。",
+    "metrics": "burst、GC、恢复时间",
+    "mode": "checkpoint",
+    "shards": 8
+  },
+  "AI-CKP-007": {
+    "case_id": "AI-CKP-007",
+    "category": "checkpoint",
+    "case_name": "1t_full_distributed",
+    "config": "1T full，1024 ranks，18 TB/checkpoint",
+    "purpose": "验证极大模型 checkpoint 的全局保存和恢复。",
+    "steps": [
+      "准备 1T full，1024 ranks，18 TB/checkpoint 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、global save/load、rank skew 和恢复时间。"
+    ],
+    "test_duration": "约 8–12 小时",
+    "command": "python ai_ssd_test_cases/test_checkpoint_1t_full_distributed.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：1024 ranks 全部完成；global save/load 可重跑；无损坏、缺 rank 或容量越界。",
+    "metrics": "global save/load、rank skew",
+    "mode": "checkpoint",
+    "shards": 1024
+  },
+  "AI-CKP-008": {
+    "case_id": "AI-CKP-008",
+    "category": "checkpoint",
+    "case_name": "cold_warm_recovery",
+    "config": "write-only→purge/reboot→read-only",
+    "purpose": "证明恢复读实际命中 SSD，而不是页缓存。",
+    "steps": [
+      "准备 write-only→purge/reboot→read-only 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、PhysicalDisk bytes、load time、hash 和恢复时间。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_checkpoint_cold_warm_recovery.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：cold 方法明确；实际物理读字节与逻辑量一致；warm/cold 结果分开报告。",
+    "metrics": "PhysicalDisk bytes、load time、hash",
+    "mode": "checkpoint",
+    "shards": 8
+  },
+  "AI-CKP-009": {
+    "case_id": "AI-CKP-009",
+    "category": "checkpoint",
+    "case_name": "interval_burst_gc",
+    "config": "interval 5/30/300 s，1/2/10 cycles",
+    "purpose": "评价连续 checkpoint 和后台 GC 对后续保存的影响。",
+    "steps": [
+      "准备 interval 5/30/300 s，1/2/10 cycles 对应的 checkpoint 分片和容量余量。",
+      "按固定 rank/分片布局执行带 fsync 的写入，并记录最慢 rank。",
+      "清理或重启后执行恢复读取；无法证明 cold 时标记 warm-only。",
+      "校验 10 次保存/读取、完整性、后续 checkpoint 退化、P99、GC 和恢复时间。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_checkpoint_interval_burst_gc.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：所有 cycle 完成；后续 checkpoint 退化可量化；无持续超过目标的尾延迟。",
+    "metrics": "后续 checkpoint 退化、P99、GC",
+    "mode": "checkpoint",
+    "shards": 8
+  },
+  "AI-KV-001": {
+    "case_id": "AI-KV-001",
+    "category": "kv",
+    "case_name": "option1_8b_nvme_only",
+    "config": "MLPerf option 1，8B，200 users，CPU/GPU=0",
+    "purpose": "验证 8B NVMe-only 高并发 KV Cache。",
+    "steps": [
+      "准备 MLPerf option 1，8B，200 users，CPU/GPU=0 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 worst P95、tokens/s、tier bytes，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_option1_8b_nvme_only.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：storage_entries>0；所有 trial 完成；worst P95 和 tokens/s 达到对应 SLA；NVMe tier 有实际 I/O。",
+    "metrics": "worst P95、tokens/s、tier bytes",
+    "mode": "kv",
+    "users": 200
+  },
+  "AI-KV-002": {
+    "case_id": "AI-KV-002",
+    "category": "kv",
+    "case_name": "option2_cpu_spill",
+    "config": "MLPerf option 2，4 GB CPU spill，100 users",
+    "purpose": "验证 CPU spill 边界和 NVMe tier 仍有实际负载。",
+    "steps": [
+      "准备 MLPerf option 2，4 GB CPU spill，100 users 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 spill 时刻、P95、evictions、tier bytes，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_option2_cpu_spill.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：spill 行为可观察；NVMe tier entries>0；无 OOM；P95 达到 SLA。",
+    "metrics": "spill 时刻、P95、evictions、tier bytes",
+    "mode": "kv",
+    "users": 100
+  },
+  "AI-KV-003": {
+    "case_id": "AI-KV-003",
+    "category": "kv",
+    "case_name": "option3_70b",
+    "config": "MLPerf option 3，70B，70 users，allocs=4",
+    "purpose": "验证大模型 KV 对象下的带宽、尾延迟和 RAM 峰值。",
+    "steps": [
+      "准备 MLPerf option 3，70B，70 users，allocs=4 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 P95、BW、RAM 峰值、tier bytes，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_option3_70b.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：所有 trial 完成；tier I/O 可证；RAM 无越界；P95 和 BW 达到 SLA。",
+    "metrics": "P95、BW、RAM 峰值、tier bytes",
+    "mode": "kv",
+    "users": 70
+  },
+  "AI-KV-004": {
+    "case_id": "AI-KV-004",
+    "category": "kv",
+    "case_name": "tiny1b_smoke",
+    "config": "tiny-1b，users 10→500",
+    "purpose": "用小模型快速验证 KV Cache 的小对象 IOPS。",
+    "steps": [
+      "准备 tiny-1b，users 10→500 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 IOPS、P99、entries，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 30–45 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_tiny1b_smoke.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：用户阶梯可重跑；entries>0；P99 无异常尖峰；无丢请求。",
+    "metrics": "IOPS、P99、entries",
+    "mode": "kv",
+    "users": 100
+  },
+  "AI-KV-005": {
+    "case_id": "AI-KV-005",
+    "category": "kv",
+    "case_name": "mistral7b_gqa",
+    "config": "mistral-7b，128 KiB/token GQA",
+    "purpose": "验证 GQA KV 对象大小对尾延迟和带宽的影响。",
+    "steps": [
+      "准备 mistral-7b，128 KiB/token GQA 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 tail latency、BW、tokens/s，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_mistral7b_gqa.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：context/users sweep 完整；P99 达到 SLA；带宽变化与对象大小一致。",
+    "metrics": "tail latency、BW、tokens/s",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-006": {
+    "case_id": "AI-KV-006",
+    "category": "kv",
+    "case_name": "llama2_7b_upper_bound",
+    "config": "llama2-7b，512 KiB/token，alloc 1/2/4/8",
+    "purpose": "验证较大 KV/token 下的 P99.9 和 OOM 边界。",
+    "steps": [
+      "准备 llama2-7b，512 KiB/token，alloc 1/2/4/8 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 P99.9、OOM guard、tier bytes，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_llama2_7b_upper_bound.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：各 alloc 点结果完整；OOM guard 正常；无 silent eviction 或目录误写。",
+    "metrics": "P99.9、OOM guard、tier bytes",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-007": {
+    "case_id": "AI-KV-007",
+    "category": "kv",
+    "case_name": "llama31_8b_users",
+    "config": "llama3.1-8b，users 25/50/100/200",
+    "purpose": "绘制 8B 独立负载的最大合格用户曲线。",
+    "steps": [
+      "准备 llama3.1-8b，users 25/50/100/200 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 max compliant users、P99.99、tokens/s，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_llama31_8b_users.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：最大合格用户明确；Interactive SLA 全部满足；无 tier I/O 缺失。",
+    "metrics": "max compliant users、P99.99、tokens/s",
+    "mode": "kv",
+    "users": 100
+  },
+  "AI-KV-008": {
+    "case_id": "AI-KV-008",
+    "category": "kv",
+    "case_name": "llama31_70b_users",
+    "config": "llama3.1-70b，users 10/35/70/140",
+    "purpose": "绘制大模型独立负载的最大合格用户曲线。",
+    "steps": [
+      "准备 llama3.1-70b，users 10/35/70/140 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 max compliant users、P99.99、BW，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_llama31_70b_users.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：用户阶梯完整；最大合格点可复现；P99.99 和 BW 达标。",
+    "metrics": "max compliant users、P99.99、BW",
+    "mode": "kv",
+    "users": 70
+  },
+  "AI-KV-009": {
+    "case_id": "AI-KV-009",
+    "category": "kv",
+    "case_name": "deepseek_v3_mla",
+    "config": "deepseek-v3，context 4K/8K/25K，MLA",
+    "purpose": "验证 MLA 压缩 KV 对小对象效率的影响。",
+    "steps": [
+      "准备 deepseek-v3，context 4K/8K/25K，MLA 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 对象大小、bytes/token、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_deepseek_v3_mla.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：三档 context 完成；对象大小和 bytes/token 可解释；尾延迟满足 SLA。",
+    "metrics": "对象大小、bytes/token、P99",
+    "mode": "kv",
+    "users": 35
+  },
+  "AI-KV-010": {
+    "case_id": "AI-KV-010",
+    "category": "kv",
+    "case_name": "qwen3_32b_sweep",
+    "config": "qwen3-32b，256 KiB/token",
+    "purpose": "验证 32B KV 对象在用户和上下文变化下的供给。",
+    "steps": [
+      "准备 qwen3-32b，256 KiB/token 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 P99、BW、tokens/s，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_qwen3_32b_sweep.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：context/users sweep 完整；P99 和 BW 达到目标；无丢请求。",
+    "metrics": "P99、BW、tokens/s",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-011": {
+    "case_id": "AI-KV-011",
+    "category": "kv",
+    "case_name": "gpt_oss_20b_moe",
+    "config": "gpt-oss-20b，MoE 小 KV，高 users",
+    "purpose": "验证 MoE 小 KV 在高并发下的 IOPS 和 CPU 开销。",
+    "steps": [
+      "准备 gpt-oss-20b，MoE 小 KV，高 users 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 IOPS、CPU overhead、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_gpt_oss_20b_moe.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：高用户点可完成；CPU 开销可归因；IOPS 和 P99 达标。",
+    "metrics": "IOPS、CPU overhead、P99",
+    "mode": "kv",
+    "users": 100
+  },
+  "AI-KV-012": {
+    "case_id": "AI-KV-012",
+    "category": "kv",
+    "case_name": "gpt_oss_120b",
+    "config": "gpt-oss-120b，大模型低 KV/token",
+    "purpose": "验证大模型低 KV/token 配置的吞吐和尾延迟。",
+    "steps": [
+      "准备 gpt-oss-120b，大模型低 KV/token 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 throughput、P99、RAM、tier bytes，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_gpt_oss_120b.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：users/context sweep 完整；throughput 和 P99 达标；tier I/O 可证。",
+    "metrics": "throughput、P99、RAM、tier bytes",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-013": {
+    "case_id": "AI-KV-013",
+    "category": "kv",
+    "case_name": "tier_capacity_matrix",
+    "config": "GPU/CPU=0/4/16/32 GiB",
+    "purpose": "定位 GPU/CPU tier 变化下的 offload 拐点。",
+    "steps": [
+      "准备 GPU/CPU=0/4/16/32 GiB 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 tier occupancy、spill latency、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_tier_capacity_matrix.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：每个 tier 点完成；spill 拐点可定位；无 OOM 或缓存目录误写。",
+    "metrics": "tier occupancy、spill latency、P99",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-014": {
+    "case_id": "AI-KV-014",
+    "category": "kv",
+    "case_name": "tensor_parallel_matrix",
+    "config": "TP 1/2/4/8，num_gpus≥TP",
+    "purpose": "量化 TP 变化对 per-rank shard 对象和聚合带宽的影响。",
+    "steps": [
+      "准备 TP 1/2/4/8，num_gpus≥TP 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 per-rank bytes、aggregate BW、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_tensor_parallel_matrix.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：各 TP 点 rank 对齐；bytes 和 BW 可解释；尾延迟满足 SLA。",
+    "metrics": "per-rank bytes、aggregate BW、P99",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-015": {
+    "case_id": "AI-KV-015",
+    "category": "kv",
+    "case_name": "prefill_write",
+    "config": "Prefill-only，model/users/context sweep",
+    "purpose": "验证 disaggregated prefill 的写密集 KV 行为。",
+    "steps": [
+      "准备 Prefill-only，model/users/context sweep 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 write BW、fsync、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_prefill_write.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：写入字节完整；fsync 成功；write BW 和 P99 达到目标。",
+    "metrics": "write BW、fsync、P99",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-016": {
+    "case_id": "AI-KV-016",
+    "category": "kv",
+    "case_name": "decode_read",
+    "config": "Decode-only，预置 cache，model/users",
+    "purpose": "验证 disaggregated decode 的读密集 KV 行为。",
+    "steps": [
+      "准备 Decode-only，预置 cache，model/users 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 read BW、P99.99、tokens/s，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_decode_read.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：预置 cache 可复用；实际读字节可证；P99.99 和 tokens/s 达标。",
+    "metrics": "read BW、P99.99、tokens/s",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-017": {
+    "case_id": "AI-KV-017",
+    "category": "kv",
+    "case_name": "context_personas",
+    "config": "chatbot/coding/document 短/长上下文",
+    "purpose": "比较不同上下文 persona 的对象分布和尾延迟。",
+    "steps": [
+      "准备 chatbot/coding/document 短/长上下文 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 object CDF、P99、tier bytes，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_context_personas.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：三类 persona 结果完整；object CDF 和尾延迟可解释；无丢请求。",
+    "metrics": "object CDF、P99、tier bytes",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-018": {
+    "case_id": "AI-KV-018",
+    "category": "kv",
+    "case_name": "generation_modes",
+    "config": "none/fast/realistic generation",
+    "purpose": "区分峰值生成节奏与真实生成节奏下的资源占用。",
+    "steps": [
+      "准备 none/fast/realistic generation 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 wall/active BW、SLA、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_generation_modes.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：三种节奏可区分；wall/active BW 均有记录；SLA 判定不混淆。",
+    "metrics": "wall/active BW、SLA、P99",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-019": {
+    "case_id": "AI-KV-019",
+    "category": "kv",
+    "case_name": "rag_prefix_multiturn",
+    "config": "RAG/prefix/multi-turn，docs 10/100",
+    "purpose": "验证 KV 复用和额外文档 I/O 的收益与代价。",
+    "steps": [
+      "准备 RAG/prefix/multi-turn，docs 10/100 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 hit rate、bytes saved、P99、docs I/O，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_rag_prefix_multiturn.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：开关和 docs 阶梯完整；hit rate 与 bytes saved 可解释；P99 达标。",
+    "metrics": "hit rate、bytes saved、P99、docs I/O",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-020": {
+    "case_id": "AI-KV-020",
+    "category": "kv",
+    "case_name": "saturation_autoscale",
+    "config": "users/request-rate 逐步增加 20/25%",
+    "purpose": "定位最大合格负载、队列拐点和恢复时间。",
+    "steps": [
+      "准备 users/request-rate 逐步增加 20/25% 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 knee、queue、recovery、P99，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_saturation_autoscale.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：最大合格点明确；超过拐点能恢复；无持续丢请求或队列失控。",
+    "metrics": "knee、queue、recovery、P99",
+    "mode": "kv",
+    "users": 100
+  },
+  "AI-KV-021": {
+    "case_id": "AI-KV-021",
+    "category": "kv",
+    "case_name": "tier2_trace_replay",
+    "config": "Tier-2 trace，1×/2×/4×，Windows Direct I/O",
+    "purpose": "在 Windows Direct I/O 下复现过滤后的 Tier-2 访问。",
+    "steps": [
+      "准备 Tier-2 trace，1×/2×/4×，Windows Direct I/O 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 P50/P95/P99、aligned BW、实际读字节，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_kv_tier2_trace_replay.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：trace 过滤范围可追溯；三种速率完成；aligned BW 和尾延迟可复现。",
+    "metrics": "P50/P95/P99、aligned BW、实际读字节",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-KV-022": {
+    "case_id": "AI-KV-022",
+    "category": "kv",
+    "case_name": "burstgpt_sharegpt",
+    "config": "BurstGPT/ShareGPT arrival/context trace",
+    "purpose": "验证真实 arrival 和 context 分布下的突发尾延迟。",
+    "steps": [
+      "准备 BurstGPT/ShareGPT arrival/context trace 的 KV Cache tier、模型和用户/上下文配置。",
+      "固定随机种子，先完成 warm-up，再按用户或 context 阶梯运行。",
+      "记录 NVMe tier entries、读写字节、tokens/s 和各分位尾延迟。",
+      "对照 burst tail、queue、drop、tokens/s，确认没有 OOM、丢请求或缓存目录落错盘。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_kv_burstgpt_sharegpt.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：外部数据集版本和 trace speed 固定；无异常 drop；突发尾延迟可解释。",
+    "metrics": "burst tail、queue、drop、tokens/s",
+    "mode": "kv",
+    "users": 50
+  },
+  "AI-VDB-001": {
+    "case_id": "AI-VDB-001",
+    "category": "vdb",
+    "case_name": "hnsw_1k_smoke",
+    "config": "1K×128 HNSW，planted query，L2",
+    "purpose": "完成 Windows smoke 并验证 trace 完整性。",
+    "steps": [
+      "准备 1K×128 HNSW，planted query，L2 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、QPS、trace 完整性，确认结果可复现。"
+    ],
+    "test_duration": "约 20–30 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_hnsw_1k_smoke.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：Recall 达标；QPS 可记录；trace、索引和结果文件完整。",
+    "metrics": "Recall、QPS、trace 完整性",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-002": {
+    "case_id": "AI-VDB-002",
+    "category": "vdb",
+    "case_name": "hnsw_1m",
+    "config": "1M×1536 HNSW，M64，ef 32/128/256",
+    "purpose": "建立内存图索引的 Recall-QPS-P99 基线。",
+    "steps": [
+      "准备 1M×1536 HNSW，M64，ef 32/128/256 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、QPS、P99、容量，确认结果可复现。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_vdb_hnsw_1m.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：同一 Recall 门槛下比较；ef 阶梯完整；P99 和容量可追溯。",
+    "metrics": "Recall、QPS、P99、容量",
+    "mode": "vdb",
+    "dimensions": 1536
+  },
+  "AI-VDB-003": {
+    "case_id": "AI-VDB-003",
+    "category": "vdb",
+    "case_name": "diskann_1m_1536",
+    "config": "1M×1536 DISKANN，degree64",
+    "purpose": "建立磁盘 ANN 的搜索和实际读基线。",
+    "steps": [
+      "准备 1M×1536 DISKANN，degree64 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、QPS、physical read、P99，确认结果可复现。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_vdb_diskann_1m_1536.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：Recall 达标；physical read 命中 DUT；QPS/P99 可重跑。",
+    "metrics": "Recall、QPS、physical read、P99",
+    "mode": "vdb",
+    "dimensions": 1536
+  },
+  "AI-VDB-004": {
+    "case_id": "AI-VDB-004",
+    "category": "vdb",
+    "case_name": "diskann_1m_512",
+    "config": "1M×512 DISKANN，和 1536 维对照",
+    "purpose": "量化向量维度变化对查询字节和 QPS 的影响。",
+    "steps": [
+      "准备 1M×512 DISKANN，和 1536 维对照 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 bytes/query、QPS、Recall，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_diskann_1m_512.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：两种维度同 Recall 门槛；bytes/query 变化可解释；无索引错配。",
+    "metrics": "bytes/query、QPS、Recall",
+    "mode": "vdb",
+    "dimensions": 512
+  },
+  "AI-VDB-005": {
+    "case_id": "AI-VDB-005",
+    "category": "vdb",
+    "case_name": "aisaq_1m_512",
+    "config": "1M×512 AISAQ，inline_pq 16/32",
+    "purpose": "验证压缩索引的容量、Recall 和 QPS 权衡。",
+    "steps": [
+      "准备 1M×512 AISAQ，inline_pq 16/32 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 capacity、Recall、QPS、P99，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_aisaq_1m_512.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：PQ 16/32 结果完整；Recall 达标；容量收益和性能代价可解释。",
+    "metrics": "capacity、Recall、QPS、P99",
+    "mode": "vdb",
+    "dimensions": 512
+  },
+  "AI-VDB-006": {
+    "case_id": "AI-VDB-006",
+    "category": "vdb",
+    "case_name": "hnsw_10m",
+    "config": "10M×1536 HNSW，10 shards，query proc 1/4/8",
+    "purpose": "验证大数据集 HNSW 的加载、扩展和 P99。",
+    "steps": [
+      "准备 10M×1536 HNSW，10 shards，query proc 1/4/8 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 scale、load time、P99、QPS，确认结果可复现。"
+    ],
+    "test_duration": "约 4–8 小时",
+    "command": "python ai_ssd_test_cases/test_vdb_hnsw_10m.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：10 shards 可加载；query proc 变化可解释；无容器重启或数据缺失。",
+    "metrics": "scale、load time、P99、QPS",
+    "mode": "vdb",
+    "dimensions": 1536
+  },
+  "AI-VDB-007": {
+    "case_id": "AI-VDB-007",
+    "category": "vdb",
+    "case_name": "diskann_10m",
+    "config": "10M×1536 DISKANN，10 shards",
+    "purpose": "验证大磁盘型索引的 QPS、物理 I/O 和温度。",
+    "steps": [
+      "准备 10M×1536 DISKANN，10 shards 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 QPS、physical IO、temperature、Recall，确认结果可复现。"
+    ],
+    "test_duration": "约 4–8 小时",
+    "command": "python ai_ssd_test_cases/test_vdb_diskann_10m.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：Recall 达标；physical IO 命中 DUT；温度和空间余量安全。",
+    "metrics": "QPS、physical IO、temperature、Recall",
+    "mode": "vdb",
+    "dimensions": 1536
+  },
+  "AI-VDB-008": {
+    "case_id": "AI-VDB-008",
+    "category": "vdb",
+    "case_name": "index_family_sweep",
+    "config": "DISKANN/HNSW/AISAQ/IVF/FLAT 六类 index",
+    "purpose": "在相同 Recall 门槛下比较索引家族。",
+    "steps": [
+      "准备 DISKANN/HNSW/AISAQ/IVF/FLAT 六类 index 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、QPS、容量、P99，确认结果可复现。"
+    ],
+    "test_duration": "约 4–8 小时",
+    "command": "python ai_ssd_test_cases/test_vdb_index_family_sweep.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：所有支持的 index 均记录版本；同 Recall 下比较；不支持项明确标注。",
+    "metrics": "Recall、QPS、容量、P99",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-009": {
+    "case_id": "AI-VDB-009",
+    "category": "vdb",
+    "case_name": "search_effort_sweep",
+    "config": "ef/search-list 32→512",
+    "purpose": "绘制搜索努力度与精度、性能的关系。",
+    "steps": [
+      "准备 ef/search-list 32→512 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、QPS、P99、search effort，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_search_effort_sweep.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：参数阶梯完整；Recall 单调性和 QPS/P99 变化可解释。",
+    "metrics": "Recall、QPS、P99、search effort",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-010": {
+    "case_id": "AI-VDB-010",
+    "category": "vdb",
+    "case_name": "query_process_scaling",
+    "config": "query process 1/2/4/8/16",
+    "purpose": "定位查询并发的饱和点和队列拐点。",
+    "steps": [
+      "准备 query process 1/2/4/8/16 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 aggregate QPS、queue、P99、CPU，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_query_process_scaling.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：最大合格进程数明确；队列拐点可定位；Recall 不下降。",
+    "metrics": "aggregate QPS、queue、P99、CPU",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-011": {
+    "case_id": "AI-VDB-011",
+    "category": "vdb",
+    "case_name": "search_batch_scaling",
+    "config": "batch 1/8/32/64",
+    "purpose": "验证批查询对 QPS 和单查询尾延迟的影响。",
+    "steps": [
+      "准备 batch 1/8/32/64 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 QPS、per-query P99、Recall，确认结果可复现。"
+    ],
+    "test_duration": "约 60–90 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_search_batch_scaling.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：四档 batch 完成；per-query P99 不被 aggregate QPS 掩盖；Recall 达标。",
+    "metrics": "QPS、per-query P99、Recall",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-012": {
+    "case_id": "AI-VDB-012",
+    "category": "vdb",
+    "case_name": "ingest_tuning",
+    "config": "batch 1K/10K，compact on/off",
+    "purpose": "验证写入批次和 compact 对建索引效率的影响。",
+    "steps": [
+      "准备 batch 1K/10K，compact on/off 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 vectors/s、flush/index time、写放大，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_ingest_tuning.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：四种组合结果完整；无丢向量；flush/index 时间和写放大可解释。",
+    "metrics": "vectors/s、flush/index time、写放大",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-013": {
+    "case_id": "AI-VDB-013",
+    "category": "vdb",
+    "case_name": "topk_metric_dimension",
+    "config": "K10/100；COSINE/L2/IP；多维度",
+    "purpose": "验证查询形状对 Recall、结果字节和延迟的影响。",
+    "steps": [
+      "准备 K10/100；COSINE/L2/IP；多维度 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、result bytes、latency、QPS，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_topk_metric_dimension.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：K、metric、dimension 组合完整；Recall 计算口径一致；结果字节可解释。",
+    "metrics": "Recall、result bytes、latency、QPS",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-014": {
+    "case_id": "AI-VDB-014",
+    "category": "vdb",
+    "case_name": "cold_warm_search",
+    "config": "restart/load、重复 round、search-only",
+    "purpose": "区分索引加载、缓存和 steady-state 搜索影响。",
+    "steps": [
+      "准备 restart/load、重复 round、search-only 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 load time、first P99、steady P99、physical read，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_cold_warm_search.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：cold/warm/search-only 分开；first/steady 结果可重跑；physical read 证据完整。",
+    "metrics": "load time、first P99、steady P99、physical read",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-015": {
+    "case_id": "AI-VDB-015",
+    "category": "vdb",
+    "case_name": "logical_trace_replay",
+    "config": "both/search-only，1×/2×/4×",
+    "purpose": "复现 VectorDB 逻辑 SSD 负载并验证对齐带宽。",
+    "steps": [
+      "准备 both/search-only，1×/2×/4× 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 aligned BW、P99、trace 覆盖，确认结果可复现。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_vdb_logical_trace_replay.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：trace 版本和过滤范围固定；三种速率完成；aligned BW/P99 可比较。",
+    "metrics": "aligned BW、P99、trace 覆盖",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-VDB-016": {
+    "case_id": "AI-VDB-016",
+    "category": "vdb",
+    "case_name": "ingest_search_coexist",
+    "config": "独立 ingest/query clients",
+    "purpose": "评价后台写入和建索引对前台搜索的影响。",
+    "steps": [
+      "准备 独立 ingest/query clients 的向量、索引和固定 planted query。",
+      "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
+      "记录 Recall、QPS、P99、实际读写、容量和温度。",
+      "在相同 Recall 门槛下比较 Recall、foreground P99、ingest rate，确认结果可复现。"
+    ],
+    "test_duration": "约 2–4 小时",
+    "command": "python ai_ssd_test_cases/test_vdb_ingest_search_coexist.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：前台 Recall 不降；P99 满足 SLA；后台 ingest rate 和影响可量化。",
+    "metrics": "Recall、foreground P99、ingest rate",
+    "mode": "vdb",
+    "dimensions": 128
+  },
+  "AI-MIX-001": {
+    "case_id": "AI-MIX-001",
+    "category": "mixed",
+    "case_name": "training_checkpoint",
+    "config": "前台 Training，后台 Checkpoint save",
+    "purpose": "验证持续读与突发写同盘时的训练和保存窗口。",
+    "steps": [
+      "分别完成前台和后台 前台 Training，后台 Checkpoint save 的单项基线。",
+      "同时启动前台/后台负载，固定到达节奏并记录 UTC 时间线。",
+      "重复运行并采集前台尾延迟、后台吞吐、队列和错误。",
+      "对照单项基线，判断 AU、checkpoint throughput、foreground P99 是否满足通过门槛。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_mixed_training_checkpoint.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：AU 达标；checkpoint throughput≥solo 的 0.8×；无数据或分片错误。",
+    "metrics": "AU、checkpoint throughput、foreground P99",
+    "mode": "mixed"
+  },
+  "AI-MIX-002": {
+    "case_id": "AI-MIX-002",
+    "category": "mixed",
+    "case_name": "kv_decode_checkpoint",
+    "config": "前台 KV decode，后台 Checkpoint save",
+    "purpose": "验证 LLM 推理尾延迟对大写入的抗干扰能力。",
+    "steps": [
+      "分别完成前台和后台 前台 KV decode，后台 Checkpoint save 的单项基线。",
+      "同时启动前台/后台负载，固定到达节奏并记录 UTC 时间线。",
+      "重复运行并采集前台尾延迟、后台吞吐、队列和错误。",
+      "对照单项基线，判断 KV P99、tokens/s、checkpoint throughput 是否满足通过门槛。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_mixed_kv_decode_checkpoint.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：KV P99≤1.5×solo 且满足 SLA；checkpoint 写入完整；无丢请求。",
+    "metrics": "KV P99、tokens/s、checkpoint throughput",
+    "mode": "mixed",
+    "users": 50
+  },
+  "AI-MIX-003": {
+    "case_id": "AI-MIX-003",
+    "category": "mixed",
+    "case_name": "vdb_search_ingest",
+    "config": "前台 VectorDB search，后台 ingest/index",
+    "purpose": "验证 RAG 在线查询对后台建库的容忍度。",
+    "steps": [
+      "分别完成前台和后台 前台 VectorDB search，后台 ingest/index 的单项基线。",
+      "同时启动前台/后台负载，固定到达节奏并记录 UTC 时间线。",
+      "重复运行并采集前台尾延迟、后台吞吐、队列和错误。",
+      "对照单项基线，判断 Recall、foreground P99、ingest rate 是否满足通过门槛。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_mixed_vdb_search_ingest.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：Recall 不降；前台 P99≤1.5×solo 且满足 SLA；后台 ingest 可完成。",
+    "metrics": "Recall、foreground P99、ingest rate",
+    "mode": "mixed",
+    "dimensions": 128
+  },
+  "AI-MIX-004": {
+    "case_id": "AI-MIX-004",
+    "category": "mixed",
+    "case_name": "kv_interactive_vdb_search",
+    "config": "前台 KV interactive + VectorDB search",
+    "purpose": "验证两类前台随机读共存时的双 SLA。",
+    "steps": [
+      "分别完成前台和后台 前台 KV interactive + VectorDB search 的单项基线。",
+      "同时启动前台/后台负载，固定到达节奏并记录 UTC 时间线。",
+      "重复运行并采集前台尾延迟、后台吞吐、队列和错误。",
+      "对照单项基线，判断 KV P99、VDB P99、Recall、QPS 是否满足通过门槛。"
+    ],
+    "test_duration": "约 90–120 分钟",
+    "command": "python ai_ssd_test_cases/test_mixed_kv_interactive_vdb_search.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：两类前台 workload 的 SLA 均达标；Recall 不降；无持续队列堆积。",
+    "metrics": "KV P99、VDB P99、Recall、QPS",
+    "mode": "mixed",
+    "users": 50,
+    "dimensions": 128
+  },
+  "AI-MIX-005": {
+    "case_id": "AI-MIX-005",
+    "category": "mixed",
+    "case_name": "four_class_soak",
+    "config": "4 类循环，fill/GC background，8 小时",
+    "purpose": "验证长时间混合 AI SSD 稳定性和持续退化。",
+    "steps": [
+      "分别完成前台和后台 4 类循环，fill/GC background，8 小时 的单项基线。",
+      "同时启动前台/后台负载，固定到达节奏并记录 UTC 时间线。",
+      "重复运行并采集前台尾延迟、后台吞吐、队列和错误。",
+      "对照单项基线，判断 错误数、前台尾延迟、吞吐退化、温度 是否满足通过门槛。"
+    ],
+    "test_duration": "约 8 小时",
+    "command": "python ai_ssd_test_cases/test_mixed_four_class_soak.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+    "standard": "PASS：0 错误；无持续超过 10% 的退化；温度、空间和队列在安全范围。",
+    "metrics": "错误数、前台尾延迟、吞吐退化、温度",
+    "mode": "mixed",
+    "users": 50,
+    "dimensions": 128
+  }
+}
