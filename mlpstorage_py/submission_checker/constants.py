@@ -182,6 +182,7 @@ MD5_EXCLUDE_PREFIXES: tuple[str, ...] = (
 # (any directory ending in ``.egg-info``) — keep that in the predicate, not here.
 MD5_EXCLUDE_FILENAMES: tuple[str, ...] = (
     ".code-hash.json",
+    "~$*",  # Microsoft Office owner/lock files; transient and often unreadable
     "*.pyc",
     "*.pyo",
     ".DS_Store",
