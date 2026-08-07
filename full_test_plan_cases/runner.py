@@ -47,6 +47,10 @@ class RunOptions:
     vector_dimension: int | None = None
     users: int | None = None
     o_direct: bool = False
+    trace_file: Path | None = None
+    burst_trace: Path | None = None
+    sharegpt_dataset: Path | None = None
+    cache_reset_command: str | None = None
     custom_command: str | None = None
 
 
@@ -73,6 +77,18 @@ def _find_dlio(mlpstorage: str) -> str:
             return str(sibling.parent)
     found = shutil.which("dlio_benchmark")
     return str(Path(found).parent) if found else str(cli_path.parent)
+
+
+def _find_kv_cli() -> str:
+    candidates = (
+        REPO_ROOT / ".venv" / "Scripts" / "mlperf-kv-cache.exe",
+        REPO_ROOT / ".venv" / "Scripts" / "mlperf-kv-cache",
+        REPO_ROOT / ".venv" / "bin" / "mlperf-kv-cache",
+    )
+    for candidate in candidates:
+        if candidate.is_file():
+            return str(candidate)
+    return shutil.which("mlperf-kv-cache") or "mlperf-kv-cache"
 
 
 def _launcher_args(options: RunOptions) -> tuple[list[str], str]:
@@ -117,11 +133,14 @@ def _blocked(case: dict[str, Any], options: RunOptions, reason: str) -> dict[str
     }
 
 
-def _custom_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+def _shell_command(command_text: str) -> list[str]:
     if os.name == "nt":
-        command = ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", options.custom_command or ""]
-    else:
-        command = ["bash", "-lc", options.custom_command or ""]
+        return ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", command_text]
+    return ["bash", "-lc", command_text]
+
+
+def _custom_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+    command = _shell_command(options.custom_command or "")
     _, explanation = _launcher_args(options)
     plan = {
         "case_id": case["case_id"],
@@ -142,6 +161,48 @@ def _slash_values(text: str, label: str) -> list[int]:
     return [int(value) for value in match.group(1).split("/")] if match else []
 
 
+_PROBE_SCRIPTS = {
+    "AI-BASE-002": "test_base_cache_path_modes.py",
+    "AI-BASE-003": "test_base_repeatability_monitor_overhead.py",
+    "AI-BASE-004": "test_base_fill_level_degradation.py",
+    "AI-CKP-008": "test_checkpoint_cold_warm_recovery.py",
+    "AI-MIX-001": "test_mixed_training_checkpoint.py",
+    "AI-MIX-002": "test_mixed_kv_decode_checkpoint.py",
+    "AI-MIX-003": "test_mixed_vdb_search_ingest.py",
+    "AI-MIX-004": "test_mixed_kv_interactive_vdb_search.py",
+    "AI-MIX-005": "test_mixed_four_class_soak.py",
+}
+
+
+def _engineering_probe_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+    script = REPO_ROOT / "ai_ssd_test_cases" / _PROBE_SCRIPTS[case["case_id"]]
+    command = [
+        sys.executable,
+        str(script),
+        "--execute",
+        "--prepare",
+        "--duration-sec", "1",
+        "--sample-mib", "1",
+        "--data-dir", str(options.data_dir),
+        "--result-dir", str(options.results_dir / case["case_id"] / "probe"),
+    ]
+    if case["case_id"] == "AI-BASE-003":
+        command.extend(["--repeat", "3"])
+    plan = {
+        "case_id": case["case_id"],
+        "status": "READY",
+        "reason": "documented scaled engineering probe; not a formal FULL result",
+        "commands": [] if options.dry_run else [command],
+        "launcher": "local",
+        "launcher_explanation": "local standard-library probe; no Docker engine is used",
+        "source_command": case["source_command"],
+        "nonformal": True,
+    }
+    if options.dry_run:
+        plan["preview_command"] = command
+    return plan
+
+
 def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     cli = _find_mlpstorage(options.mlpstorage)
     dlio = _find_dlio(cli)
@@ -156,10 +217,12 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
         model = model_match.group(1) if model_match else ""
         accelerator = accelerator_match.group(1) if accelerator_match else ""
         assumption = None
-    if model not in {"unet3d", "retinanet"}:
+    if model not in {"unet3d", "retinanet", "cosmoflow", "resnet50", "dlrm", "flux"}:
         return _blocked(case, options, f"current mlpstorage training CLI does not expose model {model or config}")
-    if accelerator not in {"b200", "mi355"}:
+    if accelerator not in {"a100", "h100", "b200", "mi355"}:
         return _blocked(case, options, f"current mlpstorage training CLI does not expose accelerator {accelerator or config}")
+
+    division = "open" if model in {"unet3d", "retinanet"} and accelerator in {"b200", "mi355"} else "whatif"
 
     launcher, explanation = _launcher_args(options)
     workload_results = options.results_dir / case["case_id"] / "workload"
@@ -173,7 +236,7 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     commands: list[list[str]] = []
     if options.prepare or options.dry_run:
         commands.append([
-            cli, "open", "training", model, "datagen", "file",
+            cli, division, "training", model, "datagen", "file",
             "--num-processes", "1",
             *common,
             *_training_params(options),
@@ -188,7 +251,7 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     for accelerator_count in accelerator_values:
         for read_threads in thread_values:
             run_command = [
-                cli, "open", "training", model, "run", "file",
+                cli, division, "training", model, "run", "file",
                 "--accelerator-type", accelerator,
                 "--client-host-memory-in-gb", str(options.client_memory_gb),
                 "--num-accelerators", str(accelerator_count),
@@ -203,7 +266,7 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     plan = {
         "case_id": case["case_id"],
         "status": "READY",
-        "reason": "mapped to current mlpstorage training CLI",
+        "reason": f"mapped to current mlpstorage {division} training CLI",
         "commands": commands,
         "launcher": options.launcher,
         "launcher_explanation": explanation,
@@ -216,11 +279,55 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
 
 def _checkpoint_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     if case["case_id"] == "AI-CKP-008":
-        return _blocked(
-            case,
-            options,
-            "cold/warm restore requires an operator-approved purge/reboot step between write-only and read-only phases",
-        )
+        if options.engineering_smoke:
+            return _engineering_probe_plan(case, options)
+        if not options.dry_run and not options.cache_reset_command:
+            return _blocked(
+                case,
+                options,
+                "execute requires --cache-reset-command between the documented write-only and read-only phases",
+            )
+        cli = _find_mlpstorage(options.mlpstorage)
+        dlio = _find_dlio(cli)
+        launcher, explanation = _launcher_args(options)
+        workload_results = options.results_dir / case["case_id"] / "workload"
+        common = [
+            cli, "open", "checkpointing", "run", "file",
+            "--model", "llama3-8b",
+            "--num-processes", "8",
+            "--client-host-memory-in-gb", str(options.client_memory_gb),
+            "--checkpoint-folder", str(options.data_dir / "checkpoint" / case["case_id"]),
+            "--results-dir", str(workload_results),
+            "--systemname", f"full-{case['case_id'].lower()}",
+            "--dlio-bin-path", dlio,
+            *launcher,
+        ]
+        write_only = [
+            *common,
+            "--num-checkpoints-read", "0",
+            "--num-checkpoints-write", "1",
+            *_nonformal_args(options),
+        ]
+        read_only = [
+            *common,
+            "--num-checkpoints-read", "1",
+            "--num-checkpoints-write", "0",
+            *_nonformal_args(options),
+        ]
+        commands = [write_only]
+        if options.cache_reset_command:
+            commands.append(_shell_command(options.cache_reset_command))
+        commands.append(read_only)
+        return {
+            "case_id": case["case_id"],
+            "status": "READY",
+            "reason": "mapped to README write-only, cache-reset, read-only phases",
+            "commands": commands,
+            "launcher": options.launcher,
+            "launcher_explanation": explanation,
+            "source_command": case["source_command"],
+            "manual_gate": None if options.cache_reset_command else "supply an approved cache purge or reboot command before execute",
+        }
     cli = _find_mlpstorage(options.mlpstorage)
     dlio = _find_dlio(cli)
     config = case["model_config"].lower()
@@ -271,21 +378,127 @@ def _kv_model(config: str) -> str | None:
         ("mistral-7b", "mistral-7b"),
         ("llama2-7b", "llama2-7b"),
         ("tiny-1b", "tiny-1b"),
+        ("deepseek-v3", "deepseek-v3"),
+        ("qwen3-32b", "qwen3-32b"),
+        ("gpt-oss-20b", "gpt-oss-20b"),
+        ("gpt-oss-120b", "gpt-oss-120b"),
     ):
         if token in lowered:
             return model
-    if any(token in lowered for token in ("deepseek", "qwen", "gpt-oss", "burstgpt", "sharegpt")):
+    if any(token in lowered for token in ("burstgpt", "sharegpt")):
         return None
     return "llama3.1-8b"
 
 
+def _kv_trace_replay_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+    kv_cli = _find_kv_cli()
+    workload_results = options.results_dir / case["case_id"] / "workload"
+    trace_path = workload_results / "tier2_trace.csv"
+    model = "tiny-1b" if options.engineering_smoke else "llama3.1-8b"
+    generate = [
+        kv_cli,
+        "--config", str(REPO_ROOT / "kv_cache_benchmark" / "config.yaml"),
+        "--model", model,
+        "--num-users", str(options.users or 1),
+        "--duration", "1" if options.dry_run or options.engineering_smoke else str(options.duration_sec),
+        "--gpu-mem-gb", "0",
+        "--cpu-mem-gb", "0",
+        "--cache-dir", str(options.data_dir / "kvcache" / case["case_id"]),
+        "--generation-mode", "none",
+        "--performance-profile", "latency",
+        "--max-concurrent-allocs", "1",
+        "--max-requests", "1" if options.dry_run or options.engineering_smoke else "0",
+        "--seed", "42",
+        "--io-trace-log", str(trace_path),
+        "--output", str(workload_results / "trace_generation.json"),
+    ]
+    commands = [generate]
+    if not options.dry_run:
+        speed_values = [1, 2, 4] if options.matrix else [1]
+        for speed in speed_values:
+            commands.append([
+                sys.executable, "-m", "vdbbench.replay", str(trace_path),
+                "--data-dir", str(options.data_dir / "kv_replay" / f"{speed}x"),
+                "--speed", str(speed),
+                "--direct-io",
+                "--seed", "42",
+            ])
+    return {
+        "case_id": case["case_id"],
+        "status": "READY",
+        "reason": "mapped to documented KV I/O trace generation and vdbbench.replay pipeline",
+        "commands": commands,
+        "launcher": "local",
+        "launcher_explanation": "local trace generation and replay; no Docker engine is used",
+        "source_command": case["source_command"],
+        "nonformal": options.engineering_smoke,
+    }
+
+
+def _kv_dataset_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+    if options.burst_trace and options.sharegpt_dataset:
+        return _blocked(case, options, "choose only one of --burst-trace or --sharegpt-dataset")
+    fixture = REPO_ROOT / "full_test_plan_cases" / "fixtures" / "burstgpt_smoke.csv"
+    burst_trace = options.burst_trace or (fixture if options.engineering_smoke else None)
+    sharegpt_dataset = options.sharegpt_dataset
+    dataset = burst_trace or sharegpt_dataset
+    if dataset is None:
+        return _blocked(case, options, "provide --burst-trace or --sharegpt-dataset; --engineering-smoke uses the bundled tiny fixture")
+    if not dataset.is_file():
+        return _blocked(case, options, f"trace dataset not found: {dataset}")
+
+    workload_results = options.results_dir / case["case_id"] / "workload"
+    command = [
+        _find_kv_cli(),
+        "--config", str(REPO_ROOT / "kv_cache_benchmark" / "config.yaml"),
+        "--model", "tiny-1b" if options.engineering_smoke else "llama3.1-8b",
+        "--num-users", str(options.users or 1),
+        "--duration", "1" if options.dry_run or options.engineering_smoke else str(options.duration_sec),
+        "--gpu-mem-gb", "0",
+        "--cpu-mem-gb", "0",
+        "--cache-dir", str(options.data_dir / "kvcache" / case["case_id"]),
+        "--generation-mode", "none" if burst_trace else "realistic",
+        "--performance-profile", "latency",
+        "--max-concurrent-allocs", "1",
+        "--replay-cycles", "1",
+        "--seed", "42",
+        "--output", str(workload_results / "dataset_replay.json"),
+    ]
+    if burst_trace:
+        command.extend([
+            "--use-burst-trace",
+            "--burst-trace-path", str(burst_trace),
+            "--trace-speedup", "0" if options.engineering_smoke else "1",
+        ])
+    else:
+        command.extend(["--dataset-path", str(sharegpt_dataset), "--max-conversations", "10" if options.engineering_smoke else "500"])
+    if options.dry_run:
+        command.extend([
+            "--max-requests", "1",
+            "--io-trace-log", str(workload_results / "dataset_replay.trace.csv"),
+        ])
+    return {
+        "case_id": case["case_id"],
+        "status": "READY",
+        "reason": "mapped to documented BurstGPT/ShareGPT replay options",
+        "commands": [command],
+        "launcher": "local",
+        "launcher_explanation": "installed mlperf-kv-cache executable; no Docker engine is used",
+        "source_command": case["source_command"],
+        "nonformal": options.engineering_smoke,
+    }
+
+
 def _kv_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
-    if case["case_id"] in {"AI-KV-021", "AI-KV-022"}:
-        return _blocked(case, options, "trace replay requires the case trace file and its replay adapter")
+    if case["case_id"] == "AI-KV-021":
+        return _kv_trace_replay_plan(case, options)
+    if case["case_id"] == "AI-KV-022":
+        return _kv_dataset_plan(case, options)
     model = _kv_model(case["model_config"])
     if not model:
         return _blocked(case, options, f"current mlpstorage KV Cache CLI does not expose {case['model_config']}")
-    cli = _find_mlpstorage(options.mlpstorage)
+    extended_model = model in {"deepseek-v3", "qwen3-32b", "gpt-oss-20b", "gpt-oss-120b"}
+    cli = _find_kv_cli() if extended_model else _find_mlpstorage(options.mlpstorage)
     defaults = {
         "AI-KV-001": {"users": 200, "gpu": 0, "cpu": 0, "alloc": 16},
         "AI-KV-002": {"users": 100, "gpu": 0, "cpu": 4, "alloc": 16},
@@ -315,6 +528,30 @@ def _kv_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
         for generation_mode in generation_modes:
             for capacity in capacity_values:
                 for allocation in allocation_values:
+                    if extended_model:
+                        output_stem = f"{case['case_id'].lower()}-{users}-{generation_mode}"
+                        command = [
+                            cli,
+                            "--config", str(REPO_ROOT / "kv_cache_benchmark" / "config.yaml"),
+                            "--model", model,
+                            "--num-users", str(users),
+                            "--duration", "1" if options.dry_run or options.engineering_smoke else str(options.duration_sec),
+                            "--gpu-mem-gb", "0",
+                            "--cpu-mem-gb", "0",
+                            "--cache-dir", str(options.data_dir / "kvcache" / case["case_id"]),
+                            "--generation-mode", generation_mode,
+                            "--performance-profile", "latency",
+                            "--max-concurrent-allocs", str(allocation or 1),
+                            "--seed", "42",
+                            "--output", str(workload_results / f"{output_stem}.json"),
+                        ]
+                        if options.dry_run:
+                            command.extend([
+                                "--max-requests", "1",
+                                "--io-trace-log", str(workload_results / f"{output_stem}.trace.csv"),
+                            ])
+                        commands.append(command)
+                        continue
                     command = [
                         cli, "open", "kvcache", "run",
                         "--model", model,
@@ -344,7 +581,11 @@ def _kv_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     return {
         "case_id": case["case_id"],
         "status": "READY",
-        "reason": "mapped to current mlpstorage KV Cache CLI",
+        "reason": (
+            "mapped to installed mlperf-kv-cache config model"
+            if extended_model
+            else "mapped to current mlpstorage KV Cache CLI"
+        ),
         "commands": commands,
         "launcher": options.launcher,
         "launcher_explanation": explanation,
@@ -360,9 +601,41 @@ def _vdb_index(config: str) -> str:
     return "HNSW"
 
 
+def _vdb_replay_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+    fixture = REPO_ROOT / "full_test_plan_cases" / "fixtures" / "logical_io_smoke.csv"
+    trace_path = options.trace_file or (fixture if options.engineering_smoke else None)
+    if trace_path is None:
+        return _blocked(case, options, "provide --trace-file; --engineering-smoke uses the bundled aligned I/O fixture")
+    if not trace_path.is_file():
+        return _blocked(case, options, f"logical trace not found: {trace_path}")
+    speed_values = [1, 2, 4] if options.matrix else [1]
+    commands = []
+    for speed in speed_values:
+        commands.append([
+            sys.executable, "-m", "vdbbench.replay", str(trace_path),
+            "--data-dir", str(options.data_dir / "vdb_replay" / f"{speed}x"),
+            "--speed", str(speed),
+            "--direct-io",
+            "--seed", "42",
+        ])
+    plan = {
+        "case_id": case["case_id"],
+        "status": "READY",
+        "reason": "mapped to documented vdbbench.replay direct-I/O command",
+        "commands": [] if options.dry_run else commands,
+        "launcher": "local",
+        "launcher_explanation": "local logical I/O replay; no Docker engine is used",
+        "source_command": case["source_command"],
+        "nonformal": options.engineering_smoke,
+    }
+    if options.dry_run:
+        plan["preview_command"] = commands[0]
+    return plan
+
+
 def _vdb_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     if case["case_id"] == "AI-VDB-015":
-        return _blocked(case, options, "logical trace replay requires --custom-command with the selected trace path")
+        return _vdb_replay_plan(case, options)
     cli = _find_mlpstorage(options.mlpstorage)
     config = case["model_config"]
     index = _vdb_index(config)
@@ -464,6 +737,8 @@ def build_workload_plan(case: dict[str, Any], options: RunOptions) -> dict[str, 
     if family == "VectorDB":
         return _vdb_plan(case, options)
     if family == "Base":
+        if options.engineering_smoke and case["case_id"] in _PROBE_SCRIPTS:
+            return _engineering_probe_plan(case, options)
         if case["case_id"] == "AI-BASE-001":
             command = [
                 "powershell.exe", "-NoProfile", "-Command",
@@ -479,8 +754,10 @@ def build_workload_plan(case: dict[str, Any], options: RunOptions) -> dict[str, 
             if options.dry_run:
                 plan["preview_command"] = command
             return plan
-        return _blocked(case, options, "base case requires its authorized DUT PowerShell workload via --custom-command")
-    return _blocked(case, options, "mixed case requires explicit component commands and orchestration via --custom-command")
+        return _blocked(case, options, "formal base case requires its authorized DUT PowerShell workload via --custom-command; use --engineering-smoke for the safe probe")
+    if family == "Mixed" and options.engineering_smoke:
+        return _engineering_probe_plan(case, options)
+    return _blocked(case, options, "formal mixed case requires explicit component commands and orchestration via --custom-command; use --engineering-smoke for the concurrent probe")
 
 
 def _parser(case: dict[str, Any]) -> argparse.ArgumentParser:
@@ -503,6 +780,10 @@ def _parser(case: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument("--vector-dimension", type=int)
     parser.add_argument("--users", type=int)
     parser.add_argument("--o-direct", action="store_true")
+    parser.add_argument("--trace-file", type=Path, help="logical I/O CSV consumed by vdbbench.replay")
+    parser.add_argument("--burst-trace", type=Path, help="BurstGPT CSV used by AI-KV-022")
+    parser.add_argument("--sharegpt-dataset", type=Path, help="ShareGPT JSON used by AI-KV-022")
+    parser.add_argument("--cache-reset-command", help="approved cache purge or reboot command between checkpoint phases")
     parser.add_argument("--custom-command", help="approved exact workload command for unsupported or composite cases")
     parser.add_argument("--confirm-dut", action="store_true", help="required for mode=execute")
     return parser
@@ -528,6 +809,10 @@ def _options(args: argparse.Namespace) -> RunOptions:
         vector_dimension=args.vector_dimension,
         users=args.users,
         o_direct=args.o_direct,
+        trace_file=args.trace_file,
+        burst_trace=args.burst_trace,
+        sharegpt_dataset=args.sharegpt_dataset,
+        cache_reset_command=args.cache_reset_command,
         custom_command=args.custom_command,
     )
 
@@ -580,9 +865,19 @@ def classify_command_status(returncode: int, output: str) -> str:
     return "PASS" if returncode == 0 else "FAIL"
 
 
+def prepare_command_output_paths(command: Sequence[str]) -> None:
+    """Create parents for file outputs accepted by direct benchmark CLIs."""
+    for flag in ("--output", "--io-trace-log", "--xlsx-output"):
+        if flag in command:
+            index = command.index(flag)
+            if index + 1 < len(command):
+                Path(command[index + 1]).parent.mkdir(parents=True, exist_ok=True)
+
+
 def _execute_commands(commands: list[list[str]], case_dir: Path) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for index, command in enumerate(commands, start=1):
+        prepare_command_output_paths(command)
         cwd = _command_workdir(command, case_dir)
         init = _initialize_results_if_needed(command, cwd)
         command_env = os.environ.copy()

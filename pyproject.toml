@@ -88,6 +88,7 @@ packages = {find = {include = ["mlpstorage_py*", "vdbbench*", "full_test_plan_ca
 ]
 "full_test_plan_cases" = [
     "case_catalog.json",
+    "fixtures/*.csv",
     "source/*.xlsx",
     "source/*.ndjson",
 ]

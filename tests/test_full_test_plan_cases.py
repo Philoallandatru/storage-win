@@ -13,6 +13,7 @@ from full_test_plan_cases.runner import (
     RunOptions,
     build_workload_plan,
     classify_command_status,
+    prepare_command_output_paths,
     run_case,
 )
 
@@ -98,15 +99,91 @@ def test_current_windows_training_plan_uses_single_process_without_docker_engine
     assert plan["commands"][0][1:6] == ["open", "training", "unet3d", "datagen", "file"]
 
 
-def test_unsupported_current_model_is_blocked_instead_of_faked(tmp_path: Path) -> None:
-    case = next(case for case in load_catalog() if case["case_id"] == "AI-TRN-006")
+def test_whatif_training_models_and_accelerators_are_not_blocked(tmp_path: Path) -> None:
+    by_id = {case["case_id"]: case for case in load_catalog()}
     options = RunOptions(data_dir=tmp_path / "dut", results_dir=tmp_path / "results")
 
-    plan = build_workload_plan(case, options)
+    for case_id, model, accelerator in (
+        ("AI-TRN-001", "unet3d", "a100"),
+        ("AI-TRN-002", "unet3d", "h100"),
+        ("AI-TRN-006", "cosmoflow", "a100"),
+        ("AI-TRN-007", "cosmoflow", "h100"),
+        ("AI-TRN-008", "resnet50", "a100"),
+        ("AI-TRN-009", "resnet50", "h100"),
+        ("AI-TRN-010", "dlrm", "b200"),
+        ("AI-TRN-011", "dlrm", "mi355"),
+        ("AI-TRN-012", "flux", "b200"),
+        ("AI-TRN-013", "flux", "mi355"),
+    ):
+        plan = build_workload_plan(by_id[case_id], options)
+        assert plan["status"] == "READY", case_id
+        command = plan["commands"][-1]
+        assert command[1:4] == ["whatif", "training", model]
+        assert command[command.index("--accelerator-type") + 1] == accelerator
 
-    assert plan["status"] == "BLOCKED"
-    assert "cosmoflow" in plan["reason"].lower()
-    assert plan["commands"] == []
+
+def test_extended_kv_models_use_installed_mlperf_kv_cache(tmp_path: Path) -> None:
+    by_id = {case["case_id"]: case for case in load_catalog()}
+    options = RunOptions(data_dir=tmp_path / "dut", results_dir=tmp_path / "results")
+
+    for case_id, model in (
+        ("AI-KV-009", "deepseek-v3"),
+        ("AI-KV-010", "qwen3-32b"),
+        ("AI-KV-011", "gpt-oss-20b"),
+        ("AI-KV-012", "gpt-oss-120b"),
+    ):
+        plan = build_workload_plan(by_id[case_id], options)
+        assert plan["status"] == "READY", case_id
+        command = plan["commands"][0]
+        assert Path(command[0]).name.lower() in {"mlperf-kv-cache", "mlperf-kv-cache.exe"}
+        assert command[command.index("--model") + 1] == model
+        assert command[command.index("--config") + 1].endswith("kv_cache_benchmark\\config.yaml")
+
+
+def test_workflow_cases_offer_explicit_nonformal_try_runs(tmp_path: Path) -> None:
+    by_id = {case["case_id"]: case for case in load_catalog()}
+    options = RunOptions(
+        data_dir=tmp_path / "dut",
+        results_dir=tmp_path / "results",
+        dry_run=False,
+        engineering_smoke=True,
+    )
+
+    for case_id in (
+        "AI-BASE-002", "AI-BASE-003", "AI-BASE-004",
+        "AI-CKP-008", "AI-KV-021", "AI-KV-022", "AI-VDB-015",
+        "AI-MIX-001", "AI-MIX-002", "AI-MIX-003", "AI-MIX-004", "AI-MIX-005",
+    ):
+        plan = build_workload_plan(by_id[case_id], options)
+        assert plan["status"] == "READY", case_id
+        assert plan["commands"], case_id
+
+
+def test_cold_restore_and_trace_inputs_map_documented_workflows(tmp_path: Path) -> None:
+    by_id = {case["case_id"]: case for case in load_catalog()}
+    fixture_root = REPO_ROOT / "full_test_plan_cases" / "fixtures"
+    options = RunOptions(
+        data_dir=tmp_path / "dut",
+        results_dir=tmp_path / "results",
+        dry_run=False,
+        cache_reset_command="Write-Output cache-reset-approved",
+        trace_file=fixture_root / "logical_io_smoke.csv",
+        burst_trace=fixture_root / "burstgpt_smoke.csv",
+    )
+
+    checkpoint = build_workload_plan(by_id["AI-CKP-008"], options)
+    assert checkpoint["status"] == "READY"
+    assert len(checkpoint["commands"]) == 3
+    assert checkpoint["commands"][0][checkpoint["commands"][0].index("--num-checkpoints-read") + 1] == "0"
+    assert checkpoint["commands"][2][checkpoint["commands"][2].index("--num-checkpoints-write") + 1] == "0"
+
+    kv_trace = build_workload_plan(by_id["AI-KV-022"], options)
+    assert "--use-burst-trace" in kv_trace["commands"][0]
+    assert str(options.burst_trace) in kv_trace["commands"][0]
+
+    vdb_replay = build_workload_plan(by_id["AI-VDB-015"], options)
+    assert "vdbbench.replay" in vdb_replay["commands"][0]
+    assert str(options.trace_file) in vdb_replay["commands"][0]
 
 
 def test_formal_training_plan_does_not_bypass_compliance_gates(tmp_path: Path) -> None:
@@ -149,6 +226,14 @@ def test_dry_run_marker_is_not_reported_as_a_passing_workload() -> None:
     assert classify_command_status(0, "complete") == "PASS"
 
 
+def test_direct_cli_output_parents_are_created(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "result.json"
+
+    prepare_command_output_paths(["mlperf-kv-cache", "--output", str(output)])
+
+    assert output.parent.is_dir()
+
+
 def test_custom_command_is_preview_only_in_dry_run(tmp_path: Path) -> None:
     case = next(case for case in load_catalog() if case["case_id"] == "AI-MIX-001")
     options = RunOptions(
@@ -175,8 +260,9 @@ def test_checkpoint_counts_and_cold_restore_phases_follow_full_plan(tmp_path: Pa
     assert command[command.index("--num-checkpoints-read") + 1] == "10"
 
     cold_restore = build_workload_plan(by_id["AI-CKP-008"], options)
-    assert cold_restore["status"] == "BLOCKED"
-    assert "purge/reboot" in cold_restore["reason"]
+    assert cold_restore["status"] == "READY"
+    assert len(cold_restore["commands"]) == 2
+    assert cold_restore["manual_gate"] is not None
 
 
 def test_supported_full_matrix_sweeps_are_expanded(tmp_path: Path) -> None:

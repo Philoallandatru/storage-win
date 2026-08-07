@@ -155,7 +155,7 @@ def read_config_from_file(relative_path: str) -> Dict[str, Any]:
     if not os.path.isfile(config_path):
         raise FileNotFoundError(f"Configuration file not found: {config_path}")
 
-    with open(config_path, 'r') as f:
+    with open(config_path, 'r', encoding='utf-8-sig') as f:
         config = yaml.safe_load(f)
 
     return config

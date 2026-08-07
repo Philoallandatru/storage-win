@@ -1,0 +1,3 @@
+Timestamp,Model,Request tokens,Response tokens,Total tokens,Log Type
+0.000,ChatGPT,16,8,24,request
+0.001,ChatGPT,32,16,48,request

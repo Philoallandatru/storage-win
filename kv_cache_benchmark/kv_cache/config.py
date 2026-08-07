@@ -135,7 +135,10 @@ class ConfigLoader:
         if not path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-        with open(path, 'r') as f:
+        # Configuration files in this repository are UTF-8.  Relying on the
+        # Windows process code page corrupts typographic characters in comments
+        # and can raise UnicodeDecodeError before YAML parsing starts.
+        with path.open('r', encoding='utf-8-sig') as f:
             self.config = yaml.safe_load(f) or {}
 
         # Validate all keys against schema
