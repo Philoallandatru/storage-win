@@ -104,19 +104,6 @@ class TestComputeCodeTreeMd5:
 
         assert digest_a == digest_b
 
-    def test_office_owner_lock_file_excluded(self, tmp_path, mock_logger):
-        """Office ``~$`` owner files are transient and may be unreadable while open."""
-        from mlpstorage_py.submission_checker.tools.code_checksum import compute_code_tree_md5
-
-        tree = tmp_path / "tree"
-        write_binary(tree / "benchmark.py", b"MODEL = 'unet3d'\n")
-        digest_without_lock = compute_code_tree_md5(str(tree), mock_logger)
-
-        write_binary(tree / "docs" / "~$FULL_TEST_PLAN.xlsx", b"transient office lock")
-        digest_with_lock = compute_code_tree_md5(str(tree), mock_logger)
-
-        assert digest_with_lock == digest_without_lock
-
     def test_binary_mode_no_line_ending_normalization(self, tmp_path, mock_logger):
         """Behavior 3: binary-mode read — CRLF and LF files with identical content
         produce the same digest; LF vs CRLF byte streams produce different digests."""

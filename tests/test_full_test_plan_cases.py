@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from collections import Counter
 from pathlib import Path
 
 from full_test_plan_cases.catalog import SOURCE_SHA256, load_catalog
-from full_test_plan_cases.runner import RunOptions, build_workload_plan, run_case
+from full_test_plan_cases.runner import (
+    RunOptions,
+    build_workload_plan,
+    classify_command_status,
+    run_case,
+)
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -39,6 +46,8 @@ def test_full_plan_has_all_72_cases_in_workbook_order() -> None:
         "Mixed": 5,
     }
     assert SOURCE_SHA256 == "fada60afe5124244551ce248d3e8e3149a57a5b1b25bed2bc212d860d1d27656"
+    assert (REPO_ROOT / "full_test_plan_cases" / "source" / "FULL_TEST_PLAN.xlsx").is_file()
+    assert (REPO_ROOT / "full_test_plan_cases" / "source" / "FULL_TEST_PLAN.xlsx.inspect.ndjson").is_file()
 
 
 def test_each_full_plan_case_has_one_case_id_entrypoint() -> None:
@@ -134,6 +143,71 @@ def test_engineering_smoke_is_explicitly_nonformal(tmp_path: Path) -> None:
     assert "dataset.num_files_train=8" in command
 
 
+def test_dry_run_marker_is_not_reported_as_a_passing_workload() -> None:
+    assert classify_command_status(6, "Dry-run mode: Command: dlio_benchmark") == "DRY_RUN"
+    assert classify_command_status(6, "benchmark failed") == "FAIL"
+    assert classify_command_status(0, "complete") == "PASS"
+
+
+def test_custom_command_is_preview_only_in_dry_run(tmp_path: Path) -> None:
+    case = next(case for case in load_catalog() if case["case_id"] == "AI-MIX-001")
+    options = RunOptions(
+        data_dir=tmp_path / "dut",
+        results_dir=tmp_path / "results",
+        dry_run=True,
+        custom_command="Write-Output SHOULD_NOT_EXECUTE",
+    )
+
+    plan = build_workload_plan(case, options)
+
+    assert plan["status"] == "READY"
+    assert plan["commands"] == []
+    assert "SHOULD_NOT_EXECUTE" in " ".join(plan["preview_command"])
+
+
+def test_checkpoint_counts_and_cold_restore_phases_follow_full_plan(tmp_path: Path) -> None:
+    by_id = {case["case_id"]: case for case in load_catalog()}
+    options = RunOptions(data_dir=tmp_path / "dut", results_dir=tmp_path / "results")
+
+    baseline = build_workload_plan(by_id["AI-CKP-001"], options)
+    command = baseline["commands"][0]
+    assert command[command.index("--num-checkpoints-write") + 1] == "10"
+    assert command[command.index("--num-checkpoints-read") + 1] == "10"
+
+    cold_restore = build_workload_plan(by_id["AI-CKP-008"], options)
+    assert cold_restore["status"] == "BLOCKED"
+    assert "purge/reboot" in cold_restore["reason"]
+
+
+def test_supported_full_matrix_sweeps_are_expanded(tmp_path: Path) -> None:
+    by_id = {case["case_id"]: case for case in load_catalog()}
+    options = RunOptions(
+        data_dir=tmp_path / "dut",
+        results_dir=tmp_path / "results",
+        matrix=True,
+    )
+
+    training = build_workload_plan(by_id["AI-TRN-003"], options)
+    accelerator_values = [
+        int(command[command.index("--num-accelerators") + 1])
+        for command in training["commands"]
+        if "--num-accelerators" in command
+    ]
+    assert accelerator_values == [1, 2, 4, 8]
+
+    kv = build_workload_plan(by_id["AI-KV-007"], options)
+    users = [int(command[command.index("--num-users") + 1]) for command in kv["commands"]]
+    assert users == [25, 50, 100, 200]
+
+    vdb = build_workload_plan(by_id["AI-VDB-008"], options)
+    run_indices = {
+        command[command.index("--vdb-index") + 1]
+        for command in vdb["commands"]
+        if "run" in command
+    }
+    assert run_indices == {"DISKANN", "HNSW", "AISAQ", "IVF_FLAT", "IVF_SQ8", "FLAT"}
+
+
 def test_plan_mode_writes_a_manifest_for_every_case(tmp_path: Path) -> None:
     catalog = load_catalog()
     for case in catalog:
@@ -155,3 +229,16 @@ def test_plan_mode_writes_a_manifest_for_every_case(tmp_path: Path) -> None:
     assert payload["case"]["case_id"] == "AI-BASE-001"
     assert payload["mode"] == "plan"
     assert payload["source_sha256"] == SOURCE_SHA256
+
+
+def test_run_all_is_directly_launchable_from_repo_root() -> None:
+    completed = subprocess.run(
+        [sys.executable, str(REPO_ROOT / "full_test_plan_cases" / "run_all.py"), "--help"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert "Run all matching FULL_TEST_PLAN case entrypoints" in completed.stdout

@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
+
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from full_test_plan_cases.catalog import load_catalog
 from full_test_plan_cases.runner import run_case

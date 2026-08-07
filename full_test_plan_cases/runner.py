@@ -36,12 +36,14 @@ class RunOptions:
     mlpstorage: Path | str | None = None
     dry_run: bool = True
     engineering_smoke: bool = False
+    matrix: bool = False
+    repeats: int = 1
     prepare: bool = False
     accelerators: int = 1
     client_memory_gb: int = 64
     duration_sec: int = 60
     query_processes: int = 1
-    num_vectors: int = 1_000
+    num_vectors: int | None = None
     vector_dimension: int | None = None
     users: int | None = None
     o_direct: bool = False
@@ -88,12 +90,13 @@ def _nonformal_args(options: RunOptions) -> list[str]:
     return args
 
 
-def _training_params(options: RunOptions) -> list[str]:
+def _training_params(options: RunOptions, *extra: str) -> list[str]:
     values: list[str] = []
     if options.dry_run or options.engineering_smoke:
         values.append("dataset.num_files_train=8")
     if os.name == "nt":
         values.append("reader.multiprocessing_context=spawn")
+    values.extend(extra)
     return ["--params", *values] if values else []
 
 
@@ -120,15 +123,23 @@ def _custom_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     else:
         command = ["bash", "-lc", options.custom_command or ""]
     _, explanation = _launcher_args(options)
-    return {
+    plan = {
         "case_id": case["case_id"],
         "status": "READY",
-        "reason": "approved custom workload command",
-        "commands": [command],
+        "reason": "approved custom workload command" if not options.dry_run else "custom command preview only",
+        "commands": [] if options.dry_run else [command],
         "launcher": options.launcher,
         "launcher_explanation": explanation,
         "source_command": case["source_command"],
     }
+    if options.dry_run:
+        plan["preview_command"] = command
+    return plan
+
+
+def _slash_values(text: str, label: str) -> list[int]:
+    match = re.search(rf"\b{re.escape(label)}\s+([0-9]+(?:/[0-9]+)+)", text, re.I)
+    return [int(value) for value in match.group(1).split("/")] if match else []
 
 
 def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
@@ -168,19 +179,27 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
             *_training_params(options),
             *_nonformal_args(options),
         ])
-    run_command = [
-        cli, "open", "training", model, "run", "file",
-        "--accelerator-type", accelerator,
-        "--client-host-memory-in-gb", str(options.client_memory_gb),
-        "--num-accelerators", str(options.accelerators),
-        *common,
-        *_training_params(options),
-        *_timeseries_args(options),
-        *_nonformal_args(options),
-    ]
-    if options.o_direct:
-        run_command.append("--o-direct")
-    commands.append(run_command)
+    accelerator_values = [options.accelerators]
+    if options.matrix:
+        accelerator_values = _slash_values(case["primary_variables"], "accelerators") or accelerator_values
+    thread_values: list[int | None] = [None]
+    if options.matrix and case["case_id"] == "AI-TRN-015":
+        thread_values = _slash_values(case["primary_variables"], "threads") or thread_values
+    for accelerator_count in accelerator_values:
+        for read_threads in thread_values:
+            run_command = [
+                cli, "open", "training", model, "run", "file",
+                "--accelerator-type", accelerator,
+                "--client-host-memory-in-gb", str(options.client_memory_gb),
+                "--num-accelerators", str(accelerator_count),
+                "--loops", str(options.repeats),
+                *common,
+                *_training_params(options, *([f"reader.read_threads={read_threads}"] if read_threads is not None else [])),
+            ]
+            run_command.extend([*_timeseries_args(options), *_nonformal_args(options)])
+            if options.o_direct:
+                run_command.append("--o-direct")
+            commands.append(run_command)
     plan = {
         "case_id": case["case_id"],
         "status": "READY",
@@ -196,6 +215,12 @@ def _training_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
 
 
 def _checkpoint_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
+    if case["case_id"] == "AI-CKP-008":
+        return _blocked(
+            case,
+            options,
+            "cold/warm restore requires an operator-approved purge/reboot step between write-only and read-only phases",
+        )
     cli = _find_mlpstorage(options.mlpstorage)
     dlio = _find_dlio(cli)
     config = case["model_config"].lower()
@@ -205,25 +230,32 @@ def _checkpoint_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any
     ranks = int(rank_match.group(1)) if rank_match else 8
     launcher, explanation = _launcher_args(options)
     workload_results = options.results_dir / case["case_id"] / "workload"
-    command = [
-        cli, "open", "checkpointing", "run", "file",
-        "--model", model,
-        "--num-processes", str(ranks),
-        "--client-host-memory-in-gb", str(options.client_memory_gb),
-        "--checkpoint-folder", str(options.data_dir / "checkpoint" / case["case_id"]),
-        "--num-checkpoints-read", "1",
-        "--num-checkpoints-write", "1",
-        "--results-dir", str(workload_results),
-        "--systemname", f"full-{case['case_id'].lower()}",
-        "--dlio-bin-path", dlio,
-        *launcher,
-        *_nonformal_args(options),
-    ]
+    counts = [1]
+    if case["case_id"] in {"AI-CKP-001", "AI-CKP-007", "AI-CKP-009"}:
+        counts = [10]
+    if case["case_id"] == "AI-CKP-009" and options.matrix:
+        counts = [1, 2, 10]
+    commands = []
+    for count in counts:
+        commands.append([
+            cli, "open", "checkpointing", "run", "file",
+            "--model", model,
+            "--num-processes", str(ranks),
+            "--client-host-memory-in-gb", str(options.client_memory_gb),
+            "--checkpoint-folder", str(options.data_dir / "checkpoint" / case["case_id"]),
+            "--num-checkpoints-read", str(count),
+            "--num-checkpoints-write", str(count),
+            "--results-dir", str(workload_results),
+            "--systemname", f"full-{case['case_id'].lower()}",
+            "--dlio-bin-path", dlio,
+            *launcher,
+            *_nonformal_args(options),
+        ])
     return {
         "case_id": case["case_id"],
         "status": "READY",
         "reason": "mapped to current mlpstorage checkpointing CLI",
-        "commands": [command],
+        "commands": commands,
         "launcher": options.launcher,
         "launcher_explanation": explanation,
         "source_command": case["source_command"],
@@ -254,31 +286,66 @@ def _kv_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     if not model:
         return _blocked(case, options, f"current mlpstorage KV Cache CLI does not expose {case['model_config']}")
     cli = _find_mlpstorage(options.mlpstorage)
+    defaults = {
+        "AI-KV-001": {"users": 200, "gpu": 0, "cpu": 0, "alloc": 16},
+        "AI-KV-002": {"users": 100, "gpu": 0, "cpu": 4, "alloc": 16},
+        "AI-KV-003": {"users": 70, "gpu": 0, "cpu": 0, "alloc": 4},
+    }.get(case["case_id"], {})
     users_match = re.search(r"(\d+) users", case["primary_variables"], re.I)
-    users = options.users or (int(users_match.group(1)) if users_match else 10)
+    default_users = int(defaults.get("users", int(users_match.group(1)) if users_match else 10))
+    user_values = [options.users or default_users]
+    if options.matrix and options.users is None:
+        user_values = _slash_values(case["primary_variables"], "users") or user_values
+        range_match = re.search(r"users\s+(\d+)\s+to\s+(\d+)", case["primary_variables"], re.I)
+        if range_match:
+            user_values = [int(range_match.group(1)), int(range_match.group(2))]
+    generation_modes = ["none"]
+    if options.matrix and case["case_id"] == "AI-KV-018":
+        generation_modes = ["none", "fast", "realistic"]
+    capacity_values: list[int | None] = [None]
+    if options.matrix and case["case_id"] == "AI-KV-013":
+        capacity_values = [0, 4, 16, 32]
+    allocation_values: list[int | None] = [int(defaults["alloc"])] if "alloc" in defaults else [None]
+    if options.matrix and case["case_id"] == "AI-KV-006":
+        allocation_values = [1, 2, 4, 8]
     launcher, explanation = _launcher_args(options)
     workload_results = options.results_dir / case["case_id"] / "workload"
-    command = [
-        cli, "open", "kvcache", "run",
-        "--model", model,
-        "--num-users", str(users),
-        "--duration", str(options.duration_sec),
-        "--trials", "1" if options.dry_run else "3",
-        "--inter-option-delay", "0" if options.dry_run else "20",
-        "--num-processes", "1",
-        "--hosts", "localhost",
-        "--cache-dir", str(options.data_dir / "kvcache" / case["case_id"]),
-        "--results-dir", str(workload_results),
-        "--systemname", f"full-{case['case_id'].lower()}",
-        *launcher,
-        *_timeseries_args(options),
-        *_nonformal_args(options),
-    ]
+    commands = []
+    for users in user_values:
+        for generation_mode in generation_modes:
+            for capacity in capacity_values:
+                for allocation in allocation_values:
+                    command = [
+                        cli, "open", "kvcache", "run",
+                        "--model", model,
+                        "--num-users", str(users),
+                        "--duration", str(options.duration_sec),
+                        "--generation-mode", generation_mode,
+                        "--trials", "1" if options.dry_run or options.engineering_smoke else "3",
+                        "--inter-option-delay", "0" if options.dry_run or options.engineering_smoke else "20",
+                        "--loops", str(options.repeats),
+                        "--num-processes", "1",
+                        "--hosts", "localhost",
+                        "--cache-dir", str(options.data_dir / "kvcache" / case["case_id"]),
+                        "--results-dir", str(workload_results),
+                        "--systemname", f"full-{case['case_id'].lower()}",
+                        *launcher,
+                    ]
+                    gpu_value = capacity if capacity is not None else defaults.get("gpu")
+                    cpu_value = capacity if capacity is not None else defaults.get("cpu")
+                    if gpu_value is not None:
+                        command.extend(["--gpu-mem-gb", str(gpu_value)])
+                    if cpu_value is not None:
+                        command.extend(["--cpu-mem-gb", str(cpu_value)])
+                    if allocation is not None:
+                        command.extend(["--max-concurrent-allocs", str(allocation)])
+                    command.extend([*_timeseries_args(options), *_nonformal_args(options)])
+                    commands.append(command)
     return {
         "case_id": case["case_id"],
         "status": "READY",
         "reason": "mapped to current mlpstorage KV Cache CLI",
-        "commands": [command],
+        "commands": commands,
         "launcher": options.launcher,
         "launcher_explanation": explanation,
         "source_command": case["source_command"],
@@ -299,43 +366,79 @@ def _vdb_plan(case: dict[str, Any], options: RunOptions) -> dict[str, Any]:
     cli = _find_mlpstorage(options.mlpstorage)
     config = case["model_config"]
     index = _vdb_index(config)
+    indices = [index]
+    if options.matrix and case["case_id"] == "AI-VDB-008":
+        indices = ["DISKANN", "HNSW", "AISAQ", "IVF_FLAT", "IVF_SQ8", "FLAT"]
     dim_match = re.search(r"[x×](\d+)", config, re.I)
     dimension = options.vector_dimension or (int(dim_match.group(1)) if dim_match else 128)
+    declared_vectors = 10_000_000 if re.search(r"\b10M", config, re.I) else (1_000_000 if re.search(r"\b1M", config, re.I) else 1_000)
+    num_vectors = options.num_vectors or (1_000 if options.dry_run or options.engineering_smoke else declared_vectors)
+    query_processes = [options.query_processes]
+    if options.matrix:
+        query_processes = {
+            "AI-VDB-006": [1, 4, 8],
+            "AI-VDB-010": [1, 2, 4, 8, 16],
+        }.get(case["case_id"], query_processes)
+    search_efs: list[int | None] = [None]
+    if options.matrix:
+        search_efs = {
+            "AI-VDB-002": [32, 128, 256],
+            "AI-VDB-007": [32, 64, 128, 256, 512],
+            "AI-VDB-009": [32, 64, 128, 256, 512],
+        }.get(case["case_id"], search_efs)
+    batch_sizes: list[int | None] = [None]
+    if options.matrix and case["case_id"] == "AI-VDB-011":
+        batch_sizes = [1, 8, 32, 64]
+    search_limits: list[int | None] = [None]
+    if options.matrix and case["case_id"] == "AI-VDB-013":
+        search_limits = [10, 100]
     workload_results = options.results_dir / case["case_id"] / "workload"
-    collection = case["case_id"].lower().replace("-", "_")
     commands: list[list[str]] = []
-    if options.prepare or options.dry_run:
-        commands.append([
-            cli, "open", "vectordb", "datagen", "file",
-            "--vdb-engine", "milvus",
-            "--vdb-index", index,
-            "--host", "127.0.0.1",
-            "--port", "19530",
-            "--collection", collection,
-            "--num-vectors", str(options.num_vectors),
-            "--dimension", str(dimension),
-            "--num-shards", "1",
-            "--force",
-            "--results-dir", str(workload_results),
-            "--systemname", f"full-{case['case_id'].lower()}",
-            *_nonformal_args(options),
-        ])
-    commands.append([
-        cli, "open", "vectordb", "run", "file",
-        "--vdb-engine", "milvus",
-        "--vdb-index", index,
-        "--host", "127.0.0.1",
-        "--port", "19530",
-        "--collection", collection,
-        "--vector-dim", str(dimension),
-        "--num-query-processes", str(options.query_processes),
-        "--runtime", str(options.duration_sec),
-        "--storage-root", str(options.data_dir / "milvus"),
-        "--results-dir", str(workload_results),
-        "--systemname", f"full-{case['case_id'].lower()}",
-        *_timeseries_args(options),
-        *_nonformal_args(options),
-    ])
+    for current_index in indices:
+        collection = f"{case['case_id'].lower().replace('-', '_')}_{current_index.lower()}"
+        if options.prepare or options.dry_run:
+            commands.append([
+                cli, "open", "vectordb", "datagen", "file",
+                "--vdb-engine", "milvus",
+                "--vdb-index", current_index,
+                "--host", "127.0.0.1",
+                "--port", "19530",
+                "--collection", collection,
+                "--num-vectors", str(num_vectors),
+                "--dimension", str(dimension),
+                "--num-shards", "1",
+                "--force",
+                "--results-dir", str(workload_results),
+                "--systemname", f"full-{case['case_id'].lower()}",
+                *_nonformal_args(options),
+            ])
+        for query_count in query_processes:
+            for search_ef in search_efs:
+                for batch_size in batch_sizes:
+                    for search_limit in search_limits:
+                        command = [
+                            cli, "open", "vectordb", "run", "file",
+                            "--vdb-engine", "milvus",
+                            "--vdb-index", current_index,
+                            "--host", "127.0.0.1",
+                            "--port", "19530",
+                            "--collection", collection,
+                            "--vector-dim", str(dimension),
+                            "--num-query-processes", str(query_count),
+                            "--runtime", str(options.duration_sec),
+                            "--loops", str(options.repeats),
+                            "--storage-root", str(options.data_dir / "milvus"),
+                            "--results-dir", str(workload_results),
+                            "--systemname", f"full-{case['case_id'].lower()}",
+                        ]
+                        if search_ef is not None:
+                            command.extend(["--search-ef", str(search_ef)])
+                        if batch_size is not None:
+                            command.extend(["--batch-size", str(batch_size)])
+                        if search_limit is not None:
+                            command.extend(["--search-limit", str(search_limit), "--recall-k", str(search_limit)])
+                        command.extend([*_timeseries_args(options), *_nonformal_args(options)])
+                        commands.append(command)
     return {
         "case_id": case["case_id"],
         "status": "READY",
@@ -368,11 +471,14 @@ def build_workload_plan(case: dict[str, Any], options: RunOptions) -> dict[str, 
                 "Get-PhysicalDisk | Format-Table FriendlyName,SerialNumber,HealthStatus,OperationalStatus,Size",
             ]
             _, explanation = _launcher_args(options)
-            return {
+            plan = {
                 "case_id": case["case_id"], "status": "READY", "reason": "read-only Windows inventory",
-                "commands": [command], "launcher": "local", "launcher_explanation": explanation,
+                "commands": [] if options.dry_run else [command], "launcher": "local", "launcher_explanation": explanation,
                 "source_command": case["source_command"],
             }
+            if options.dry_run:
+                plan["preview_command"] = command
+            return plan
         return _blocked(case, options, "base case requires its authorized DUT PowerShell workload via --custom-command")
     return _blocked(case, options, "mixed case requires explicit component commands and orchestration via --custom-command")
 
@@ -386,12 +492,14 @@ def _parser(case: dict[str, Any]) -> argparse.ArgumentParser:
     parser.add_argument("--mpi-bin", choices=("mpiexec", "mpirun"), default="mpiexec" if os.name == "nt" else "mpirun")
     parser.add_argument("--mlpstorage", type=Path)
     parser.add_argument("--engineering-smoke", action="store_true", help="use a deliberately reduced, non-submittable workload")
+    parser.add_argument("--matrix", action="store_true", help="expand every supported sweep point declared by this Case")
+    parser.add_argument("--repeats", type=int, help="workload loops per sweep point; formal default is 3")
     parser.add_argument("--prepare", action="store_true", help="run the case's data-generation step before the workload")
     parser.add_argument("--accelerators", type=int, default=1)
     parser.add_argument("--client-memory-gb", type=int, default=64)
     parser.add_argument("--duration-sec", type=int, default=60)
     parser.add_argument("--query-processes", type=int, default=1)
-    parser.add_argument("--num-vectors", type=int, default=1_000)
+    parser.add_argument("--num-vectors", type=int)
     parser.add_argument("--vector-dimension", type=int)
     parser.add_argument("--users", type=int)
     parser.add_argument("--o-direct", action="store_true")
@@ -409,6 +517,8 @@ def _options(args: argparse.Namespace) -> RunOptions:
         mlpstorage=args.mlpstorage,
         dry_run=args.mode in {"plan", "preflight", "dry-run"},
         engineering_smoke=args.engineering_smoke,
+        matrix=args.matrix,
+        repeats=args.repeats or (1 if args.mode in {"plan", "preflight", "dry-run"} or args.engineering_smoke else 3),
         prepare=args.prepare,
         accelerators=args.accelerators,
         client_memory_gb=args.client_memory_gb,
@@ -463,6 +573,13 @@ def _initialize_results_if_needed(command: Sequence[str], cwd: Path) -> dict[str
     return {"returncode": init.returncode, "stdout": init.stdout[-2000:], "stderr": init.stderr[-2000:]}
 
 
+def classify_command_status(returncode: int, output: str) -> str:
+    """Classify process completion without treating command generation as a workload pass."""
+    if "dry-run mode" in output.lower():
+        return "DRY_RUN"
+    return "PASS" if returncode == 0 else "FAIL"
+
+
 def _execute_commands(commands: list[list[str]], case_dir: Path) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     for index, command in enumerate(commands, start=1):
@@ -489,13 +606,14 @@ def _execute_commands(commands: list[list[str]], case_dir: Path) -> list[dict[st
         stderr_path = case_dir / f"command_{index:02d}.stderr.log"
         stdout_path.write_text(completed.stdout, encoding="utf-8")
         stderr_path.write_text(completed.stderr, encoding="utf-8")
-        dry_run_detected = "dry-run mode" in f"{completed.stdout}\n{completed.stderr}".lower()
+        combined_output = f"{completed.stdout}\n{completed.stderr}"
+        status = classify_command_status(completed.returncode, combined_output)
         results.append({
             "command": command,
             "command_text": subprocess.list2cmdline(command) if os.name == "nt" else shlex.join(command),
             "returncode": completed.returncode,
-            "status": "PASS" if completed.returncode == 0 or dry_run_detected else "FAIL",
-            "dry_run_detected": dry_run_detected,
+            "status": status,
+            "dry_run_detected": status == "DRY_RUN",
             "stdout": str(stdout_path),
             "stderr": str(stderr_path),
             "init": init,
@@ -537,7 +655,9 @@ def run_case(case_id: str, argv: Sequence[str] | None = None) -> int:
             return 2
         command_results = _execute_commands(plan["commands"], case_dir)
         manifest["command_results"] = command_results
-        if all(item["status"] == "PASS" for item in command_results):
+        if args.mode == "dry-run" and not any(item["status"] == "FAIL" for item in command_results):
+            manifest["status"] = "DRY_RUN"
+        elif all(item["status"] == "PASS" for item in command_results):
             manifest["status"] = "SMOKE_PASS" if options.engineering_smoke and args.mode == "execute" else "PASS"
         else:
             manifest["status"] = "FAIL"
@@ -545,7 +665,7 @@ def run_case(case_id: str, argv: Sequence[str] | None = None) -> int:
         manifest["status"] = "PLANNED" if args.mode == "plan" else ("READY" if manifest["preflight"]["ready"] else "BLOCKED")
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{case['case_id']} {manifest['status']} -> {manifest_path}")
-    return 0 if manifest["status"] in {"PLANNED", "READY", "PASS", "SMOKE_PASS"} else 2
+    return 0 if manifest["status"] in {"PLANNED", "READY", "DRY_RUN", "PASS", "SMOKE_PASS"} else 2
 
 
 def main(case_id: str | None = None) -> int:

@@ -11,9 +11,10 @@ from typing import Any
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_WORKBOOK = REPO_ROOT / "outputs" / "ai_ssd_case_matrix_full_v2_019fc23e" / "AI_SSD_AI_PC_Case_Execution_Matrix_FULL_v2_CN.xlsx"
-DEFAULT_INSPECT = REPO_ROOT / "outputs" / "ai_ssd_case_matrix_full_019fc23e" / "AI_SSD_AI_PC_Case_Execution_Matrix_FULL_CN.xlsx.inspect.ndjson"
 OUTPUT_ROOT = REPO_ROOT / "full_test_plan_cases"
+SOURCE_ROOT = OUTPUT_ROOT / "source"
+DEFAULT_WORKBOOK = SOURCE_ROOT / "FULL_TEST_PLAN.xlsx"
+DEFAULT_INSPECT = SOURCE_ROOT / "FULL_TEST_PLAN.xlsx.inspect.ndjson"
 EXPECTED_SHA256 = "fada60afe5124244551ce248d3e8e3149a57a5b1b25bed2bc212d860d1d27656"
 
 
