@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import types
 from collections import Counter
 from pathlib import Path
 
@@ -24,6 +25,37 @@ CASE_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 
 def _filename(case_id: str) -> str:
     return f"test_{case_id.lower().replace('-', '_')}.py"
+
+
+def test_runner_import_does_not_require_datetime_utc(monkeypatch) -> None:
+    """The standalone case launcher must also import on Python 3.10."""
+    import builtins
+    import datetime as real_datetime
+    import importlib.util
+
+    datetime_without_utc = types.ModuleType("datetime")
+    for name in dir(real_datetime):
+        if name != "UTC":
+            setattr(datetime_without_utc, name, getattr(real_datetime, name))
+
+    real_import = builtins.__import__
+
+    def import_without_utc(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "datetime":
+            return datetime_without_utc
+        return real_import(name, globals, locals, fromlist, level)
+
+    module_name = "_full_test_plan_runner_datetime_compat"
+    spec = importlib.util.spec_from_file_location(
+        module_name,
+        REPO_ROOT / "full_test_plan_cases" / "runner.py",
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, module_name, module)
+    monkeypatch.setattr(builtins, "__import__", import_without_utc)
+
+    spec.loader.exec_module(module)
 
 
 def test_full_plan_has_all_72_cases_in_workbook_order() -> None:

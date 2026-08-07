@@ -3,8 +3,10 @@
 本目录严格来自随包保存的 `source/FULL_TEST_PLAN.xlsx`（原文件名 `AI_SSD_AI_PC_Case_Execution_Matrix_FULL_v2_CN.xlsx`，SHA-256：`fada60af...d27656`），按工作簿顺序生成 72 个脚本。入口文件位于 `cases/`，文件名与 Case ID 一一对应，例如：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_trn_003.py --mode plan --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_trn_003.py --mode plan --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
+
+项目正式运行时要求 Python 3.12；Windows 上请始终使用仓库的 `.\.venv\Scripts\python.exe`，不要依赖 PATH 中可能较旧的系统 `python`。可先执行 `.\.venv\Scripts\python.exe --version` 确认。
 
 ## 运行层级
 
@@ -43,38 +45,38 @@ Windows 单进程使用 `--launcher single`。当前 CLI 内部仍将它拼成 `
 UNet3D/B200：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_trn_003.py --mode dry-run --launcher single --prepare --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_trn_003.py --mode dry-run --launcher single --prepare --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 README 中列出的 What-if 模型，例如 CosmoFlow/A100：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_trn_006.py --mode dry-run --launcher single --prepare --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_trn_006.py --mode dry-run --launcher single --prepare --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 配置文件提供的扩展 KV 模型，例如 DeepSeek-V3：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_kv_009.py --mode dry-run --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_kv_009.py --mode dry-run --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 BurstGPT 或 ShareGPT 二选一：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_kv_022.py --mode execute --confirm-dut --burst-trace D:\traces\BurstGPT_1.csv --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
-python full_test_plan_cases/cases/test_ai_kv_022.py --mode execute --confirm-dut --sharegpt-dataset D:\traces\ShareGPT.json --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_kv_022.py --mode execute --confirm-dut --burst-trace D:\traces\BurstGPT_1.csv --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_kv_022.py --mode execute --confirm-dut --sharegpt-dataset D:\traces\ShareGPT.json --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 Checkpoint cold/warm 分段；缓存处理命令必须由 DUT 管理者批准：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_ckp_008.py --mode execute --confirm-dut --cache-reset-command "<批准的缓存清理或重启命令>" --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_ckp_008.py --mode execute --confirm-dut --cache-reset-command "<批准的缓存清理或重启命令>" --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 缩小工程规模的本地实跑（会产生真实 I/O，但结果明确标为 `SMOKE_PASS`，不可作为正式成绩）：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_trn_003.py --mode execute --engineering-smoke --confirm-dut --launcher single --prepare --accelerators 1 --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_trn_003.py --mode execute --engineering-smoke --confirm-dut --launcher single --prepare --accelerators 1 --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 正式模式不要加 `--engineering-smoke`；脚本不会跳过参数、环境、文件系统分离或时序采集门禁。FULL 数据集可能接近 983 GiB，执行 `--prepare` 前必须先确认容量。
@@ -92,20 +94,20 @@ python full_test_plan_cases/cases/test_ai_trn_003.py --mode execute --engineerin
 上述 Case 都提供 `--engineering-smoke` 的基本 try run。它会使用 1 秒/1 MiB 或随包极小 Trace，结果标为 `SMOKE_PASS`，不能当作正式成绩：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_kv_022.py --mode execute --engineering-smoke --confirm-dut --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
-python full_test_plan_cases/cases/test_ai_mix_001.py --mode execute --engineering-smoke --confirm-dut --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_kv_022.py --mode execute --engineering-smoke --confirm-dut --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_mix_001.py --mode execute --engineering-smoke --confirm-dut --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 准备好实验室命令后也可接入对应入口：
 
 ```powershell
-python full_test_plan_cases/cases/test_ai_mix_001.py --mode execute --confirm-dut --custom-command "<批准的并发编排命令>" --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe full_test_plan_cases/cases/test_ai_mix_001.py --mode execute --confirm-dut --custom-command "<批准的并发编排命令>" --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 一次生成/检查全部 Case 的计划：
 
 ```powershell
-python -m full_test_plan_cases.run_all --mode plan --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+.\.venv\Scripts\python.exe -m full_test_plan_cases.run_all --mode plan --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
 ```
 
 每个 Case 的 `manifest.json` 都保留工作簿原始测试工具、目的、步骤、时长、脚本、标准、Profile、Priority、变量、指标和 Windows 状态。

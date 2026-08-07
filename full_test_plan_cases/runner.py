@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -925,7 +925,7 @@ def run_case(case_id: str, argv: Sequence[str] | None = None) -> int:
     case_dir.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, Any] = {
         "schema_version": 1,
-        "generated_at": datetime.now(UTC).isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "source_sha256": SOURCE_SHA256,
         "mode": args.mode,
         "case": case,
