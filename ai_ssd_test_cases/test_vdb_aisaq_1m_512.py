@@ -1,39 +1,103 @@
-"""AI-VDB-005 · aisaq_1m_512
+"""FULL_TEST_PLAN Case 056: AI-VDB-005.
 
-Generated from docs/AI_SSD_TEST_PLAN.xlsx.
+The command list below is the native mlpstorage command for this case.
 """
 
 from __future__ import annotations
 
+import argparse
+import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
-_REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
-from ai_ssd_test_cases.runner_support import execute_case
+CASE_ID = 'AI-VDB-005'
+NATIVE_STATUS = 'SUPPORTED'
+NATIVE_REASON = 'mlpstorage'
+COMMANDS = [{'phase': 'prepare', 'argv': ['open', 'vectordb', 'datagen', 'file', '--vdb-engine', 'milvus', '--vdb-index', 'AISAQ', '--host', '127.0.0.1', '--port', '19530', '--collection', 'ai_vdb_005_aisaq', '--num-vectors', '1000000', '--dimension', '512', '--num-shards', '1', '--force', '--results-dir', '<RESULTS_DIR>', '--systemname', '<SYSTEMNAME>']}, {'phase': 'run', 'argv': ['open', 'vectordb', 'run', 'file', '--vdb-engine', 'milvus', '--vdb-index', 'AISAQ', '--host', '127.0.0.1', '--port', '19530', '--collection', 'ai_vdb_005_aisaq', '--benchmark-mode', 'timed', '--vector-dim', '512', '--num-query-processes', '<QUERY_PROCESSES>', '--runtime', '<DURATION_SEC>', '--loops', '<LOOPS>', '--storage-root', '<STORAGE_ROOT>', '--results-dir', '<RESULTS_DIR>', '--systemname', '<SYSTEMNAME>']}]
 
-CASE_SPEC = {
-    "case_id": "AI-VDB-005",
-    "category": "vdb",
-    "case_name": "aisaq_1m_512",
-    "config": "1M×512 AISAQ，inline_pq 16/32",
-    "purpose": "验证压缩索引的容量、Recall 和 QPS 权衡。",
-    "steps": [
-        "准备 1M×512 AISAQ，inline_pq 16/32 的向量、索引和固定 planted query。",
-        "先完成建库/加载，再按 Case 变量执行查询或后台写入。",
-        "记录 Recall、QPS、P99、实际读写、容量和温度。",
-        "在相同 Recall 门槛下比较 capacity、Recall、QPS、P99，确认结果可复现。"
-    ],
-    "test_duration": "约 90–120 分钟",
-    "command": "python ai_ssd_test_cases/test_vdb_aisaq_1m_512.py --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
-    "standard": "PASS：PQ 16/32 结果完整；Recall 达标；容量收益和性能代价可解释。",
-    "metrics": "capacity、Recall、QPS、P99",
-    "mode": "vdb",
-    "dimensions": 512
-}
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=f"{CASE_ID} direct mlpstorage case")
+    parser.add_argument("--mode", choices=("plan", "preflight", "dry-run", "execute"), default="plan")
+    parser.add_argument("--data-dir", type=Path, default=Path(os.environ.get("DUT_DATA", "data")))
+    parser.add_argument("--results-dir", type=Path, default=Path(os.environ.get("MLPERF_RESULTS_DIR", "results")))
+    parser.add_argument("--mlpstorage", type=Path)
+    parser.add_argument("--launcher", choices=("single", "mpi"), default="single")
+    parser.add_argument("--mpi-bin", choices=("mpiexec", "mpirun"), default="mpiexec" if os.name == "nt" else "mpirun")
+    parser.add_argument("--systemname", default=None)
+    parser.add_argument("--client-memory-gb", type=int, default=64)
+    parser.add_argument("--accelerators", type=int, default=1)
+    parser.add_argument("--query-processes", type=int, default=1)
+    parser.add_argument("--duration-sec", type=int, default=60)
+    parser.add_argument("--loops", type=int, default=1)
+    parser.add_argument("--dlio-bin-path", type=Path)
+    parser.add_argument("--prepare", action="store_true")
+    parser.add_argument("--o-direct", action="store_true")
+    parser.add_argument("--confirm-dut", action="store_true")
+    args = parser.parse_args()
+
+    if NATIVE_STATUS != "SUPPORTED":
+        print(f"{CASE_ID} BLOCKED: no native mlpstorage command: {NATIVE_REASON}")
+        return 2
+    cli = args.mlpstorage
+    if cli is None:
+        for candidate in (Path(sys.executable).with_name("mlpstorage.exe"), Path(sys.executable).with_name("mlpstorage")):
+            if candidate.is_file():
+                cli = candidate
+                break
+    if cli is None:
+        cli = Path(shutil.which("mlpstorage") or "mlpstorage")
+    selected = [item for item in COMMANDS if args.prepare or item["phase"] != "prepare"]
+    values = {
+        "<DATA_DIR>": str(args.data_dir.resolve()),
+        "<RESULTS_DIR>": str(args.results_dir.resolve()),
+        "<CHECKPOINT_DIR>": str(args.data_dir.resolve() / "checkpoint" / CASE_ID),
+        "<CACHE_DIR>": str(args.data_dir.resolve() / "kvcache" / CASE_ID),
+        "<STORAGE_ROOT>": str(args.data_dir.resolve() / "milvus" / CASE_ID),
+        "<SYSTEMNAME>": args.systemname or f"{CASE_ID.lower()}-native",
+        "<CLIENT_MEMORY_GB>": str(args.client_memory_gb),
+        "<ACCELERATORS>": str(args.accelerators),
+        "<QUERY_PROCESSES>": str(args.query_processes),
+        "<DURATION_SEC>": str(args.duration_sec),
+        "<LOOPS>": str(args.loops),
+        "<MPI_BIN>": args.mpi_bin,
+    }
+    if args.mode == "execute" and not args.confirm_dut:
+        print(f"{CASE_ID} BLOCKED: execute requires --confirm-dut")
+        return 2
+    for item in selected:
+        command = [str(cli), *[values.get(arg, arg) for arg in item["argv"] if arg != "<COMMAND>"]]
+        if args.o_direct and ("training" in command or "checkpointing" in command) and "--o-direct" not in command:
+            command.append("--o-direct")
+        if args.dlio_bin_path and ("training" in command or "checkpointing" in command):
+            command.extend(["--dlio-bin-path", str(args.dlio_bin_path)])
+        if args.launcher == "single" and args.mode in {"preflight", "dry-run", "execute"} and "checkpointing" in command and "--num-processes" in command:
+            ranks = int(command[command.index("--num-processes") + 1])
+            if ranks > 1:
+                print(f"{CASE_ID} BLOCKED: checkpointing rank case requires --launcher mpi (requested {ranks} ranks)")
+                return 2
+        print(f"{CASE_ID} {item['phase']}: {subprocess.list2cmdline(['mlpstorage', *command[1:]])}")
+        if args.mode in {"plan", "preflight"}:
+            continue
+        if args.mode == "dry-run":
+            command.append("--dry-run")
+        completed = subprocess.run(command, check=False)
+        if completed.returncode != 0:
+            print(f"{CASE_ID} FAIL phase={item['phase']} rc={completed.returncode}")
+            return completed.returncode
+    if args.mode == "preflight" and not cli.is_file() and shutil.which(str(cli)) is None:
+        print(f"{CASE_ID} BLOCKED: mlpstorage executable not found: {cli}")
+        return 2
+    if args.mode == "dry-run":
+        print(f"{CASE_ID} DRY_RUN (not a workload PASS)")
+        return 3
+    if args.mode == "execute":
+        print(f"{CASE_ID} PASS")
+    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(execute_case(CASE_SPEC))
+    raise SystemExit(main())

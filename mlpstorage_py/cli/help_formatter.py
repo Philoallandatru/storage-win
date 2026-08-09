@@ -216,7 +216,6 @@ TR_RUN_CLOSED
     --num-accelerators/-na N
     --accelerator-type/-g {b200,mi355}
     --client-host-memory-in-gb/-cm N
-    --checkpoint-folder/-cf PATH
     --results-dir/-rd PATH
     --data-dir/-dd PATH
     [storage positional: file | object]

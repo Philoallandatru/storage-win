@@ -32,6 +32,11 @@ from mlpstorage_py.environment import detect_os, validate_ssh_connectivity, Vali
 from mlpstorage_py.environment.systemd_ipc import check_removeipc_risk
 
 
+def _benchmark_name(args) -> Optional[str]:
+    """Return the benchmark field used by both legacy and current parsers."""
+    return getattr(args, "benchmark", None) or getattr(args, "program", None)
+
+
 def validate_pre_run(args, logger=None) -> None:
     """
     Validate configuration before running a benchmark.
@@ -109,7 +114,7 @@ def _validate_required_params(args) -> List[Exception]:
         List of errors for missing/invalid parameters.
     """
     errors = []
-    program = getattr(args, 'program', None)
+    program = _benchmark_name(args)
     command = getattr(args, 'command', None)
 
     # Common required parameters
@@ -311,8 +316,12 @@ def _is_host_reachable(hostname: str, timeout: int = 2) -> bool:
 
     try:
         # Use ping with single packet and timeout
+        if os.name == "nt":
+            command = ['ping', '-n', '1', '-w', str(int(timeout * 1000)), hostname]
+        else:
+            command = ['ping', '-c', '1', '-W', str(timeout), hostname]
         result = subprocess.run(
-            ['ping', '-c', '1', '-W', str(timeout), hostname],
+            command,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             timeout=timeout + 1
@@ -333,7 +342,7 @@ def _validate_dependencies(args) -> List[Exception]:
         List of errors for missing dependencies.
     """
     errors = []
-    program = getattr(args, 'program', None)
+    program = _benchmark_name(args)
 
     # Check for MPI if distributed
     if hasattr(args, 'hosts') and args.hosts and len(args.hosts) > 1:
@@ -550,7 +559,7 @@ def _requires_dlio(args) -> bool:
     Returns:
         True if DLIO is required, False otherwise.
     """
-    program = getattr(args, 'program', None)
+    program = _benchmark_name(args)
     return program in ('training', 'checkpointing')
 
 

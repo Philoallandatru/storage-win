@@ -6,6 +6,8 @@
 
 每个脚本均为 `test_<类别>_<case_name>.py`：
 
+每个脚本都带有稳定的 `case_no`（001–072），与 Excel 汇总表保持一致。
+
 - `test_base_*.py`：基础路径、缓存和填充率
 - `test_training_*.py`：训练供数
 - `test_checkpoint_*.py`：Checkpoint 持久化与恢复
@@ -15,18 +17,27 @@
 
 ## 运行方式
 
-默认只生成执行计划和 manifest，不会启动重负载：
+默认只打印 native 执行计划，不会启动 workload：
 
 ```powershell
-python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py
+python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --mode plan
 ```
 
-执行可重复的 scaled smoke probe：
+直接执行 native mlpstorage Case：
 
 ```powershell
-python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --execute --prepare --data-dir <DUT_DATA> --result-dir <RESULTS>
+mlpstorage init ai-trn-001 D:\ai_ssd\results
+python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --mode execute --prepare --confirm-dut --data-dir <DUT_DATA> --results-dir <RESULTS>
 ```
 
-`--execute` 的 Checkpoint/KV/VectorDB/Mixed 脚本使用标准库实现小规模 probe，结果用于验证路径、读写、尾延迟和并发逻辑；Checkpoint 默认最多写 8 个缩放分片，只有在授权 DUT 上才使用 `--full-scale`。正式容量、模型、Milvus 索引或 MLPerf SLA 测试应替换为批准的 workload，并保留同一 Case ID。
+脚本不会替用户初始化、清理或改写结果目录。
 
-所有脚本都包含测试目的、编号步骤、测试时长、命令和通过标准；完整字段可查 `case_catalog.json`。
+在 Windows DUT 上执行时，可显式选择结果目录和 MPI：
+
+```powershell
+python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --mode execute --prepare --confirm-dut --launcher single --data-dir D:\ai_ssd\data --results-dir D:\ai_ssd\results
+```
+
+脚本直接调用仓库的 `mlpstorage` 命令；没有对应 native 命令的 Case 会返回 `BLOCKED`，不会降级为标准库 probe 或 `whatif --dry-run`。
+
+测试目的、编号步骤、测试时长、命令和通过标准保存在 `case_catalog.json`；脚本本身只负责直接调用对应的 native `mlpstorage` 命令。

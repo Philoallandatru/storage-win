@@ -21,6 +21,7 @@ from mlpstorage_py.validation_helpers import (
     _requires_mpi,
     _is_distributed_run,
     _requires_dlio,
+    _is_host_reachable,
     _is_object_storage,
     _validate_paths,
 )
@@ -103,6 +104,11 @@ class TestRequiresDlio:
         args = Namespace(program='checkpointing')
         assert _requires_dlio(args) is True
 
+    def test_current_cli_benchmark_field_requires_dlio(self):
+        """The current parser calls the field benchmark, not program."""
+        args = Namespace(benchmark='training')
+        assert _requires_dlio(args) is True
+
     def test_kvcache_does_not_require_dlio(self):
         """Should return False for kvcache program."""
         args = Namespace(program='kvcache')
@@ -117,6 +123,16 @@ class TestRequiresDlio:
         """Should return False when program not set."""
         args = Namespace()
         assert _requires_dlio(args) is False
+
+
+def test_windows_host_probe_uses_windows_ping_flags():
+    with patch("mlpstorage_py.validation_helpers.os.name", "nt"):
+        with patch("subprocess.run") as run:
+            run.return_value.returncode = 0
+
+            assert _is_host_reachable("dut-host", timeout=2) is True
+
+    assert run.call_args.args[0] == ["ping", "-n", "1", "-w", "2000", "dut-host"]
 
 
 class TestIsObjectStorage:

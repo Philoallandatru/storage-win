@@ -14,7 +14,7 @@
     "primary_variables": "identity;capacity;paths",
     "primary_metrics": "health;capacity;path map",
     "windows_status": "Now",
-    "tool": "PowerShell + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Bind data and results to one physical SSD（DUT inventory；P0）",
     "steps": [
       "建立 DUT inventory 基线并确认独立 DUT、盘符、序列号、健康状态；",
@@ -24,7 +24,11 @@
       "保存 manifest、原始日志、监控和判定。"
     ],
     "duration": "10–15 min",
-    "source_command": "Get-Disk | Format-Table Number,FriendlyName,SerialNumber,OperationalStatus,HealthStatus,Size\nGet-PhysicalDisk | Format-Table FriendlyName,SerialNumber,HealthStatus,OperationalStatus,Size\n# 将 <DUT_DIR>、<RESULT_DIR> 写入 manifest",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "Get-Disk | Format-Table Number,FriendlyName,SerialNumber,OperationalStatus,HealthStatus,Size\nGet-PhysicalDisk | Format-Table FriendlyName,SerialNumber,HealthStatus,OperationalStatus,Size\n# 将 <DUT_DIR>、<RESULT_DIR> 写入 manifest",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：Identity complete； data and results separated；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -42,7 +46,7 @@
     "primary_variables": "buffered cold;warm;o-direct",
     "primary_metrics": "logical/physical bytes;throughput;latency",
     "windows_status": "Now",
-    "tool": "PowerShell + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Separate cache and direct-I/O effects（Path matrix；P0）",
     "steps": [
       "建立 Path matrix 基线并确认独立 DUT、盘符、序列号、健康状态；",
@@ -52,7 +56,11 @@
       "保存 manifest、原始日志、监控和判定。"
     ],
     "duration": "30–60 min",
-    "source_command": "PowerShell -File .\\io_baseline.ps1 -Path <DUT_DIR> -SizeGB 20-50 -Mode BufferedCold,BufferedWarm,Direct\n# 记录 logical_bytes、physical_bytes、throughput、P50/P95/P99",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "PowerShell -File .\\io_baseline.ps1 -Path <DUT_DIR> -SizeGB 20-50 -Mode BufferedCold,BufferedWarm,Direct\n# 记录 logical_bytes、physical_bytes、throughput、P50/P95/P99",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：Three modes separately reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -70,7 +78,7 @@
     "primary_variables": "3 runs;monitor off/on",
     "primary_metrics": "CV;P99 delta;sample gaps",
     "windows_status": "Now",
-    "tool": "PowerShell + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Validate repeatability and monitor overhead（Repeatability；P0）",
     "steps": [
       "建立 Repeatability 基线并确认独立 DUT、盘符、序列号、健康状态；",
@@ -80,7 +88,11 @@
       "保存 manifest、原始日志、监控和判定。"
     ],
     "duration": "45–90 min",
-    "source_command": "typeperf \"\\PhysicalDisk(*)\\Disk Read Bytes/sec\" \"\\PhysicalDisk(*)\\Disk Write Bytes/sec\" \"\\PhysicalDisk(*)\\Avg. Disk sec/Read\" \"\\PhysicalDisk(*)\\Current Disk Queue Length\" -si 1 -sc <SECONDS> -o <RESULT_DIR>/windows_disk_1s.csv\n# monitor off/on 各执行 3 次",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "typeperf \"\\PhysicalDisk(*)\\Disk Read Bytes/sec\" \"\\PhysicalDisk(*)\\Disk Write Bytes/sec\" \"\\PhysicalDisk(*)\\Avg. Disk sec/Read\" \"\\PhysicalDisk(*)\\Current Disk Queue Length\" -si 1 -sc <SECONDS> -o <RESULT_DIR>/windows_disk_1s.csv\n# monitor off/on 各执行 3 次",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：CV<=5%；monitor overhead<=2%；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -98,7 +110,7 @@
     "primary_variables": "20/50/80/90% fill",
     "primary_metrics": "throughput;P99;queue;temperature",
     "windows_status": "Test-directory authorization",
-    "tool": "PowerShell + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Expose GC and capacity cliffs（Fill sensitivity；P1）",
     "steps": [
       "建立 Fill sensitivity 基线并确认独立 DUT、盘符、序列号、健康状态；",
@@ -108,7 +120,11 @@
       "保存 manifest、原始日志、监控和判定。"
     ],
     "duration": "2–4 h",
-    "source_command": "$volume = Get-Volume -DriveLetter <DUT_DRIVE>; $bytes = [math]::Floor($volume.Size * <FILL_RATIO>)\nfsutil file createnew <DUT_DIR>/fill.bin $bytes\ntypeperf \"\\PhysicalDisk(*)\\Disk Read Bytes/sec\" \"\\PhysicalDisk(*)\\Disk Write Bytes/sec\" \"\\PhysicalDisk(*)\\Current Disk Queue Length\" -si 1 -sc <SECONDS> -o <RESULT_DIR>/fill_<RATIO>.csv",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "$volume = Get-Volume -DriveLetter <DUT_DRIVE>; $bytes = [math]::Floor($volume.Size * <FILL_RATIO>)\nfsutil file createnew <DUT_DIR>/fill.bin $bytes\ntypeperf \"\\PhysicalDisk(*)\\Disk Read Bytes/sec\" \"\\PhysicalDisk(*)\\Disk Write Bytes/sec\" \"\\PhysicalDisk(*)\\Current Disk Queue Length\" -si 1 -sc <SECONDS> -o <RESULT_DIR>/fill_<RATIO>.csv",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：Degradation curve；no unexplained cliff；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -126,7 +142,7 @@
     "primary_variables": "accelerators 1/2/4;direct/cold",
     "primary_metrics": "AU;samples/s;GiB/s",
     "windows_status": "Now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Large-file feed baseline（UNet3D/A100；P1）",
     "steps": [
       "准备 UNet3D/A100 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -136,7 +152,66 @@
       "校验数据完整性，记录 Windows 可执行性：Now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4, direct/cold\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training unet3d datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=168\nmlpstorage whatif training unet3d run file --num-accelerators <ACCELERATORS> --accelerator-type a100 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=168",
+    "workbook_command": "mlpstorage open training datagen file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4, direct/cold\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "unet3d",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=168"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "unet3d",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "a100",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=168"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=90%；repeatable；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -154,7 +229,7 @@
     "primary_variables": "accelerators 1/2/4",
     "primary_metrics": "AU;samples/s;queue",
     "windows_status": "Experimental",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Shorter compute-gap pressure（UNet3D/H100；P2）",
     "steps": [
       "准备 UNet3D/H100 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -164,7 +239,66 @@
       "校验数据完整性，记录 Windows 可执行性：Experimental，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training unet3d datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=168\nmlpstorage whatif training unet3d run file --num-accelerators <ACCELERATORS> --accelerator-type h100 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=168",
+    "workbook_command": "mlpstorage open training datagen file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "unet3d",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=168"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "unet3d",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "h100",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=168"
+        ]
+      }
+    ],
     "standard": "Pass：Experimental until support confirmed；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -182,7 +316,7 @@
     "primary_variables": "datasize;accelerators 1/2/4/8",
     "primary_metrics": "AU;samples/s;GiB/s",
     "windows_status": "Reduced now;full near 983 GiB",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "V3.0 sustained large-file reads（UNet3D/B200；P0）",
     "steps": [
       "准备 UNet3D/B200 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -192,7 +326,66 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now;full near 983 GiB，归档全部结果。"
     ],
     "duration": "30–120 min（容量门禁）",
-    "source_command": "mlpstorage open training datagen file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: datasize, accelerators 1/2/4/8\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage open training unet3d datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=168\nmlpstorage open training unet3d run file --num-accelerators <ACCELERATORS> --accelerator-type b200 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=168",
+    "workbook_command": "mlpstorage open training datagen file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model unet3d --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: datasize, accelerators 1/2/4/8\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "training",
+          "unet3d",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=168"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "training",
+          "unet3d",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "b200",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=168"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=90% at declared load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -210,7 +403,7 @@
     "primary_variables": "accelerators 1/4/8/16",
     "primary_metrics": "AU;files/s;P99;CPU",
     "windows_status": "Now with capacity",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Million-JPEG small-file pressure（RetinaNet/B200；P0）",
     "steps": [
       "准备 RetinaNet/B200 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -220,7 +413,66 @@
       "校验数据完整性，记录 Windows 可执行性：Now with capacity，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage open training retinanet datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1170301\nmlpstorage open training retinanet run file --num-accelerators <ACCELERATORS> --accelerator-type b200 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1170301",
+    "workbook_command": "mlpstorage open training datagen file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "training",
+          "retinanet",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1170301"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "training",
+          "retinanet",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "b200",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1170301"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=85% at declared load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -238,7 +490,7 @@
     "primary_variables": "accelerators 1/4/8/16",
     "primary_metrics": "AU;files/s;P99",
     "windows_status": "Now with capacity",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Different batch/compute small-file pressure（RetinaNet/MI355；P0）",
     "steps": [
       "准备 RetinaNet/MI355 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -248,7 +500,66 @@
       "校验数据完整性，记录 Windows 可执行性：Now with capacity，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage open training retinanet datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1170301\nmlpstorage open training retinanet run file --num-accelerators <ACCELERATORS> --accelerator-type mi355 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1170301",
+    "workbook_command": "mlpstorage open training datagen file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model retinanet --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "training",
+          "retinanet",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1170301"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "training",
+          "retinanet",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "mi355",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1170301"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=85% at declared load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -266,7 +577,7 @@
     "primary_variables": "accelerators 1/2/4",
     "primary_metrics": "AU;IOPS;GiB/s",
     "windows_status": "Reduced now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Shuffle-heavy medium objects（CosmoFlow/A100；P1）",
     "steps": [
       "准备 CosmoFlow/A100 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -276,7 +587,66 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training cosmoflow datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=524288\nmlpstorage whatif training cosmoflow run file --num-accelerators <ACCELERATORS> --accelerator-type a100 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=524288",
+    "workbook_command": "mlpstorage open training datagen file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "cosmoflow",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=524288"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "cosmoflow",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "a100",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=524288"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=70%；knee reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -294,7 +664,7 @@
     "primary_variables": "accelerators 1/2/4/8",
     "primary_metrics": "AU;P99;queue",
     "windows_status": "Reduced now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Higher-rate medium-object reads（CosmoFlow/H100；P1）",
     "steps": [
       "准备 CosmoFlow/H100 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -304,7 +674,66 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4/8\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training cosmoflow datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=524288\nmlpstorage whatif training cosmoflow run file --num-accelerators <ACCELERATORS> --accelerator-type h100 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=524288",
+    "workbook_command": "mlpstorage open training datagen file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model cosmoflow --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4/8\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "cosmoflow",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=524288"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "cosmoflow",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "h100",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=524288"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=70%；bottleneck identified；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -322,7 +751,7 @@
     "primary_variables": "fixed batch;thread sweep",
     "primary_metrics": "AU;samples/s;read amplification",
     "windows_status": "Now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "TFRecord multi-sample baseline（ResNet50/A100；P1）",
     "steps": [
       "准备 ResNet50/A100 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -332,7 +761,66 @@
       "校验数据完整性，记录 Windows 可执行性：Now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: fixed batch, thread sweep\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training resnet50 datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1024\nmlpstorage whatif training resnet50 run file --num-accelerators <ACCELERATORS> --accelerator-type a100 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1024",
+    "workbook_command": "mlpstorage open training datagen file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: fixed batch, thread sweep\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "resnet50",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1024"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "resnet50",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "a100",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1024"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=90%；repeatable；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -350,7 +838,7 @@
     "primary_variables": "accelerators 1/2/4/8",
     "primary_metrics": "AU;samples/s;queue",
     "windows_status": "Now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Higher TFRecord supply rate（ResNet50/H100；P1）",
     "steps": [
       "准备 ResNet50/H100 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -360,7 +848,66 @@
       "校验数据完整性，记录 Windows 可执行性：Now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4/8\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training resnet50 datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1024\nmlpstorage whatif training resnet50 run file --num-accelerators <ACCELERATORS> --accelerator-type h100 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1024",
+    "workbook_command": "mlpstorage open training datagen file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model resnet50 --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: accelerators 1/2/4/8\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "resnet50",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1024"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "resnet50",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "h100",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1024"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=90% at declared load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -378,7 +925,7 @@
     "primary_variables": "prefetch 0/2/4",
     "primary_metrics": "AU;row-groups/s;physical bytes",
     "windows_status": "Reduced now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Parquet row-group/column reads（DLRM/B200；P1）",
     "steps": [
       "准备 DLRM/B200 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -388,7 +935,62 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: prefetch 0/2/4\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training dlrm datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>\nmlpstorage whatif training dlrm run file --num-accelerators <ACCELERATORS> --accelerator-type b200 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open training datagen file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: prefetch 0/2/4\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "dlrm",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "dlrm",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "b200",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=70%；amplification reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -406,7 +1008,7 @@
     "primary_variables": "threads 1/4/8/16",
     "primary_metrics": "AU;CPU;GiB/s",
     "windows_status": "Reduced now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Parquet reader parallelism（DLRM/MI355；P1）",
     "steps": [
       "准备 DLRM/MI355 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -416,7 +1018,62 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: threads 1/4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training dlrm datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>\nmlpstorage whatif training dlrm run file --num-accelerators <ACCELERATORS> --accelerator-type mi355 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open training datagen file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model dlrm --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: threads 1/4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "dlrm",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "dlrm",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "mi355",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=70%；knee reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -434,7 +1091,7 @@
     "primary_variables": "threads 4/8/16",
     "primary_metrics": "AU;GiB/s;P99",
     "windows_status": "Reduced now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Large Parquet-object feed（Flux/B200；P1）",
     "steps": [
       "准备 Flux/B200 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -444,7 +1101,66 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: threads 4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training flux datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=4296\nmlpstorage whatif training flux run file --num-accelerators <ACCELERATORS> --accelerator-type b200 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=4296",
+    "workbook_command": "mlpstorage open training datagen file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: threads 4/8/16\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "flux",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=4296"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "flux",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "b200",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=4296"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=90%；steady result；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -462,7 +1178,7 @@
     "primary_variables": "batch 72;thread sweep",
     "primary_metrics": "AU;burst latency;queue",
     "windows_status": "Reduced now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Burst reads after compute gaps（Flux/MI355；P2）",
     "steps": [
       "准备 Flux/MI355 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -472,7 +1188,66 @@
       "校验数据完整性，记录 Windows 可执行性：Reduced now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: batch 72, thread sweep\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "mlpstorage whatif training flux datagen file --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=4296\nmlpstorage whatif training flux run file --num-accelerators <ACCELERATORS> --accelerator-type mi355 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --loops <LOOPS> --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=4296",
+    "workbook_command": "mlpstorage open training datagen file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model flux --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: batch 72, thread sweep\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "whatif",
+          "training",
+          "flux",
+          "datagen",
+          "file",
+          "--num-processes",
+          "1",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=4296"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "whatif",
+          "training",
+          "flux",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "mi355",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=4296"
+        ]
+      }
+    ],
     "standard": "Pass：AU>=90%；burst CDF reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -490,7 +1265,7 @@
     "primary_variables": "UNet/Retina;1 to saturation",
     "primary_metrics": "AU;speedup;efficiency",
     "windows_status": "Now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Find maximum qualifying accelerators（Closed-model scaling；P0）",
     "steps": [
       "准备 Closed-model scaling 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -500,7 +1275,11 @@
       "校验数据完整性，记录 Windows 可执行性：Now，归档全部结果。"
     ],
     "duration": "60–120 min",
-    "source_command": "mlpstorage open training datagen file --model closed-model-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model closed-model-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: UNet/Retina, 1 to saturation\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 Case 的 scaling/cache 变量没有对应的单一 native mlpstorage 参数，需先拆成真实模型 Case。",
+    "workbook_command": "mlpstorage open training datagen file --model closed-model-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model closed-model-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: UNet/Retina, 1 to saturation\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 Case 的 scaling/cache 变量没有对应的单一 native mlpstorage 参数，需先拆成真实模型 Case。",
+    "native_commands": [],
     "standard": "Pass：Highest load meeting AU reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -519,7 +1298,7 @@
     "primary_variables": "threads 1/2/4/8/16/32",
     "primary_metrics": "throughput;CPU;queue;P99",
     "windows_status": "Now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Separate SSD and CPU saturation（Reader scaling；P1）",
     "steps": [
       "准备 Reader scaling 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -529,7 +1308,11 @@
       "校验数据完整性，记录 Windows 可执行性：Now，归档全部结果。"
     ],
     "duration": "60–120 min",
-    "source_command": "mlpstorage open training datagen file --model reader-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model reader-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: threads 1/2/4/8/16/32\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 Case 的 scaling/cache 变量没有对应的单一 native mlpstorage 参数，需先拆成真实模型 Case。",
+    "workbook_command": "mlpstorage open training datagen file --model reader-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model reader-scaling --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: threads 1/2/4/8/16/32\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 Case 的 scaling/cache 变量没有对应的单一 native mlpstorage 参数，需先拆成真实模型 Case。",
+    "native_commands": [],
     "standard": "Pass：Knee and limiting resource identified；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -547,7 +1330,7 @@
     "primary_variables": "warm;cold;o-direct",
     "primary_metrics": "AU;logical/physical bytes",
     "windows_status": "Now",
-    "tool": "mlpstorage + DLIO + PowerShell 监控",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Quantify page-cache contamination（Cache/path matrix；P0）",
     "steps": [
       "准备 Cache/path matrix 数据集；容量不足时采用仓库支持的缩小工程规模并明确标注；",
@@ -557,7 +1340,11 @@
       "校验数据完整性，记录 Windows 可执行性：Now，归档全部结果。"
     ],
     "duration": "30–90 min",
-    "source_command": "mlpstorage open training datagen file --model cache --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model cache --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: warm, cold, o-direct\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 Case 的 scaling/cache 变量没有对应的单一 native mlpstorage 参数，需先拆成真实模型 Case。",
+    "workbook_command": "mlpstorage open training datagen file --model cache --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\nmlpstorage open training run file --model cache --num-processes 1 --data-dir <DATA_DIR> --results-dir <RESULT_DIR>\n# sweep: warm, cold, o-direct\n# 以 mlpstorage open training run --help 映射当前版本的 accelerator/thread 参数",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 Case 的 scaling/cache 变量没有对应的单一 native mlpstorage 参数，需先拆成真实模型 Case。",
+    "native_commands": [],
     "standard": "Pass：Cold/direct reaches physical SSD；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -575,7 +1362,7 @@
     "primary_variables": "105 GB;10 save;10 load",
     "primary_metrics": "slowest duration;min throughput;hash",
     "windows_status": "Smoke on ~1 TB",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Single-node save/restore baseline（Llama3-8B full 8 ranks；P0）",
     "steps": [
       "确认 Llama3-8B full 8 ranks 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -585,7 +1372,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "30–120 min（容量门禁）",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-8b-full-8-ranks --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 10 --num-checkpoints-read 10\n# 变量：105 GB, 10 save, 10 load\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-8b --num-processes 8 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-8b-full-8-ranks --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 10 --num-checkpoints-read 10\n# 变量：105 GB, 10 save, 10 load\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-8b",
+          "--num-processes",
+          "8",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：Formal only if 10 copies fit；else smoke；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -603,7 +1424,7 @@
     "primary_variables": "114 GB;8 ranks",
     "primary_metrics": "slowest rank;min throughput;skew",
     "windows_status": "Smoke on ~1 TB",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Simulate node-local 70B shard（Llama3-70B 8-rank subset；P0）",
     "steps": [
       "确认 Llama3-70B 8-rank subset 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -613,7 +1434,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "30–120 min（容量门禁）",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-70b-8-rank-subset --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：114 GB, 8 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-70b --num-processes 8 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-70b-8-rank-subset --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：114 GB, 8 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-70b",
+          "--num-processes",
+          "8",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：fsync succeeds；restore hash matches；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -632,7 +1487,7 @@
     "primary_variables": "912 GB;64 ranks",
     "primary_metrics": "global duration;skew;bandwidth",
     "windows_status": "Scaled system",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Multi-node concurrent save/restore（Llama3-70B full 64 ranks；P0）",
     "steps": [
       "确认 Llama3-70B full 64 ranks 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -642,7 +1497,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "按扩展环境；4–24 h",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-70b-full-64-ranks --systemname ai-ssd-win --num-processes 64 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：912 GB, 64 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-70b --num-processes 64 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-70b-full-64-ranks --systemname ai-ssd-win --num-processes 64 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：912 GB, 64 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-70b",
+          "--num-processes",
+          "64",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：10 save/load；zero mismatch；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -660,7 +1549,7 @@
     "primary_variables": "94 GB;8 ranks",
     "primary_metrics": "save/load GiB/s;cold bytes",
     "windows_status": "Capacity tight",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "405B node-local SSD load（Llama3-405B 8-rank subset；P1）",
     "steps": [
       "确认 Llama3-405B 8-rank subset 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -670,7 +1559,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "30–120 min（容量门禁）",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-405b-8-rank-subset --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：94 GB, 8 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-405b --num-processes 8 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-405b-8-rank-subset --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：94 GB, 8 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-405b",
+          "--num-processes",
+          "8",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：fsync succeeds；hash matches；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -689,7 +1612,7 @@
     "primary_variables": "5.29 TB;512 ranks",
     "primary_metrics": "global duration;skew;bandwidth",
     "windows_status": "Scaled system",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "TB-scale shared checkpointing（Llama3-405B full 512 ranks；P0）",
     "steps": [
       "确认 Llama3-405B full 512 ranks 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -699,7 +1622,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "按扩展环境；4–24 h",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-405b-full-512-ranks --systemname ai-ssd-win --num-processes 512 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：5.29 TB, 512 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-405b --num-processes 512 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-405b-full-512-ranks --systemname ai-ssd-win --num-processes 512 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：5.29 TB, 512 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-405b",
+          "--num-processes",
+          "512",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：10 save/load；zero mismatch；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -717,7 +1674,7 @@
     "primary_variables": "161 GB;8 ranks",
     "primary_metrics": "burst BW;recovery;restore time",
     "windows_status": "Smoke only",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Maximum node-local shard/GC pressure（Llama3-1T 8-rank subset；P1）",
     "steps": [
       "确认 Llama3-1T 8-rank subset 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -727,7 +1684,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "30–120 min（容量门禁）",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-1t-8-rank-subset --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：161 GB, 8 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-1t --num-processes 8 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-1t-8-rank-subset --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：161 GB, 8 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-1t",
+          "--num-processes",
+          "8",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：fsync succeeds；hash matches；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -746,7 +1737,7 @@
     "primary_variables": "18 TB;1024 ranks",
     "primary_metrics": "global duration;min throughput",
     "windows_status": "Scaled system",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "mlpstorage",
     "purpose": "Extreme-model global recovery（Llama3-1T full 1024 ranks；P0）",
     "steps": [
       "确认 Llama3-1T full 1024 ranks 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -756,7 +1747,41 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "按扩展环境；4–24 h",
-    "source_command": "mlpstorage open checkpointing run file --model llama3-1t-full-1024-ranks --systemname ai-ssd-win --num-processes 1024 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 10 --num-checkpoints-read 10\n# 变量：18 TB, 1024 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "mlpstorage open checkpointing run file --model llama3-1t --num-processes 1024 --client-host-memory-in-gb <CLIENT_MEMORY_GB> --checkpoint-folder <CHECKPOINT_DIR> --num-checkpoints-read 10 --num-checkpoints-write 10 --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN>",
+    "workbook_command": "mlpstorage open checkpointing run file --model llama3-1t-full-1024-ranks --systemname ai-ssd-win --num-processes 1024 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 10 --num-checkpoints-read 10\n# 变量：18 TB, 1024 ranks\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "checkpointing",
+          "run",
+          "file",
+          "--model",
+          "llama3-1t",
+          "--num-processes",
+          "1024",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--checkpoint-folder",
+          "<CHECKPOINT_DIR>",
+          "--num-checkpoints-read",
+          "10",
+          "--num-checkpoints-write",
+          "10",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：10 save/load；zero mismatch；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -775,7 +1800,7 @@
     "primary_variables": "write-only;purge/reboot;read-only",
     "primary_metrics": "logical/physical bytes;duration;hash",
     "windows_status": "Define Windows cold method",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Prove restore reaches SSD（Cold/warm restore split；P0）",
     "steps": [
       "确认 Cold/warm restore split 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -785,7 +1810,11 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "30–120 min（容量门禁）",
-    "source_command": "mlpstorage open checkpointing run file --model cold --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：write-only, purge/reboot, read-only\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "# BLOCKED: no native mlpstorage command: cold-cache reset 或 interval/burst 编排不是 checkpointing CLI 的单一 native 参数，不能静默改成普通 run。",
+    "workbook_command": "mlpstorage open checkpointing run file --model cold --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 1 --num-checkpoints-read 1\n# 变量：write-only, purge/reboot, read-only\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "BLOCKED",
+    "native_block_reason": "cold-cache reset 或 interval/burst 编排不是 checkpointing CLI 的单一 native 参数，不能静默改成普通 run。",
+    "native_commands": [],
     "standard": "Pass：Cold method recorded；bytes align；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -803,7 +1832,7 @@
     "primary_variables": "5/30/300 s;1/2/10 cycles",
     "primary_metrics": "degradation;P99;queue;temperature",
     "windows_status": "Now with capacity guard",
-    "tool": "mlpstorage checkpointing + DLIO + PowerShell 监控",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Measure consecutive writes and GC（Interval/burst；P1）",
     "steps": [
       "确认 Interval/burst 所需容量、rank 数和空闲空间，先执行容量门禁；",
@@ -813,7 +1842,11 @@
       "若当前 AI PC 不具备 full 条件，标记为 smoke/扩展，不得冒充正式 full 成绩。"
     ],
     "duration": "2–4 h",
-    "source_command": "mlpstorage open checkpointing run file --model interval --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 10 --num-checkpoints-read 10\n# 变量：5/30/300 s, 1/2/10 cycles\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "source_command": "# BLOCKED: no native mlpstorage command: cold-cache reset 或 interval/burst 编排不是 checkpointing CLI 的单一 native 参数，不能静默改成普通 run。",
+    "workbook_command": "mlpstorage open checkpointing run file --model interval --systemname ai-ssd-win --num-processes 8 --client-host-memory-in-gb 64 --checkpoint-folder <DUT_DIR> --results-dir <RESULT_DIR> --num-checkpoints-write 10 --num-checkpoints-read 10\n# 变量：5/30/300 s, 1/2/10 cycles\n# full 规模需先通过容量门禁；以 mlpstorage open checkpointing run --help 确认参数",
+    "native_status": "BLOCKED",
+    "native_block_reason": "cold-cache reset 或 interval/burst 编排不是 checkpointing CLI 的单一 native 参数，不能静默改成普通 run。",
+    "native_commands": [],
     "standard": "Pass：No errors；recovery reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：容量不足、未完成 cold 方法、哈希/日志缺失或 full 规模条件不满足。"
   },
   {
@@ -831,7 +1864,7 @@
     "primary_variables": "200 users;GPU/CPU 0;alloc 16",
     "primary_metrics": "worst P95;tokens/s;Tier-2 bytes",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "NVMe-only high concurrency（MLPerf option 1 Llama3.1-8B；P0）",
     "steps": [
       "配置 MLPerf option 1 Llama3.1-8B，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -841,7 +1874,54 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "30–90 min",
-    "source_command": "python -m kv_cache.cli --model mlperf-option-1-llama3-1-8b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-001.json\n# sweep: 200 users, GPU/CPU 0, alloc 16\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model llama3.1-8b --num-users 200 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN> --gpu-mem-gb 0 --cpu-mem-gb 0",
+    "workbook_command": "python -m kv_cache.cli --model mlperf-option-1-llama3-1-8b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-001.json\n# sweep: 200 users, GPU/CPU 0, alloc 16\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "llama3.1-8b",
+          "--num-users",
+          "200",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--gpu-mem-gb",
+          "0",
+          "--cpu-mem-gb",
+          "0"
+        ]
+      }
+    ],
     "standard": "Pass：Tier-2 active；QoS P95 met；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -859,7 +1939,7 @@
     "primary_variables": "100 users;CPU 4 GiB;alloc 16",
     "primary_metrics": "spill time;P95;evictions",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "4 GiB CPU spill boundary（MLPerf option 2 Llama3.1-8B；P0）",
     "steps": [
       "配置 MLPerf option 2 Llama3.1-8B，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -869,7 +1949,54 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "30–90 min",
-    "source_command": "python -m kv_cache.cli --model mlperf-option-2-llama3-1-8b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-002.json\n# sweep: 100 users, CPU 4 GiB, alloc 16\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model llama3.1-8b --num-users 100 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN> --gpu-mem-gb 0 --cpu-mem-gb 4",
+    "workbook_command": "python -m kv_cache.cli --model mlperf-option-2-llama3-1-8b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-002.json\n# sweep: 100 users, CPU 4 GiB, alloc 16\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "llama3.1-8b",
+          "--num-users",
+          "100",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--gpu-mem-gb",
+          "0",
+          "--cpu-mem-gb",
+          "4"
+        ]
+      }
+    ],
     "standard": "Pass：Tier-2 active after spill；QoS met；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -887,7 +2014,7 @@
     "primary_variables": "70 users;GPU/CPU 0;alloc 4",
     "primary_metrics": "P95;BW;RAM peak",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "Large KV objects（MLPerf option 3 Llama3.1-70B；P0）",
     "steps": [
       "配置 MLPerf option 3 Llama3.1-70B，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -897,7 +2024,54 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "30–90 min",
-    "source_command": "python -m kv_cache.cli --model mlperf-option-3-llama3-1-70b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-003.json\n# sweep: 70 users, GPU/CPU 0, alloc 4\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model llama3.1-70b-instruct --num-users 70 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN> --gpu-mem-gb 0 --cpu-mem-gb 0",
+    "workbook_command": "python -m kv_cache.cli --model mlperf-option-3-llama3-1-70b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-003.json\n# sweep: 70 users, GPU/CPU 0, alloc 4\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "llama3.1-70b-instruct",
+          "--num-users",
+          "70",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--gpu-mem-gb",
+          "0",
+          "--cpu-mem-gb",
+          "0"
+        ]
+      }
+    ],
     "standard": "Pass：Tier-2 active；QoS P95 met；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -915,7 +2089,7 @@
     "primary_variables": "users 10 to 500",
     "primary_metrics": "IOPS;P99;tokens/s",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "Small-object IOPS ceiling（tiny-1b；P1）",
     "steps": [
       "配置 tiny-1b，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -925,7 +2099,50 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model tiny-1b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-004.json\n# sweep: users 10 to 500\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model tiny-1b --num-users 10 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN>",
+    "workbook_command": "python -m kv_cache.cli --model tiny-1b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-004.json\n# sweep: users 10 to 500\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "tiny-1b",
+          "--num-users",
+          "10",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：No errors；knee reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -943,7 +2160,7 @@
     "primary_variables": "context/user sweep",
     "primary_metrics": "P99;BW;tokens/s",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "128 KiB/token GQA baseline（mistral-7b；P1）",
     "steps": [
       "配置 mistral-7b，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -953,7 +2170,50 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model mistral-7b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-005.json\n# sweep: context/user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model mistral-7b --num-users 10 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN>",
+    "workbook_command": "python -m kv_cache.cli --model mistral-7b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-005.json\n# sweep: context/user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "mistral-7b",
+          "--num-users",
+          "10",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：Max compliant load reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -971,7 +2231,7 @@
     "primary_variables": "alloc 1/2/4/8",
     "primary_metrics": "P99.9;BW;OOM guard",
     "windows_status": "Now with capacity guard",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "512 KiB/token upper bound（llama2-7b；P1）",
     "steps": [
       "配置 llama2-7b，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -981,7 +2241,50 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model llama2-7b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-006.json\n# sweep: alloc 1/2/4/8\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model llama2-7b --num-users 10 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN>",
+    "workbook_command": "python -m kv_cache.cli --model llama2-7b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-006.json\n# sweep: alloc 1/2/4/8\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "llama2-7b",
+          "--num-users",
+          "10",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：No OOM/errors；tail curve；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -999,7 +2302,7 @@
     "primary_variables": "users 25/50/100/200",
     "primary_metrics": "P95;tokens/s;queue",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "Find max compliant users（Llama3.1-8B load curve；P0）",
     "steps": [
       "配置 Llama3.1-8B load curve，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1009,7 +2312,50 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "30–90 min",
-    "source_command": "python -m kv_cache.cli --model llama3-1-8b-load-curve --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-007.json\n# sweep: users 25/50/100/200\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model llama3.1-8b --num-users 10 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN>",
+    "workbook_command": "python -m kv_cache.cli --model llama3-1-8b-load-curve --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-007.json\n# sweep: users 25/50/100/200\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "llama3.1-8b",
+          "--num-users",
+          "10",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：Highest QoS-compliant load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1027,7 +2373,7 @@
     "primary_variables": "users 10/35/70/140",
     "primary_metrics": "P95;tokens/s;Tier-2 BW",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "mlpstorage",
     "purpose": "Large-model saturation（Llama3.1-70B load curve；P0）",
     "steps": [
       "配置 Llama3.1-70B load curve，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1037,7 +2383,50 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "30–90 min",
-    "source_command": "python -m kv_cache.cli --model llama3-1-70b-load-curve --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-008.json\n# sweep: users 10/35/70/140\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "mlpstorage open kvcache run --model llama3.1-70b-instruct --num-users 10 --duration <DURATION_SEC> --generation-mode realistic --performance-profile latency --trials 3 --inter-option-delay 20 --loops <LOOPS> --cache-dir <CACHE_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --num-processes 1 --hosts localhost --mpi-bin <MPI_BIN>",
+    "workbook_command": "python -m kv_cache.cli --model llama3-1-70b-load-curve --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-008.json\n# sweep: users 10/35/70/140\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "kvcache",
+          "run",
+          "--model",
+          "llama3.1-70b-instruct",
+          "--num-users",
+          "10",
+          "--duration",
+          "<DURATION_SEC>",
+          "--generation-mode",
+          "realistic",
+          "--performance-profile",
+          "latency",
+          "--trials",
+          "3",
+          "--inter-option-delay",
+          "20",
+          "--loops",
+          "<LOOPS>",
+          "--cache-dir",
+          "<CACHE_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--num-processes",
+          "1",
+          "--hosts",
+          "localhost",
+          "--mpi-bin",
+          "<MPI_BIN>"
+        ]
+      }
+    ],
     "standard": "Pass：Highest QoS-compliant load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1055,7 +2444,7 @@
     "primary_variables": "context 4K/8K/25K",
     "primary_metrics": "IOPS;bytes/token;P99",
     "windows_status": "Direct CLI",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "MLA-compressed KV efficiency（deepseek-v3；P2）",
     "steps": [
       "配置 deepseek-v3，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1065,7 +2454,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model deepseek-v3 --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-009.json\n# sweep: context 4K/8K/25K\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model deepseek-v3 --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-009.json\n# sweep: context 4K/8K/25K\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：No errors；curve reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1083,7 +2476,7 @@
     "primary_variables": "context/user sweep",
     "primary_metrics": "P99;BW;tokens/s",
     "windows_status": "Direct CLI",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "256 KiB/token workload（qwen3-32b；P2）",
     "steps": [
       "配置 qwen3-32b，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1093,7 +2486,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model qwen3-32b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-010.json\n# sweep: context/user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model qwen3-32b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-010.json\n# sweep: context/user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Max compliant load reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1111,7 +2508,7 @@
     "primary_variables": "high-user sweep",
     "primary_metrics": "IOPS;CPU;P99",
     "windows_status": "Direct CLI",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "MoE small KV objects（gpt-oss-20b；P2）",
     "steps": [
       "配置 gpt-oss-20b，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1121,7 +2518,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model gpt-oss-20b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-011.json\n# sweep: high-user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model gpt-oss-20b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-011.json\n# sweep: high-user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：No errors；bottleneck identified；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1139,7 +2540,7 @@
     "primary_variables": "user/context sweep",
     "primary_metrics": "tokens/s;P99;BW",
     "windows_status": "Direct CLI",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Large model;low KV/token（gpt-oss-120b；P2）",
     "steps": [
       "配置 gpt-oss-120b，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1149,7 +2550,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model gpt-oss-120b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-012.json\n# sweep: user/context sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model gpt-oss-120b --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-012.json\n# sweep: user/context sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Max compliant load reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1168,7 +2573,7 @@
     "primary_variables": "GPU/CPU 0/4/16/32 GiB",
     "primary_metrics": "occupancy;spill latency;evictions",
     "windows_status": "Now;simulated tiers",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Locate CPU/GPU-to-NVMe spill knees（Tier capacity；P1）",
     "steps": [
       "配置 Tier capacity，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1178,7 +2583,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model tier-capacity --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-013.json\n# sweep: GPU/CPU 0/4/16/32 GiB\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model tier-capacity --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-013.json\n# sweep: GPU/CPU 0/4/16/32 GiB\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Spill point and QoS impact；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1195,7 +2604,7 @@
     "primary_variables": "TP 1/2/4/8;GPUs>=TP",
     "primary_metrics": "per-rank bytes;aggregate BW;P99",
     "windows_status": "Simulation/trace now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Per-rank object-size effects（TP matrix；P1）",
     "steps": [
       "配置 TP matrix，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1205,7 +2614,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model tp-matrix --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-014.json\n# sweep: TP 1/2/4/8, GPUs>=TP\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model tp-matrix --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-014.json\n# sweep: TP 1/2/4/8, GPUs>=TP\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Scaling effect reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1222,7 +2635,7 @@
     "primary_variables": "model/user/context sweep",
     "primary_metrics": "write BW;P99;fsync",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Write-heavy disaggregated prefill（Prefill-only；P1）",
     "steps": [
       "配置 Prefill-only，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1232,7 +2645,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model prefill-only --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-015.json\n# sweep: model/user/context sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model prefill-only --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-015.json\n# sweep: model/user/context sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：No errors；write-tail curve；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1249,7 +2666,7 @@
     "primary_variables": "preloaded cache;user sweep",
     "primary_metrics": "read BW;P99.99;tokens/s",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Read-heavy disaggregated decode（Decode-only；P1）",
     "steps": [
       "配置 Decode-only，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1259,7 +2676,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model decode-only --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-016.json\n# sweep: preloaded cache, user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model decode-only --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-016.json\n# sweep: preloaded cache, user sweep\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：QoS met at declared load；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1276,7 +2697,7 @@
     "primary_variables": "chatbot;coding;document",
     "primary_metrics": "object CDF;P99;BW",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Compare object distributions（Context personas；P2）",
     "steps": [
       "配置 Context personas，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1286,7 +2707,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model context-personas --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-017.json\n# sweep: chatbot, coding, document\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model context-personas --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-017.json\n# sweep: chatbot, coding, document\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Differences reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1304,7 +2729,7 @@
     "primary_variables": "none;fast;realistic",
     "primary_metrics": "wall/active BW;P95;tokens/s",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Separate peak and realistic pacing（Generation modes；P1）",
     "steps": [
       "配置 Generation modes，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1314,7 +2739,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model generation-modes --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-018.json\n# sweep: none, fast, realistic\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model generation-modes --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-018.json\n# sweep: none, fast, realistic\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Mode and QoS recorded；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1331,7 +2760,7 @@
     "primary_variables": "on/off;docs 10/100",
     "primary_metrics": "hit rate;bytes saved;P99",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Measure reuse and document I/O（RAG/prefix/multi-turn；P2）",
     "steps": [
       "配置 RAG/prefix/multi-turn，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1341,7 +2770,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "20–60 min",
-    "source_command": "python -m kv_cache.cli --model rag --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-019.json\n# sweep: on/off, docs 10/100\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model rag --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-019.json\n# sweep: on/off, docs 10/100\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Reuse and added I/O quantified；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1359,7 +2792,7 @@
     "primary_variables": "users/rate +20/25%",
     "primary_metrics": "queue;tail;recovery;tokens/s",
     "windows_status": "Now",
-    "tool": "Python kv_cache.cli + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Find knee and recovery（Saturation/autoscale；P0）",
     "steps": [
       "配置 Saturation/autoscale，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1369,7 +2802,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "2–8 h",
-    "source_command": "python -m kv_cache.cli --model saturation --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-020.json\n# sweep: users/rate +20/25%\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model saturation --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --output <RESULT_DIR>/ai-kv-020.json\n# sweep: users/rate +20/25%\n# 记录 storage_entries、Tier-2 bytes、P95/P99 和 OOM",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Max compliant load；recovery time；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1387,7 +2824,7 @@
     "primary_variables": "filter Tier-2;1x/2x/4x;direct",
     "primary_metrics": "P50/P95/P99;aligned BW;errors",
     "windows_status": "Now after filter",
-    "tool": "kv_cache.cli + Trace Replay + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Reproduce SSD-tier logical I/O（Tier-2 trace replay；P0）",
     "steps": [
       "配置 Tier-2 trace replay，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1397,7 +2834,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "30–90 min",
-    "source_command": "python -m kv_cache.cli --model tier-2-trace-replay --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --io-trace-log <RESULT_DIR>/ai-kv-021_trace.csv --output <RESULT_DIR>/ai-kv-021.json\n# sweep: filter Tier-2, 1x/2x/4x, direct\npython -m vdbbench.replay <RESULT_DIR>/ai-kv-021_trace.csv --data-dir <DUT_DIR>/kv_replay --direct-io --seed 42",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model tier-2-trace-replay --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --io-trace-log <RESULT_DIR>/ai-kv-021_trace.csv --output <RESULT_DIR>/ai-kv-021.json\n# sweep: filter Tier-2, 1x/2x/4x, direct\npython -m vdbbench.replay <RESULT_DIR>/ai-kv-021_trace.csv --data-dir <DUT_DIR>/kv_replay --direct-io --seed 42",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Only Tier-2；zero replay errors；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1415,7 +2856,7 @@
     "primary_variables": "trace speed;cycles;dataset",
     "primary_metrics": "burst tail;queue;drops",
     "windows_status": "External dataset",
-    "tool": "kv_cache.cli + Trace Replay + typeperf",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Real arrival/context distributions（BurstGPT/ShareGPT；P2）",
     "steps": [
       "配置 BurstGPT/ShareGPT，固定 context、users、GPU/CPU tier 和 generation mode；",
@@ -1425,7 +2866,11 @@
       "保存 JSON、Trace、监控、过滤条件和判定。"
     ],
     "duration": "2–8 h",
-    "source_command": "python -m kv_cache.cli --model burstgpt --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --io-trace-log <RESULT_DIR>/ai-kv-022_trace.csv --output <RESULT_DIR>/ai-kv-022.json\n# sweep: trace speed, cycles, dataset\npython -m vdbbench.replay <RESULT_DIR>/ai-kv-022_trace.csv --data-dir <DUT_DIR>/kv_replay --direct-io --seed 42",
+    "source_command": "# BLOCKED: no native mlpstorage command: 该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "workbook_command": "python -m kv_cache.cli --model burstgpt --num-users <USERS> --duration 300 --gpu-mem-gb <GPU_TIER_GB> --cpu-mem-gb <CPU_TIER_GB> --cache-dir <DUT_DIR> --generation-mode <none|fast|realistic> --performance-profile latency --io-trace-log <RESULT_DIR>/ai-kv-022_trace.csv --output <RESULT_DIR>/ai-kv-022.json\n# sweep: trace speed, cycles, dataset\npython -m vdbbench.replay <RESULT_DIR>/ai-kv-022_trace.csv --data-dir <DUT_DIR>/kv_replay --direct-io --seed 42",
+    "native_status": "BLOCKED",
+    "native_block_reason": "该 KV Case 的模型或 trace/prefill/decode/persona/TP 参数不在 mlpstorage kvcache CLI 暴露范围内。",
+    "native_commands": [],
     "standard": "Pass：Provenance recorded；no unexplained drops；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Tier-2 未命中、Trace 为空、时间戳倒退或出现 OOM 但未记录。"
   },
   {
@@ -1443,7 +2888,7 @@
     "primary_variables": "planted query;L2",
     "primary_metrics": "Recall;QPS;trace completeness",
     "windows_status": "Now;completed",
-    "tool": "Docker Desktop + Milvus + vdbbench-modular",
+    "tool": "mlpstorage",
     "purpose": "Windows Milvus/trace smoke（1Kx128 HNSW；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 1Kx128 HNSW 数据/索引；",
@@ -1453,7 +2898,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now;completed。"
     ],
     "duration": "30–120 min",
-    "source_command": "docker compose -f vdb_benchmark/docker-compose.win.yml up -d\nvdbbench-modular --config vdb_benchmark/vdbbench/benchmark/configs/windows_trace_smoke.yaml --io-trace-log <RESULT_DIR>/milvus_trace.csv --output-dir <RESULT_DIR>/milvus_smoke",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_001_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_001_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "docker compose -f vdb_benchmark/docker-compose.win.yml up -d\nvdbbench-modular --config vdb_benchmark/vdbbench/benchmark/configs/windows_trace_smoke.yaml --io-trace-log <RESULT_DIR>/milvus_trace.csv --output-dir <RESULT_DIR>/milvus_smoke",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_001_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_001_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Expected result；valid trace；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1471,7 +2986,7 @@
     "primary_variables": "M64;ef 32/128/256",
     "primary_metrics": "Recall;QPS;P99",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Graph-index baseline（1Mx1536 HNSW；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 1Mx1536 HNSW 数据/索引；",
@@ -1481,7 +2996,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-002 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-002 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: M64, ef 32/128/256",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_002_hnsw --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_002_hnsw --benchmark-mode timed --vector-dim 1536 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-002 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-002 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: M64, ef 32/128/256",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_002_hnsw",
+          "--num-vectors",
+          "1000000",
+          "--dimension",
+          "1536",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_002_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "1536",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Fixed-Recall comparison；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1499,7 +3084,7 @@
     "primary_variables": "degree 64;search-list",
     "primary_metrics": "Recall;QPS;P99;physical reads",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Disk-resident ANN baseline（1Mx1536 DISKANN；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 1Mx1536 DISKANN 数据/索引；",
@@ -1509,7 +3094,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-003 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-003 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: degree 64, search-list",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai_vdb_003_diskann --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai_vdb_003_diskann --benchmark-mode timed --vector-dim 1536 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-003 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-003 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: degree 64, search-list",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "DISKANN",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_003_diskann",
+          "--num-vectors",
+          "1000000",
+          "--dimension",
+          "1536",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "DISKANN",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_003_diskann",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "1536",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Recall target；physical I/O reported；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1527,7 +3182,7 @@
     "primary_variables": "512 vs 1536",
     "primary_metrics": "bytes/query;QPS;P99;Recall",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Vector-dimension effect（1Mx512 DISKANN；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 1Mx512 DISKANN 数据/索引；",
@@ -1537,7 +3192,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-004 --num-vectors 1000000 --dimension 512 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-004 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: 512 vs 1536",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai_vdb_004_diskann --num-vectors 1000000 --dimension 512 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai_vdb_004_diskann --benchmark-mode timed --vector-dim 512 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-004 --num-vectors 1000000 --dimension 512 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-004 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: 512 vs 1536",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "DISKANN",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_004_diskann",
+          "--num-vectors",
+          "1000000",
+          "--dimension",
+          "512",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "DISKANN",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_004_diskann",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "512",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Fixed-Recall comparison；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1555,7 +3280,7 @@
     "primary_variables": "inline PQ 16/32",
     "primary_metrics": "index bytes;Recall;QPS;P99",
     "windows_status": "Confirm engine support",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Compressed-index efficiency（1Mx512 AISAQ；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 1Mx512 AISAQ 数据/索引；",
@@ -1565,7 +3290,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Confirm engine support。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index AISAQ --host 127.0.0.1 --port 19530 --collection ai-vdb-005 --num-vectors 1000000 --dimension 512 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index AISAQ --host 127.0.0.1 --port 19530 --collection ai-vdb-005 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: inline PQ 16/32",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index AISAQ --host 127.0.0.1 --port 19530 --collection ai_vdb_005_aisaq --num-vectors 1000000 --dimension 512 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index AISAQ --host 127.0.0.1 --port 19530 --collection ai_vdb_005_aisaq --benchmark-mode timed --vector-dim 512 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index AISAQ --host 127.0.0.1 --port 19530 --collection ai-vdb-005 --num-vectors 1000000 --dimension 512 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index AISAQ --host 127.0.0.1 --port 19530 --collection ai-vdb-005 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: inline PQ 16/32",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "AISAQ",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_005_aisaq",
+          "--num-vectors",
+          "1000000",
+          "--dimension",
+          "512",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "AISAQ",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_005_aisaq",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "512",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Support confirmed；fixed Recall；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1583,7 +3378,7 @@
     "primary_variables": "query processes 1/4/8",
     "primary_metrics": "load;QPS;P99;Recall",
     "windows_status": "Now with capacity",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Large-dataset scaling（10Mx1536 HNSW 10 shards；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 10Mx1536 HNSW 10 shards 数据/索引；",
@@ -1593,7 +3388,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now with capacity。"
     ],
     "duration": "60–180 min（容量门禁）",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-006 --num-vectors 10000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-006 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: query processes 1/4/8",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_006_hnsw --num-vectors 10000000 --dimension 1536 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_006_hnsw --benchmark-mode timed --vector-dim 1536 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-006 --num-vectors 10000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-006 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: query processes 1/4/8",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_006_hnsw",
+          "--num-vectors",
+          "10000000",
+          "--dimension",
+          "1536",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_006_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "1536",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Recall target；scale curve；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1611,7 +3476,7 @@
     "primary_variables": "10 shards;effort sweep",
     "primary_metrics": "QPS;P99;Recall;physical I/O;temp",
     "windows_status": "Now with capacity",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Large disk index（10Mx1536 DISKANN 10 shards；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 10Mx1536 DISKANN 10 shards 数据/索引；",
@@ -1621,7 +3486,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now with capacity。"
     ],
     "duration": "60–180 min（容量门禁）",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-007 --num-vectors 10000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-007 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: 10 shards, effort sweep",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai_vdb_007_diskann --num-vectors 10000000 --dimension 1536 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai_vdb_007_diskann --benchmark-mode timed --vector-dim 1536 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-007 --num-vectors 10000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index DISKANN --host 127.0.0.1 --port 19530 --collection ai-vdb-007 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: 10 shards, effort sweep",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "DISKANN",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_007_diskann",
+          "--num-vectors",
+          "10000000",
+          "--dimension",
+          "1536",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "DISKANN",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_007_diskann",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "1536",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Recall target；zero I/O errors；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1639,7 +3574,7 @@
     "primary_variables": "DISKANN;HNSW;AISAQ;IVF;FLAT",
     "primary_metrics": "Recall;QPS;P99;capacity",
     "windows_status": "Open profile",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Compare six index families（Index family sweep；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Index family sweep 数据/索引；",
@@ -1649,7 +3584,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Open profile。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-008 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-008 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: DISKANN, HNSW, AISAQ, IVF, FLAT",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_008_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_008_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-008 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-008 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: DISKANN, HNSW, AISAQ, IVF, FLAT",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_008_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_008_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Same data/query/Recall target；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1666,7 +3671,7 @@
     "primary_variables": "ef/search list 32 to 512",
     "primary_metrics": "Recall;QPS;P99",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Accuracy-performance curve（Search effort；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Search effort 数据/索引；",
@@ -1676,7 +3681,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-009 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-009 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: ef/search list 32 to 512",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_009_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_009_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-009 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-009 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: ef/search list 32 to 512",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_009_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_009_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Knee selected from full curve；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1693,7 +3768,7 @@
     "primary_variables": "processes 1/2/4/8/16",
     "primary_metrics": "QPS;P99;queue;CPU",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Concurrency saturation（Query process scale；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Query process scale 数据/索引；",
@@ -1703,7 +3778,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-010 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-010 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: processes 1/2/4/8/16",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_010_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_010_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-010 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-010 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: processes 1/2/4/8/16",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_010_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_010_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Knee and bottleneck identified；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1720,7 +3865,7 @@
     "primary_variables": "batch 1/8/32/64",
     "primary_metrics": "QPS;per-query P99;CPU",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Batch efficiency/tail cost（Search batch scale；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Search batch scale 数据/索引；",
@@ -1730,7 +3875,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-011 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-011 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: batch 1/8/32/64",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_011_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_011_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-011 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-011 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: batch 1/8/32/64",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_011_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_011_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Fixed-Recall tradeoff curve；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1747,7 +3962,7 @@
     "primary_variables": "batch 1K/10K;compact on/off",
     "primary_metrics": "vectors/s;phase times",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Write/flush/compact/index efficiency（Ingest tuning；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Ingest tuning 数据/索引；",
@@ -1757,7 +3972,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-012 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-012 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: batch 1K/10K, compact on/off",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_012_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_012_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-012 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-012 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: batch 1K/10K, compact on/off",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_012_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_012_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：All phases；zero insert errors；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1774,7 +4059,7 @@
     "primary_variables": "K10/100;COSINE/L2/IP",
     "primary_metrics": "Recall;result bytes;P99;QPS",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Query-shape effects（TopK/metric/dim；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 TopK/metric/dim 数据/索引；",
@@ -1784,7 +4069,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "30–120 min",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-013 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-013 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: K10/100, COSINE/L2/IP",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_013_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_013_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-013 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-013 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: K10/100, COSINE/L2/IP",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_013_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_013_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Semantically valid comparisons；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1802,7 +4157,7 @@
     "primary_variables": "restart/load;repeat rounds",
     "primary_metrics": "load;first/steady P99;physical bytes",
     "windows_status": "Now",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Separate load/cache/search（Cold/warm/search-only；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Cold/warm/search-only 数据/索引；",
@@ -1812,7 +4167,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now。"
     ],
     "duration": "60–180 min（容量门禁）",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-014 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-014 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: restart/load, repeat rounds",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_014_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_014_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-014 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-014 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: restart/load, repeat rounds",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_014_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_014_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Cold method；phases separate；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1830,7 +4255,7 @@
     "primary_variables": "both/search;1x/2x/4x",
     "primary_metrics": "aligned BW;P50/P95/P99;errors",
     "windows_status": "Now;1x complete",
-    "tool": "vdbbench.replay + Direct I/O",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Reproduce logical I/O on SSD（Logical trace replay；P0）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Logical trace replay 数据/索引；",
@@ -1840,7 +4265,11 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Now;1x complete。"
     ],
     "duration": "10–30 min",
-    "source_command": "python -m vdbbench.replay <RESULT_DIR>/milvus_trace.csv --data-dir <DUT_DIR>/vdb_replay --direct-io --seed 42\n# speed sweep: 1x/2x/4x；需要消除节奏间隔时追加 --as-fast-as-possible",
+    "source_command": "# BLOCKED: no native mlpstorage command: logical trace replay 不是 vectordb 的 native mlpstorage 子命令，不能改用 vdbbench.replay 冒充。",
+    "workbook_command": "python -m vdbbench.replay <RESULT_DIR>/milvus_trace.csv --data-dir <DUT_DIR>/vdb_replay --direct-io --seed 42\n# speed sweep: 1x/2x/4x；需要消除节奏间隔时追加 --as-fast-as-possible",
+    "native_status": "BLOCKED",
+    "native_block_reason": "logical trace replay 不是 vectordb 的 native mlpstorage 子命令，不能改用 vdbbench.replay 冒充。",
+    "native_commands": [],
     "standard": "Pass：Complete trace；zero errors；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1858,7 +4287,7 @@
     "primary_variables": "independent clients",
     "primary_metrics": "Recall;foreground P99;ingest rate",
     "windows_status": "Extension",
-    "tool": "mlpstorage vectordb + Milvus + vdbbench",
+    "tool": "mlpstorage",
     "purpose": "Foreground ANN under writes（Ingest+search；P1）",
     "steps": [
       "启动 Milvus 并等待 healthy，准备 Ingest+search 数据/索引；",
@@ -1868,7 +4297,77 @@
       "归档配置、容器日志、Trace、结果及 Windows 可执行性：Extension。"
     ],
     "duration": "60–180 min（容量门禁）",
-    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-016 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-016 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: independent clients",
+    "source_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_016_hnsw --num-vectors 1000 --dimension 128 --num-shards 1 --force --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai_vdb_016_hnsw --benchmark-mode timed --vector-dim 128 --num-query-processes <QUERY_PROCESSES> --runtime <DURATION_SEC> --loops <LOOPS> --storage-root <STORAGE_ROOT> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME>",
+    "workbook_command": "mlpstorage open vectordb datagen file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-016 --num-vectors 1000000 --dimension 1536 --num-shards 1 --force --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\nmlpstorage open vectordb run file --vdb-engine milvus --vdb-index HNSW --host 127.0.0.1 --port 19530 --collection ai-vdb-016 --benchmark-mode timed --runtime 60 --num-query-processes <1|2|4|8> --systemname ai-ssd-vdb --results-dir <RESULT_DIR>\n# sweep: independent clients",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "vectordb",
+          "datagen",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_016_hnsw",
+          "--num-vectors",
+          "1000",
+          "--dimension",
+          "128",
+          "--num-shards",
+          "1",
+          "--force",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "vectordb",
+          "run",
+          "file",
+          "--vdb-engine",
+          "milvus",
+          "--vdb-index",
+          "HNSW",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "19530",
+          "--collection",
+          "ai_vdb_016_hnsw",
+          "--benchmark-mode",
+          "timed",
+          "--vector-dim",
+          "128",
+          "--num-query-processes",
+          "<QUERY_PROCESSES>",
+          "--runtime",
+          "<DURATION_SEC>",
+          "--loops",
+          "<LOOPS>",
+          "--storage-root",
+          "<STORAGE_ROOT>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>"
+        ]
+      }
+    ],
     "standard": "Pass：Recall unchanged；P99<=1.5x solo；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
   },
   {
@@ -1887,7 +4386,7 @@
     "primary_variables": "solo/concurrent;load ramp",
     "primary_metrics": "AU;checkpoint BW;both P99",
     "windows_status": "Now with capacity guard",
-    "tool": "PowerShell 编排 + mlpstorage/kv_cache/vdbbench",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Read/write interference（Training + checkpoint；P0）",
     "steps": [
       "分别执行 Training + checkpoint 的单负载基线；",
@@ -1897,7 +4396,11 @@
       "完成长期运行/填充门禁后，归档编排脚本、各子任务日志和统一判定。"
     ],
     "duration": "2–6 h（并发与容量门禁）",
-    "source_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：solo/concurrent, load ramp\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：solo/concurrent, load ramp\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：AU passes；checkpoint>=0.8x solo；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -1917,7 +4420,7 @@
     "primary_variables": "solo/concurrent;load ramp",
     "primary_metrics": "KV P99;tokens/s;checkpoint BW",
     "windows_status": "Now with capacity guard",
-    "tool": "PowerShell 编排 + mlpstorage/kv_cache/vdbbench",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Inference tails during large writes（KV decode + checkpoint；P0）",
     "steps": [
       "分别执行 KV decode + checkpoint 的单负载基线；",
@@ -1927,7 +4430,11 @@
       "完成长期运行/填充门禁后，归档编排脚本、各子任务日志和统一判定。"
     ],
     "duration": "2–6 h（并发与容量门禁）",
-    "source_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：solo/concurrent, load ramp\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：solo/concurrent, load ramp\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：QoS met；P99<=1.5x solo；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -1945,7 +4452,7 @@
     "primary_variables": "solo/concurrent;ingest rate",
     "primary_metrics": "Recall;foreground P99;ingest rate",
     "windows_status": "Orchestration",
-    "tool": "PowerShell 编排 + mlpstorage/kv_cache/vdbbench",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "RAG search during database build（VDB search + ingest/index；P0）",
     "steps": [
       "分别执行 VDB search + ingest/index 的单负载基线；",
@@ -1955,7 +4462,11 @@
       "完成长期运行/填充门禁后，归档编排脚本、各子任务日志和统一判定。"
     ],
     "duration": "2–6 h（并发与容量门禁）",
-    "source_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：solo/concurrent, ingest rate\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：solo/concurrent, ingest rate\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：Recall stable；P99<=1.5x solo；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -1975,7 +4486,7 @@
     "primary_variables": "independent load ramps",
     "primary_metrics": "both P99;tokens/s;QPS;queue",
     "windows_status": "Orchestration",
-    "tool": "PowerShell 编排 + mlpstorage/kv_cache/vdbbench",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Two random-read services（KV interactive + VDB search；P1）",
     "steps": [
       "分别执行 KV interactive + VDB search 的单负载基线；",
@@ -1985,7 +4496,11 @@
       "完成长期运行/填充门禁后，归档编排脚本、各子任务日志和统一判定。"
     ],
     "duration": "2–6 h（并发与容量门禁）",
-    "source_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：independent load ramps\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：independent load ramps\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：Both SLAs met；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   },
   {
@@ -2003,7 +4518,7 @@
     "primary_variables": "AI cycle;fill background",
     "primary_metrics": "errors;P99/BW drift;temperature",
     "windows_status": "Dedicated test directory",
-    "tool": "PowerShell 编排 + mlpstorage/kv_cache/vdbbench",
+    "tool": "BLOCKED: no native mlpstorage command",
     "purpose": "Eight-hour stability/recovery（Four-family cycle + fill/GC；P0）",
     "steps": [
       "分别执行 Four-family cycle + fill/GC 的单负载基线；",
@@ -2013,7 +4528,11 @@
       "完成长期运行/填充门禁后，归档编排脚本、各子任务日志和统一判定。"
     ],
     "duration": "8–12 h",
-    "source_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：AI cycle, fill background\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "source_command": "# BLOCKED: no native mlpstorage command: 项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "workbook_command": "# 先分别运行各家庭 solo 基线，再并发编排\nStart-Job { mlpstorage open training run file --model <TRAIN_MODEL> --data-dir <DATA_DIR> --results-dir <RESULT_DIR>/training }\nStart-Job { python -m kv_cache.cli --model <KV_MODEL> --cache-dir <DUT_DIR>/kv --output <RESULT_DIR>/kv.json }\n# 追加 Milvus/vdbbench 任务；并发变量：AI cycle, fill background\n# 统一保存 jobs、stdout/stderr、typeperf 与最终判定",
+    "native_status": "BLOCKED",
+    "native_block_reason": "项目没有 Base/Mixed 对应的统一 mlpstorage 命令；不能用 Python probe 冒充 native benchmark。",
+    "native_commands": [],
     "standard": "Pass：Zero errors；no sustained >10% drift；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：路径/盘符不清、采样缺失、结果目录位于 DUT 或无法证明命中 DUT。"
   }
 ]

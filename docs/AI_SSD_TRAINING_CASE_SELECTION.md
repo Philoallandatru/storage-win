@@ -24,9 +24,8 @@
 5. **AI-TRN-010**：验证列式读取和有效数据比例。
 6. **AI-TRN-014**：在上述访问形态确认后做并发扩展，定位饱和点。
 
-每个 Case 的表格步骤、时长、命令和通过标准见 [AI_SSD_TRAINING_CASE_PLAN.xlsx](AI_SSD_TRAINING_CASE_PLAN.xlsx)。对应的可执行入口为 [ai_ssd_training_case_runner.py](../tools/ai_ssd_training_case_runner.py)。
+每个 Case 的表格步骤、时长、命令和通过标准见 [AI_SSD_TRAINING_CASE_PLAN.xlsx](AI_SSD_TRAINING_CASE_PLAN.xlsx)。当前可执行入口是直接调用 native `mlpstorage` 的 [FULL_TEST_PLAN Case 目录](../full_test_plan_cases/cases/)；旧的 `ai_ssd_training_case_runner.py` 已废弃。
 
 ## 暂不纳入首轮的 Case
 
 AI-TRN-002、003、005、007、008、009、011、012、013、015 主要是已覆盖访问形态的加速器、数据规模、batch、线程或长时变体。首轮完成后，再根据瓶颈位置选择这些变体，可以减少重复执行并保留针对性确认。
-

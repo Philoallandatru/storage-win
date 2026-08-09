@@ -9,6 +9,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "ai_ssd_test_cases"
 
+CASE_NUMBER_OFFSETS = {
+    "TRN": 0,
+    "BASE": 16,
+    "CKP": 20,
+    "KV": 29,
+    "VDB": 51,
+    "MIX": 67,
+}
+
+
+def _case_number(case_id: str) -> int:
+    """Return a stable 1-based number matching the external case table."""
+    _, family, number = case_id.split("-")
+    return CASE_NUMBER_OFFSETS[family] + int(number)
+
 
 def _steps(category: str, config: str, metrics: str) -> list[str]:
     templates = {
@@ -55,6 +70,7 @@ def _steps(category: str, config: str, metrics: str) -> list[str]:
 def _case(category: str, case_id: str, name: str, config: str, purpose: str, metrics: str, duration: str, standard: str, *, mode: str | None = None, shards: int | None = None, users: int | None = None, dimensions: int | None = None) -> dict[str, object]:
     filename = f"test_{category}_{name}.py"
     spec: dict[str, object] = {
+        "case_no": _case_number(case_id),
         "case_id": case_id,
         "category": category,
         "case_name": name,
@@ -62,7 +78,7 @@ def _case(category: str, case_id: str, name: str, config: str, purpose: str, met
         "purpose": purpose,
         "steps": _steps(category, config, metrics),
         "test_duration": duration,
-        "command": f"python ai_ssd_test_cases/{filename} --execute --data-dir <DUT_DATA> --result-dir <RESULTS>",
+        "command": f"python ai_ssd_test_cases/{filename} --mode execute --confirm-dut --data-dir <DUT_DATA> --results-dir <RESULTS>",
         "standard": standard,
         "metrics": metrics,
         "mode": mode or category,
@@ -170,8 +186,10 @@ add("mixed", "AI-MIX-005", "four_class_soak", "4 类循环，fill/GC background�
 
 def _write_case(spec: dict[str, object]) -> None:
     filename = f"test_{spec['category']}_{spec['case_name']}.py"
-    payload = json.dumps(spec, ensure_ascii=False, indent=4)
-    content = f'''"""{spec['case_id']} · {spec['case_name']}\n\nGenerated from docs/AI_SSD_TEST_PLAN.xlsx.\n"""\n\nfrom __future__ import annotations\n\nimport sys\nfrom pathlib import Path\n\n_REPO_ROOT = Path(__file__).resolve().parents[1]\nif str(_REPO_ROOT) not in sys.path:\n    sys.path.insert(0, str(_REPO_ROOT))\n\nfrom ai_ssd_test_cases.runner_support import execute_case\n\nCASE_SPEC = {payload}\n\n\nif __name__ == "__main__":\n    raise SystemExit(execute_case(CASE_SPEC))\n'''
+    direct_case = ROOT / "full_test_plan_cases" / "cases" / f"test_{str(spec['case_id']).lower().replace('-', '_')}.py"
+    if not direct_case.is_file():
+        raise FileNotFoundError(f"Generate FULL native cases before AI SSD aliases: {direct_case}")
+    content = direct_case.read_text(encoding="utf-8")
     (OUT / filename).write_text(content, encoding="utf-8")
 
 
@@ -181,7 +199,26 @@ def main() -> None:
         existing.unlink()
     for spec in CASES:
         _write_case(spec)
-    catalog = {str(spec["case_id"]): spec for spec in CASES}
+    full_catalog_path = ROOT / "full_test_plan_cases" / "case_catalog.json"
+    full_catalog_raw = json.loads(full_catalog_path.read_text(encoding="utf-8"))
+    full_catalog = {
+        str(item["case_id"]): item for item in full_catalog_raw
+    }
+    native_fields = (
+        "workbook_command",
+        "source_command",
+        "native_status",
+        "native_block_reason",
+        "native_commands",
+    )
+    catalog: dict[str, dict[str, object]] = {}
+    for spec in CASES:
+        case_id = str(spec["case_id"])
+        merged = dict(spec)
+        full_spec = full_catalog[case_id]
+        for field in native_fields:
+            merged[field] = full_spec[field]
+        catalog[case_id] = merged
     (OUT / "case_catalog.json").write_text(json.dumps(catalog, ensure_ascii=False, indent=2), encoding="utf-8")
     readme = """# AI SSD Test Cases
 
@@ -190,6 +227,8 @@ def main() -> None:
 ## 命名规则
 
 每个脚本均为 `test_<类别>_<case_name>.py`：
+
+每个脚本都带有稳定的 `case_no`（001–072），与 Excel 汇总表保持一致。
 
 - `test_base_*.py`：基础路径、缓存和填充率
 - `test_training_*.py`：训练供数
@@ -200,21 +239,30 @@ def main() -> None:
 
 ## 运行方式
 
-默认只生成执行计划和 manifest，不会启动重负载：
+默认只打印 native 执行计划，不会启动 workload：
 
 ```powershell
-python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py
+python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --mode plan
 ```
 
-执行可重复的 scaled smoke probe：
+直接执行 native mlpstorage Case：
 
 ```powershell
-python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --execute --prepare --data-dir <DUT_DATA> --result-dir <RESULTS>
+mlpstorage init ai-trn-001 D:\\ai_ssd\\results
+python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --mode execute --prepare --confirm-dut --data-dir <DUT_DATA> --results-dir <RESULTS>
 ```
 
-`--execute` 的 Checkpoint/KV/VectorDB/Mixed 脚本使用标准库实现小规模 probe，结果用于验证路径、读写、尾延迟和并发逻辑；Checkpoint 默认最多写 8 个缩放分片，只有在授权 DUT 上才使用 `--full-scale`。正式容量、模型、Milvus 索引或 MLPerf SLA 测试应替换为批准的 workload，并保留同一 Case ID。
+脚本不会替用户初始化、清理或改写结果目录。
 
-所有脚本都包含测试目的、编号步骤、测试时长、命令和通过标准；完整字段可查 `case_catalog.json`。
+在 Windows DUT 上执行时，可显式选择结果目录和 MPI：
+
+```powershell
+python ai_ssd_test_cases/test_training_unet3d_a100_baseline.py --mode execute --prepare --confirm-dut --launcher single --data-dir D:\\ai_ssd\\data --results-dir D:\\ai_ssd\\results
+```
+
+脚本直接调用仓库的 `mlpstorage` 命令；没有对应 native 命令的 Case 会返回 `BLOCKED`，不会降级为标准库 probe 或 `whatif --dry-run`。
+
+测试目的、编号步骤、测试时长、命令和通过标准保存在 `case_catalog.json`；脚本本身只负责直接调用对应的 native `mlpstorage` 命令。
 """
     (OUT / "README.md").write_text(readme, encoding="utf-8")
     print(f"generated={len(CASES)} directory={OUT}")
