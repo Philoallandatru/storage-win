@@ -6,6 +6,7 @@
 
 - Windows x64；Python `>=3.12,<3.13`。
 - 在线构建机需要 `uv`、Git 和网络访问 PyPI/GitHub。
+- Python 依赖默认使用清华 PyPI 镜像；可用 `-PythonIndexUrl` 替换为公司内网或其他镜像。
 - Windows MPI 使用 Microsoft MPI；Case 的 Windows 默认 MPI 命令是 `mpiexec`。
 - `pyproject.toml` 已把 `s3dlio`、`s3torchconnector` 限制为 Linux 依赖；Windows 本地文件系统 Case 不需要 Docker。
 - 构建包会复制已经准备好的 `.venv`，因此构建机需要预留较大空间。当前完整环境约 6 GB 原始大小，最终 ZIP 约 3.5 GB。
@@ -23,6 +24,22 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\tools\prepare_windows_offline_bundle.ps1 `
     -Output E:\MLPerfStorage-Windows-Offline.zip
 ```
+
+默认会设置：
+
+```powershell
+$env:UV_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
+```
+
+如果使用内部镜像：
+
+```powershell
+.\tools\prepare_windows_offline_bundle.ps1 `
+    -Output E:\MLPerfStorage-Windows-Offline.zip `
+    -PythonIndexUrl https://pypi.example.local/simple
+```
+
+这个镜像只用于 Python 包安装；Microsoft MPI 仍从官方 Release 下载。
 
 也可以在构建机上直接双击：
 
@@ -103,14 +120,16 @@ Test-Path 'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
 ### 3.2 准备 Python 环境
 
 ```powershell
-.\tools\setup_windows_build_env.ps1
+.\tools\setup_windows_build_env.ps1 `
+    -PythonIndexUrl https://pypi.tuna.tsinghua.edu.cn/simple
 ```
 
 脚本等价于仓库当前的环境流程：
 
 ```powershell
 uv venv --python 3.12.3 .venv       # 仅当 .venv 不存在时
-uv sync --all-groups --extra test --extra vectordb
+$env:UV_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
+uv sync --frozen --all-groups --extra test --extra vectordb
 uv pip install --python .venv\Scripts\python.exe --editable .\kv_cache_benchmark
 uv pip install --python .venv\Scripts\python.exe --editable .\vdb_benchmark
 ```

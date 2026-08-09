@@ -1,8 +1,10 @@
 [CmdletBinding()]
 param(
+    [Alias("Destination")]
     [string]$Output = "E:\MLPerfStorage-Windows-Offline.zip",
     [string]$MpiVersion = "v10.1.1",
     [string]$MpiDirectory = "",
+    [string]$PythonIndexUrl = "https://pypi.tuna.tsinghua.edu.cn/simple",
     [switch]$SkipMpiDownload,
     [switch]$InstallMpiRuntime,
     [switch]$InstallMpiSdk,
@@ -32,7 +34,7 @@ if (-not (Test-Path -LiteralPath $mpiInstaller -PathType Leaf)) {
     throw "MS-MPI runtime installer was not found: $mpiInstaller"
 }
 
-& (Join-Path $PSScriptRoot "setup_windows_build_env.ps1") -RepoRoot $repoRoot -RecreateVenv:$RecreateVenv -UpdateLock:$UpdateLock
+& (Join-Path $PSScriptRoot "setup_windows_build_env.ps1") -RepoRoot $repoRoot -PythonIndexUrl $PythonIndexUrl -RecreateVenv:$RecreateVenv -UpdateLock:$UpdateLock
 if ($LASTEXITCODE -ne 0) { throw "Windows environment setup failed with exit code $LASTEXITCODE" }
 
 & (Join-Path $PSScriptRoot "build_windows_offline_bundle.ps1") -Output $Output -MpiInstaller $mpiInstaller

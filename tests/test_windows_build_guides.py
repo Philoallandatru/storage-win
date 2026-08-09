@@ -31,8 +31,14 @@ def test_windows_build_scripts_use_repository_entrypoints() -> None:
     assert "prepare_windows_offline_bundle.ps1" in cmd
     assert "ExecutionPolicy Bypass" in cmd
     assert "uv sync" in setup
+    assert "--frozen" in setup
+    assert "UV_INDEX_URL" in setup
+    assert "pypi.tuna.tsinghua.edu.cn" in setup
     assert "kv_cache_benchmark" in setup
     assert "vdb_benchmark" in setup
     assert "Microsoft-MPI/releases/tags" in download
     assert "msmpisetup.exe" in download
     assert "MpiInstaller" in builder
+    assert '[Alias("Destination")]' in builder
+    assert '[Alias("Destination")]' in prepare
+    assert "PythonIndexUrl" in prepare

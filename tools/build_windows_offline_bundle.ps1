@@ -1,5 +1,6 @@
 [CmdletBinding()]
 param(
+    [Alias("Destination")]
     [string]$Output = (Join-Path (Get-Location) "MLPerfStorage-Windows-Offline.zip"),
     [string]$MpiInstaller = "C:\Program Files\Microsoft MPI\Redist\MSMpiSetup.exe"
 )
