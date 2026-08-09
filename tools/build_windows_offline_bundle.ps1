@@ -1,11 +1,13 @@
 [CmdletBinding()]
 param(
-    [string]$Output = (Join-Path (Get-Location) "MLPerfStorage-Windows-Offline.zip")
+    [string]$Output = (Join-Path (Get-Location) "MLPerfStorage-Windows-Offline.zip"),
+    [string]$MpiInstaller = "C:\Program Files\Microsoft MPI\Redist\MSMpiSetup.exe"
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $outputPath = [IO.Path]::GetFullPath($Output)
+$mpiInstallerPath = [IO.Path]::GetFullPath($MpiInstaller)
 $outputParent = [IO.Path]::GetDirectoryName($outputPath)
 if (-not (Test-Path -LiteralPath $outputParent -PathType Container)) {
     New-Item -ItemType Directory -Path $outputParent -Force | Out-Null
@@ -102,11 +104,10 @@ try {
         Set-Content -LiteralPath $finder.FullName -Value $content -Encoding utf8 -NoNewline
     }
 
-    $mpiInstallerSource = "C:\Program Files\Microsoft MPI\Redist\MSMpiSetup.exe"
-    if (Test-Path -LiteralPath $mpiInstallerSource) {
+    if (Test-Path -LiteralPath $mpiInstallerPath) {
         $mpiDestination = Join-Path $payload "mpi"
         New-Item -ItemType Directory -Path $mpiDestination -Force | Out-Null
-        Copy-Item -LiteralPath $mpiInstallerSource -Destination $mpiDestination -Force
+        Copy-Item -LiteralPath $mpiInstallerPath -Destination $mpiDestination -Force
     }
 
     $manifest = [ordered]@{
