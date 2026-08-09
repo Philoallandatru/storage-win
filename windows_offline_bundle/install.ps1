@@ -23,6 +23,9 @@ if (Test-Path -LiteralPath (Join-Path $payloadRoot "mpi")) {
 }
 Copy-Item -LiteralPath (Join-Path $bundleRoot "run.ps1") -Destination $InstallRoot -Force
 Copy-Item -LiteralPath (Join-Path $bundleRoot "run.cmd") -Destination $InstallRoot -Force
+if (Test-Path -LiteralPath (Join-Path $bundleRoot "verify_windows_benchmark_environment.ps1") -PathType Leaf) {
+    Copy-Item -LiteralPath (Join-Path $bundleRoot "verify_windows_benchmark_environment.ps1") -Destination $InstallRoot -Force
+}
 
 $pyvenv = Join-Path $venvRoot "pyvenv.cfg"
 @"

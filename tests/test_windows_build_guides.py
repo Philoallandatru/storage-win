@@ -17,6 +17,7 @@ def test_windows_build_guide_and_scripts_are_present() -> None:
         ROOT / "tools" / "download_msmpi.ps1",
         ROOT / "tools" / "setup_windows_build_env.ps1",
         ROOT / "tools" / "activate_windows_venv.ps1",
+        ROOT / "tools" / "verify_windows_benchmark_environment.ps1",
         ROOT / "tools" / "prepare_windows_offline_bundle.ps1",
         ROOT / "tools" / "build_windows_offline_bundle.cmd",
     )
@@ -28,6 +29,7 @@ def test_windows_build_scripts_use_repository_entrypoints() -> None:
     setup = (ROOT / "tools" / "setup_windows_build_env.ps1").read_text(encoding="utf-8")
     download = (ROOT / "tools" / "download_msmpi.ps1").read_text(encoding="utf-8")
     builder = (ROOT / "tools" / "build_windows_offline_bundle.ps1").read_text(encoding="utf-8")
+    verifier = (ROOT / "tools" / "verify_windows_benchmark_environment.ps1").read_text(encoding="utf-8")
 
     assert "download_msmpi.ps1" in prepare
     assert "setup_windows_build_env.ps1" in prepare
@@ -44,6 +46,11 @@ def test_windows_build_scripts_use_repository_entrypoints() -> None:
     assert "Microsoft-MPI/releases/tags" in download
     assert "msmpisetup.exe" in download
     assert "MpiInstaller" in builder
+    assert "verify_windows_benchmark_environment.ps1" in builder
+    assert "SUPPORTED_PREFLIGHT_OK" in verifier
+    assert "PYTHON_IMPORTS_OK" in verifier
+    assert "MPI_OK" in verifier
+    assert "Test-NetConnection" in verifier
     assert '[Alias("Destination")]' in builder
     assert '[Alias("Destination")]' in prepare
     assert "PythonIndexUrl" in prepare
