@@ -22,7 +22,7 @@ MPI 官方版本固定为 `v10.1.1`。脚本从 Microsoft-MPI 官方 GitHub Rele
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
 .\tools\prepare_windows_offline_bundle.ps1 `
-    -Output E:\MLPerfStorage-Windows-Offline.zip
+    -Output C:\MLPerfStorage-Windows-Offline.zip
 ```
 
 默认会设置：
@@ -35,7 +35,7 @@ $env:UV_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
 
 ```powershell
 .\tools\prepare_windows_offline_bundle.ps1 `
-    -Output E:\MLPerfStorage-Windows-Offline.zip `
+    -Output C:\MLPerfStorage-Windows-Offline.zip `
     -PythonIndexUrl https://pypi.example.local/simple
 ```
 
@@ -80,7 +80,7 @@ tools\build_windows_offline_bundle.cmd
 
 ```powershell
 .\tools\prepare_windows_offline_bundle.ps1 `
-    -Output E:\MLPerfStorage-Windows-Offline.zip `
+    -Output C:\MLPerfStorage-Windows-Offline.zip `
     -InstallMpiRuntime -InstallMpiSdk
 ```
 
@@ -88,7 +88,7 @@ tools\build_windows_offline_bundle.cmd
 
 ```powershell
 .\tools\prepare_windows_offline_bundle.ps1 `
-    -Output E:\MLPerfStorage-Windows-Offline.zip `
+    -Output C:\MLPerfStorage-Windows-Offline.zip `
     -RecreateVenv
 ```
 
@@ -165,7 +165,7 @@ Get-Command mpiexec
 
 ```powershell
 .\tools\build_windows_offline_bundle.ps1 `
-    -Output E:\MLPerfStorage-Windows-Offline.zip `
+    -Output C:\MLPerfStorage-Windows-Offline.zip `
     -MpiInstaller .\.artifacts\msmpi\msmpisetup.exe
 ```
 
@@ -175,7 +175,7 @@ Get-Command mpiexec
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests\test_windows_offline_bundle.py -q
-Get-Item E:\MLPerfStorage-Windows-Offline.zip | Select-Object FullName,Length
+Get-Item C:\MLPerfStorage-Windows-Offline.zip | Select-Object FullName,Length
 ```
 
 ZIP 中应包含：

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [Alias("Destination")]
-    [string]$Output = "E:\MLPerfStorage-Windows-Offline.zip",
+    [string]$Output = "C:\MLPerfStorage-Windows-Offline.zip",
     [string]$MpiVersion = "v10.1.1",
     [string]$MpiDirectory = "",
     [string]$PythonIndexUrl = "https://pypi.tuna.tsinghua.edu.cn/simple",
