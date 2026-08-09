@@ -13,6 +13,7 @@ def test_windows_build_guide_and_scripts_are_present() -> None:
         ROOT / "tools" / "setup_windows_build_env.ps1",
         ROOT / "tools" / "activate_windows_venv.ps1",
         ROOT / "tools" / "prepare_windows_offline_bundle.ps1",
+        ROOT / "tools" / "build_windows_offline_bundle.cmd",
     )
     assert all(path.is_file() for path in required)
 
@@ -26,6 +27,9 @@ def test_windows_build_scripts_use_repository_entrypoints() -> None:
     assert "download_msmpi.ps1" in prepare
     assert "setup_windows_build_env.ps1" in prepare
     assert "build_windows_offline_bundle.ps1" in prepare
+    cmd = (ROOT / "tools" / "build_windows_offline_bundle.cmd").read_text(encoding="utf-8")
+    assert "prepare_windows_offline_bundle.ps1" in cmd
+    assert "ExecutionPolicy Bypass" in cmd
     assert "uv sync" in setup
     assert "kv_cache_benchmark" in setup
     assert "vdb_benchmark" in setup

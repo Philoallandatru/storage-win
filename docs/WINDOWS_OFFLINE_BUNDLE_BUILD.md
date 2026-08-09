@@ -24,6 +24,14 @@ Set-ExecutionPolicy -Scope Process Bypass
     -Output E:\MLPerfStorage-Windows-Offline.zip
 ```
 
+也可以在构建机上直接双击：
+
+```text
+tools\build_windows_offline_bundle.cmd
+```
+
+这个 `.cmd` 是“构建 ZIP”的入口；`windows_offline_bundle\install.ps1` 是打进 ZIP 后给目标机使用的安装器，两者不是同一个流程。
+
 该脚本依次执行：
 
 1. 下载 MS-MPI runtime 和 SDK；
@@ -31,6 +39,25 @@ Set-ExecutionPolicy -Scope Process Bypass
 3. 根据 `uv.lock` 同步 root 项目、测试和 VectorDB 依赖；
 4. 以 editable 方式安装 `kv_cache_benchmark` 和 `vdb_benchmark`；
 5. 调用现有 `build_windows_offline_bundle.ps1` 生成 ZIP。
+
+构建过程的目录结构如下：
+
+```text
+构建机仓库 + .venv + Python runtime + MS-MPI 安装包
+                    │
+                    ▼
+临时 staging/
+├── install.ps1 / install.cmd / run.ps1 / run.cmd
+├── manifest.json
+└── payload/
+    ├── app/       项目源码、配置、Case
+    ├── venv/      已同步的 Python 依赖
+    ├── runtime/   Python 基础运行时
+    └── mpi/       MSMpiSetup.exe
+                    │
+                    ▼
+          MLPerfStorage-Windows-Offline.zip
+```
 
 如果希望同时在构建机安装 MPI：
 
