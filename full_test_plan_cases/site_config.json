@@ -1,7 +1,9 @@
 {
   "mode": "execute",
-  "data_root": "G:/MLPerfTestData",
-  "results_root": "C:/MLPerfTestRuns/single-cases",
+  "test_drive": "C",
+  "test_root": "MLPerfStorageTest",
+  "data_subdir": "data",
+  "results_subdir": "results",
   "launcher": "mpi",
   "mpi_bin": "mpiexec",
   "mlpstorage": ".venv/Scripts/mlpstorage.exe",

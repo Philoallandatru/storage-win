@@ -173,6 +173,34 @@ def test_run_case_needs_only_case_id_and_uses_site_config(monkeypatch, tmp_path:
     assert kwargs["cwd"] == REPO_ROOT
 
 
+def test_run_case_uses_one_default_drive_and_accepts_drive_override(tmp_path: Path) -> None:
+    import full_test_plan_cases.run_case as run_case
+
+    config = {
+        "test_drive": "C",
+        "test_root": "MLPerfStorageTest",
+        "launcher": "mpi",
+        "mpi_bin": "mpiexec",
+        "mlpstorage": str(tmp_path / "venv" / "mlpstorage.exe"),
+        "confirm_dut": True,
+        "init_results": True,
+        "cleanup_data": True,
+    }
+
+    default_command = run_case.build_case_command("AI-KV-005", config, python_executable=tmp_path / "python.exe")
+    overridden_command = run_case.build_case_command(
+        "AI-KV-005",
+        config,
+        python_executable=tmp_path / "python.exe",
+        drive_override="D",
+    )
+
+    assert default_command[default_command.index("--data-dir") + 1].startswith("C:\\")
+    assert default_command[default_command.index("--results-dir") + 1].startswith("C:\\")
+    assert overridden_command[overridden_command.index("--data-dir") + 1].startswith("D:\\")
+    assert overridden_command[overridden_command.index("--results-dir") + 1].startswith("D:\\")
+
+
 def test_run_case_rejects_unknown_case_before_spawning(monkeypatch) -> None:
     import full_test_plan_cases.run_case as run_case
 

@@ -1,4 +1,9 @@
-# FULL_TEST_PLAN：33 个直接 native Case
+# FULL_TEST_PLAN：33 个直接 Native Case
+
+当前 Case 数量、ID 和参数以
+[`case_catalog.json`](case_catalog.json) 为准；文档状态和旧方案迁移说明见
+[`docs/AI_SSD_DOCUMENT_STATUS.md`](../docs/AI_SSD_DOCUMENT_STATUS.md)。旧的 72 Case
+规划矩阵不再是本目录的执行来源。
 
 `cases/` 中的每个文件都是独立入口，文件内直接写出并调用仓库的 `mlpstorage` 命令；不依赖第二层 workload runner，也不执行标准库模拟 probe。
 
@@ -10,13 +15,21 @@ Windows 下只传 Case ID：
 .\run_case.cmd AI-KV-005
 ```
 
+临时指定另一块测试盘时只增加一个盘符参数：
+
+```powershell
+.\run_case.cmd AI-KV-005 --test-drive D
+```
+
 运行参数不应由测试人员每次重新输入。机器相关配置集中在
 [`site_config.json`](site_config.json)，安装或迁移机器后只修改一次：
 
 ```json
 {
-  "data_root": "G:/MLPerfTestData",
-  "results_root": "C:/MLPerfTestRuns/single-cases",
+  "test_drive": "C",
+  "test_root": "MLPerfStorageTest",
+  "data_subdir": "data",
+  "results_subdir": "results",
   "mpi_bin": "mpiexec",
   "duration_sec": 60,
   "loops": 1,
@@ -24,6 +37,10 @@ Windows 下只传 Case ID：
   "cleanup_data": true
 }
 ```
+
+默认盘符是 `C`。`test_drive` 只控制本次测试使用的盘；也可以使用命令行的
+`--test-drive D` 临时覆盖，不需要修改每个 Case 脚本。正式多盘部署如需把
+results 放到独立文件系统，可使用兼容配置中的 `data_root/results_root` 高级字段。
 
 入口会自动完成以下工作：
 
@@ -65,9 +82,9 @@ Windows 下只传 Case ID：
 ```powershell
 .\.venv\Scripts\python.exe full_test_plan_cases\cases\test_ai_trn_003.py `
   --mode execute --confirm-dut --prepare --init-results `
-  --cleanup-data --cleanup-root D:\ai_ssd\data `
-  --launcher single --data-dir D:\ai_ssd\data\AI-TRN-003\run-001 `
-  --results-dir E:\ai_ssd\results\AI-TRN-003\run-001
+  --cleanup-data --cleanup-root C:\MLPerfStorageTest\data `
+  --launcher single --data-dir C:\MLPerfStorageTest\data\AI-TRN-003\run-001 `
+  --results-dir C:\MLPerfStorageTest\results\AI-TRN-003\run-001
 ```
 
 `--init-results` 调用项目原生 `mlpstorage init`；`--cleanup-data` 只删除
@@ -103,7 +120,7 @@ VectorDB Case 不负责启动 Milvus；执行前必须确认 `127.0.0.1:19530` �
 
 ```powershell
 .\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
-  --mode plan --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+  --mode plan --data-dir C:\MLPerfStorageTest\data --results-dir C:\MLPerfStorageTest\results
 ```
 
 正式执行：
@@ -111,8 +128,8 @@ VectorDB Case 不负责启动 Milvus；执行前必须确认 `127.0.0.1:19530` �
 ```powershell
 .\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
   --mode execute --confirm-dut --init-results --cleanup-data `
-  --cleanup-root D:\ai_ssd\data --launcher single --prepare `
-  --data-dir D:\ai_ssd\data --results-dir C:\ai_ssd\results
+  --cleanup-root C:\MLPerfStorageTest\data --launcher single --prepare `
+  --data-dir C:\MLPerfStorageTest\data --results-dir C:\MLPerfStorageTest\results
 ```
 
 `run_all` 直接启动每个 `cases/test_*.py` 文件；在 `execute`、`dry-run` 或 `preflight` 模式下第一个非零返回码会触发套件级 fast-fail。

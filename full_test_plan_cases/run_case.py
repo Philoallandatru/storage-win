@@ -36,9 +36,13 @@ def load_site_config(path: Path) -> dict[str, Any]:
         raise SiteConfigError(f"Invalid JSON in site config {path}: {error}") from error
     if not isinstance(payload, dict):
         raise SiteConfigError(f"Site config must be a JSON object: {path}")
-    for key in ("data_root", "results_root"):
-        if not isinstance(payload.get(key), str) or not payload[key].strip():
-            raise SiteConfigError(f"Site config requires a non-empty '{key}'")
+    if "test_root" in payload:
+        if not isinstance(payload.get("test_root"), str) or not payload["test_root"].strip():
+            raise SiteConfigError("Site config requires a non-empty 'test_root'")
+    else:
+        for key in ("data_root", "results_root"):
+            if not isinstance(payload.get(key), str) or not payload[key].strip():
+                raise SiteConfigError(f"Site config requires a non-empty '{key}'")
     return payload
 
 
@@ -50,6 +54,46 @@ def _configured_path(config: dict[str, Any], key: str) -> Path:
     return path.resolve()
 
 
+def _normalize_drive(value: str) -> str:
+    drive = str(value).strip().rstrip("\\/")
+    if len(drive) == 1 and drive.isalpha():
+        drive = f"{drive.upper()}:"
+    if len(drive) != 2 or drive[0].isalpha() is False or drive[1] != ":":
+        raise SiteConfigError(f"test_drive must be a Windows drive such as C or D:, got: {value}")
+    return drive.upper()
+
+
+def _replace_drive(path: Path, drive: str) -> Path:
+    if not path.drive:
+        return path
+    tail = str(path)[len(path.drive) :].lstrip("\\/")
+    return Path(f"{drive}\\") / tail
+
+
+def _test_roots(config: dict[str, Any], drive_override: str | None) -> tuple[Path, Path]:
+    """Resolve data/results roots from one drive, with legacy root compatibility."""
+    if "test_root" not in config:
+        data_root = _configured_path(config, "data_root")
+        results_root = _configured_path(config, "results_root")
+        if drive_override:
+            drive = _normalize_drive(drive_override)
+            data_root = _replace_drive(data_root, drive)
+            results_root = _replace_drive(results_root, drive)
+        return data_root, results_root
+
+    drive = _normalize_drive(drive_override or str(config.get("test_drive", "C")))
+    test_root_value = os.path.expandvars(str(config.get("test_root", "MLPerfStorageTest")))
+    test_root = Path(test_root_value).expanduser()
+    if test_root.is_absolute():
+        test_root = _replace_drive(test_root, drive)
+    else:
+        test_root = Path(f"{drive}\\") / test_root
+    test_root = test_root.resolve()
+    data_root = test_root / str(config.get("data_subdir", "data"))
+    results_root = test_root / str(config.get("results_subdir", "results"))
+    return data_root.resolve(), results_root.resolve()
+
+
 def build_case_command(
     case_id: str,
     config: dict[str, Any],
@@ -57,6 +101,7 @@ def build_case_command(
     python_executable: Path | None = None,
     mode_override: str | None = None,
     keep_data: bool = False,
+    drive_override: str | None = None,
 ) -> list[str]:
     """Build the independent case entrypoint command from site defaults."""
     case = get_case(case_id)
@@ -71,8 +116,7 @@ def build_case_command(
     if mode == "execute" and not bool(config.get("confirm_dut", True)):
         raise SiteConfigError("execute mode requires confirm_dut=true in site config")
 
-    data_root = _configured_path(config, "data_root")
-    results_root = _configured_path(config, "results_root")
+    data_root, results_root = _test_roots(config, drive_override)
     data_dir = data_root / normalized
     results_dir = results_root / normalized
     python = python_executable or Path(sys.executable)
@@ -130,6 +174,7 @@ def main() -> int:
     parser.add_argument("case_id", help="Case ID, for example AI-KV-005")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
     parser.add_argument("--mode", choices=("plan", "preflight", "dry-run", "execute"))
+    parser.add_argument("--test-drive", help="Override the configured single Windows test drive, for example D:")
     parser.add_argument("--keep-data", action="store_true")
     parser.add_argument("--print-command", action="store_true")
     args = parser.parse_args()
@@ -146,6 +191,7 @@ def main() -> int:
             config,
             mode_override=args.mode,
             keep_data=args.keep_data,
+            drive_override=args.test_drive,
         )
     except SiteConfigError as error:
         print(f"Configuration error: {error}", file=sys.stderr)
