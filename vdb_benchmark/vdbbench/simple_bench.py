@@ -414,6 +414,29 @@ GT_CONTENT_SAMPLE_SIZE = 8
 GT_CONTENT_ATOL = 1e-4
 
 
+def _partial_flat_resume_start(
+    flat_count: int,
+    total_vectors: int,
+    pk_dtype: Any,
+) -> Optional[int]:
+    """Return a safe numeric-PK resume point for an interrupted FLAT copy.
+
+    ``load-vdb`` assigns contiguous integer IDs starting at zero.  That lets
+    an interrupted copy resume at the existing entity count without guessing
+    for numeric primary keys.  String primary keys are not ordered by this
+    contract, so they deliberately fall back to a clean rebuild.
+    """
+    integer_types = (
+        DataType.INT64,
+        DataType.INT32,
+        DataType.INT16,
+        DataType.INT8,
+    )
+    if 0 < flat_count < total_vectors and pk_dtype in integer_types:
+        return flat_count
+    return None
+
+
 def verify_flat_matches_source(
     source_coll: Collection,
     flat_coll: Collection,
@@ -626,20 +649,34 @@ def create_flat_collection(
         )
 
     try:
+        source_coll = Collection(source_collection_name, using=conn_alias)
+        source_coll.load()
+        source_coll.flush()
+
+        total_vectors = source_coll.num_entities
+        if total_vectors == 0:
+            print(
+                f"ERROR: Source collection '{source_collection_name}' "
+                "reports 0 vectors after flush. Cannot create ground truth."
+            )
+            return FlatSetupResult(
+                ok=False,
+                total_vectors=0,
+                reason=f"source collection '{source_collection_name}' has 0 vectors",
+            )
+
+        resume_start = None
         if utility.has_collection(flat_collection_name, using=conn_alias):
             flat_coll = Collection(flat_collection_name, using=conn_alias)
-            source_coll = Collection(source_collection_name, using=conn_alias)
+            flat_count = flat_coll.num_entities
 
-            if flat_coll.num_entities > 0 and (
-                flat_coll.num_entities == source_coll.num_entities
-            ):
+            if flat_count > 0 and flat_count == total_vectors:
                 # A matching row count alone is NOT sufficient to reuse the
                 # FLAT collection: a stale GT left over from a regenerated
                 # source collection has the same size but unrelated vectors,
                 # which silently drives recall to 0.00 (issue #805). Verify
                 # actual content before trusting it.
                 flat_coll.load()
-                source_coll.load()
                 matches, detail = verify_flat_matches_source(
                     source_coll, flat_coll
                 )
@@ -652,8 +689,8 @@ def create_flat_collection(
                     return FlatSetupResult(
                         ok=True,
                         coverage=1.0,
-                        total_vectors=source_coll.num_entities,
-                        copied_vectors=flat_coll.num_entities,
+                        total_vectors=total_vectors,
+                        copied_vectors=flat_count,
                         reused=True,
                     )
 
@@ -666,66 +703,79 @@ def create_flat_collection(
                     f"(issue #805)."
                 )
                 utility.drop_collection(flat_collection_name, using=conn_alias)
+            elif 0 < flat_count < total_vectors:
+                # A prior Windows run may have been interrupted while copying
+                # a wide 1M-vector source into the FLAT collection.  Verify a
+                # sample before resuming; never append to a stale collection.
+                flat_coll.load()
+                matches, detail = verify_flat_matches_source(
+                    source_coll, flat_coll
+                )
+                _, _, flat_pk_dtype = _detect_schema_fields(flat_coll)
+                resume_start = _partial_flat_resume_start(
+                    flat_count, total_vectors, flat_pk_dtype
+                )
+                if matches and resume_start is not None:
+                    print(
+                        f"Resuming FLAT collection '{flat_collection_name}' "
+                        f"after {flat_count}/{total_vectors} vectors "
+                        f"({detail})."
+                    )
+                else:
+                    print(
+                        f"FLAT collection has {flat_count}/{total_vectors} "
+                        f"vectors but cannot be safely resumed ({detail}); "
+                        "dropping and recreating."
+                    )
+                    utility.drop_collection(flat_collection_name, using=conn_alias)
+                    resume_start = None
             else:
                 print(
-                    f"FLAT collection exists but has {flat_coll.num_entities} vs "
-                    f"{source_coll.num_entities} vectors. Dropping and recreating..."
+                    f"FLAT collection exists but has {flat_count} vs "
+                    f"{total_vectors} vectors. Dropping and recreating..."
                 )
                 utility.drop_collection(flat_collection_name, using=conn_alias)
 
-        print(
-            f"Creating FLAT collection '{flat_collection_name}' "
-            f"from source '{source_collection_name}'..."
-        )
-
-        source_coll = Collection(source_collection_name, using=conn_alias)
-        source_coll.load()
-        source_coll.flush()
-
-        total_vectors = source_coll.num_entities
-        if total_vectors == 0:
+        if resume_start is None:
             print(
-                f"ERROR: Source collection '{source_collection_name}' "
-                f"reports 0 vectors after flush. Cannot create ground truth."
-            )
-            return FlatSetupResult(
-                ok=False,
-                total_vectors=0,
-                reason=f"source collection '{source_collection_name}' has 0 vectors",
+                f"Creating FLAT collection '{flat_collection_name}' "
+                f"from source '{source_collection_name}'..."
             )
 
-        src_pk_field, src_vec_field, src_pk_dtype = _detect_schema_fields(source_coll)
+            src_pk_field, src_vec_field, src_pk_dtype = _detect_schema_fields(source_coll)
 
-        print(
-            f"Source schema: pk_field='{src_pk_field}' ({src_pk_dtype.name}), "
-            f"vec_field='{src_vec_field}', vectors={total_vectors}"
-        )
+            print(
+                f"Source schema: pk_field='{src_pk_field}' ({src_pk_dtype.name}), "
+                f"vec_field='{src_vec_field}', vectors={total_vectors}"
+            )
 
-        pk_kwargs = {"max_length": 256} if src_pk_dtype == DataType.VARCHAR else {}
+            pk_kwargs = {"max_length": 256} if src_pk_dtype == DataType.VARCHAR else {}
 
-        fields = [
-            FieldSchema(
-                name="pk",
-                dtype=src_pk_dtype,
-                is_primary=True,
-                auto_id=False,
-                **pk_kwargs,
-            ),
-            FieldSchema(
-                name="vector",
-                dtype=DataType.FLOAT_VECTOR,
-                dim=vector_dim,
-            ),
-        ]
+            fields = [
+                FieldSchema(
+                    name="pk",
+                    dtype=src_pk_dtype,
+                    is_primary=True,
+                    auto_id=False,
+                    **pk_kwargs,
+                ),
+                FieldSchema(
+                    name="vector",
+                    dtype=DataType.FLOAT_VECTOR,
+                    dim=vector_dim,
+                ),
+            ]
 
-        schema = CollectionSchema(
-            fields,
-            description="FLAT index ground truth collection",
-        )
-        flat_coll = Collection(flat_collection_name, schema, using=conn_alias)
+            schema = CollectionSchema(
+                fields,
+                description="FLAT index ground truth collection",
+            )
+            flat_coll = Collection(flat_collection_name, schema, using=conn_alias)
+        else:
+            src_pk_field, src_vec_field, src_pk_dtype = _detect_schema_fields(source_coll)
 
         copy_batch_size = 5000
-        copied = 0
+        copied = resume_start or 0
 
         print(
             f"Copying {total_vectors} vectors to FLAT collection "
@@ -745,10 +795,16 @@ def create_flat_collection(
                 safe_rows = max(1, (24 * 1024 * 1024) // bytes_per_row)
                 iter_batch_size = min(copy_batch_size, safe_rows, 16384)
 
-                iterator = source_coll.query_iterator(
-                    batch_size=iter_batch_size,
-                    output_fields=[src_pk_field, src_vec_field],
-                )
+                iterator_kwargs = {
+                    "batch_size": iter_batch_size,
+                    "output_fields": [src_pk_field, src_vec_field],
+                }
+                if resume_start is not None:
+                    iterator_kwargs["expr"] = (
+                        f"{src_pk_field} >= {resume_start}"
+                    )
+
+                iterator = source_coll.query_iterator(**iterator_kwargs)
 
                 while True:
                     batch = iterator.next()
@@ -779,6 +835,24 @@ def create_flat_collection(
                 copied = 0
 
                 utility.drop_collection(flat_collection_name, using=conn_alias)
+                pk_kwargs = {"max_length": 256} if src_pk_dtype == DataType.VARCHAR else {}
+                schema = CollectionSchema(
+                    [
+                        FieldSchema(
+                            name="pk",
+                            dtype=src_pk_dtype,
+                            is_primary=True,
+                            auto_id=False,
+                            **pk_kwargs,
+                        ),
+                        FieldSchema(
+                            name="vector",
+                            dtype=DataType.FLOAT_VECTOR,
+                            dim=vector_dim,
+                        ),
+                    ],
+                    description="FLAT index ground truth collection",
+                )
                 flat_coll = Collection(flat_collection_name, schema, using=conn_alias)
 
         if not use_iterator:
@@ -796,6 +870,8 @@ def create_flat_collection(
             # copy loop with 0 vectors. Benchmark IDs are >= 0, so -1 is a safe
             # in-range sentinel that yields the valid first-page expr "pk > -1".
             last_pk: Union[int, str] = -1 if is_int_pk else ""
+            if is_int_pk and resume_start is not None:
+                last_pk = resume_start - 1
             first_page = True
             page_limit = min(copy_batch_size, 16384)
 

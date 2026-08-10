@@ -89,6 +89,7 @@ from vdbbench.simple_bench import (  # noqa: E402
     calc_recall,
     create_flat_collection,
     precompute_ground_truth,
+    _partial_flat_resume_start,
 )
 
 # The bad cursor expression this issue is about. Constructing it dynamically
@@ -265,6 +266,16 @@ class TestCoverageGuard:
         assert passes(0, 1_000_000) is False             # the bug's case
         assert passes(10_000, 1_000_000) is False        # ~1% (issue #375 shape)
         assert passes(980_000, 1_000_000) is False       # 98%
+
+    def test_partial_numeric_flat_collection_resumes_after_existing_rows(self):
+        DataType = simple_bench.DataType
+
+        assert _partial_flat_resume_start(565_248, 1_000_000, DataType.INT64) == 565_248
+
+    def test_partial_non_numeric_flat_collection_does_not_guess_a_resume_point(self):
+        DataType = simple_bench.DataType
+
+        assert _partial_flat_resume_start(565_248, 1_000_000, DataType.VARCHAR) is None
 
 
 # ===========================================================================

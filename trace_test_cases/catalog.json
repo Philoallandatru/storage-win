@@ -1,0 +1,12 @@
+[
+  {
+    "case_id": "AI-VDB-015",
+    "family": "VectorDB",
+    "mode": "TRACE-CAPTURE+TRACE-REPLAY",
+    "priority": "P0",
+    "source": "vdbbench-modular Milvus run",
+    "replay": "vdbbench.replay",
+    "status": "SUPPORTED",
+    "verdict_scope": "Conditional SSD logical-I/O result; not an end-to-end VectorDB QPS/Recall result"
+  }
+]
