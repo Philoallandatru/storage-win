@@ -23,6 +23,7 @@ from pymilvus import (
 )
 
 from vdbbench.io_trace import TraceWriter
+from vdbbench.connection import open_connection
 
 from ..base import CollectionInfo, IndexProgress, VectorDBBackend
 
@@ -44,20 +45,21 @@ class MilvusBackend(VectorDBBackend):
         self,
         host: str = "127.0.0.1",
         port: str = "19530",
+        uri: Optional[str] = None,
         **kwargs,
     ) -> None:
         max_msg = kwargs.get("max_message_length", 514_983_574)
-        connections.connect(
-            "default",
+        open_connection(
+            alias="default",
             host=host,
             port=port,
-            max_receive_message_length=max_msg,
-            max_send_message_length=max_msg,
+            uri=uri,
+            max_message_length=max_msg,
         )
         trace_path = kwargs.get("io_trace_log")
         if trace_path:
             self._trace = TraceWriter(trace_path)
-        logger.info("Connected to Milvus at %s:%s", host, port)
+        logger.info("Connected to Milvus at %s", uri or f"{host}:{port}")
 
     def disconnect(self) -> None:
         try:

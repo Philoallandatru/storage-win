@@ -137,6 +137,22 @@ class TestVectorDBCommandMap:
         assert command.startswith(expected + " ")
         assert not command.startswith("uv run ")
 
+    def test_build_command_maps_milvus_uri_to_workload_host(
+        self, basic_args, tmp_path
+    ):
+        """Local URI should reach existing workload scripts as --host."""
+        with patch('mlpstorage_py.benchmarks.base.generate_output_location') as mock_gen, \
+             patch('mlpstorage_py.benchmarks.vectordbbench.read_config_from_file', return_value={}), \
+             patch('mlpstorage_py.benchmarks.vectordbbench.VectorDBBenchmark.verify_benchmark'), \
+             patch('mlpstorage_py.benchmarks.vectordbbench.VectorDBBenchmark._validate_vdb_dependencies'):
+            mock_gen.return_value = str(tmp_path / "output")
+            basic_args.milvus_uri = str(tmp_path / "milvus.db")
+
+            from mlpstorage_py.benchmarks.vectordbbench import VectorDBBenchmark
+            command = VectorDBBenchmark(basic_args).build_command("vdbbench")
+
+        assert f"--host {basic_args.milvus_uri}" in command
+
 
 class TestVectorDBMetadata:
     """Test metadata structure for history integration."""

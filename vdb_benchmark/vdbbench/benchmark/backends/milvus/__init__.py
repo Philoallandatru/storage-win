@@ -124,7 +124,7 @@ def backend_descriptor() -> BackendDescriptor:
         connection_params=[
             ParamDescriptor(
                 name="host",
-                description="Milvus server hostname or IP.",
+                description="Milvus server hostname or IP (remote mode).",
                 type="str",
                 default="127.0.0.1",
             ),
@@ -133,6 +133,15 @@ def backend_descriptor() -> BackendDescriptor:
                 description="Milvus gRPC port.",
                 type="str",
                 default="19530",
+            ),
+            ParamDescriptor(
+                name="uri",
+                description=(
+                    "Milvus URI. Set this to a local .db path to use "
+                    "Milvus Lite without Docker."
+                ),
+                type="str",
+                default=None,
             ),
             ParamDescriptor(
                 name="max_message_length",

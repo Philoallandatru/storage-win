@@ -94,6 +94,14 @@ class TestVectorDBCommonArguments:
         args = parser.parse_args(['run', '--results-dir', '/tmp', '--systemname', 'sys-v1', '-s', 'milvus.local', 'file'])
         assert args.host == 'milvus.local'
 
+    def test_milvus_uri_argument(self, parser):
+        """Should accept a local Milvus Lite database path."""
+        args = parser.parse_args([
+            'run', '--results-dir', '/tmp', '--systemname', 'sys-v1',
+            '--milvus-uri', 'runtime/milvus.db', 'file'
+        ])
+        assert args.milvus_uri == 'runtime/milvus.db'
+
     def test_port_argument_default(self, parser):
         """Port should default to 19530."""
         args = parser.parse_args(['run', '--results-dir', '/tmp', '--systemname', 'sys-v1', 'file'])
@@ -558,6 +566,37 @@ class TestVectorDBIndexArguments:
 
         assert args.vdb_index == 'HNSW'
         assert not hasattr(args, 'index_type')
+
+    def test_local_milvus_uri_rejects_distributed_run(self, parser, capsys):
+        args = parser.parse_args(
+            _vdb_argv(
+                'run',
+                '--milvus-uri',
+                'runtime/milvus.db',
+                '--distributed',
+            )
+        )
+        args.mode = 'open'
+
+        with pytest.raises(SystemExit):
+            validate_vectordb_arguments(args)
+
+        assert 'only supports single-node' in capsys.readouterr().err
+
+    def test_milvus_uri_rejects_remote_endpoint(self, parser, capsys):
+        args = parser.parse_args(
+            _vdb_argv(
+                'run',
+                '--milvus-uri',
+                'http://milvus.example:19530',
+            )
+        )
+        args.mode = 'open'
+
+        with pytest.raises(SystemExit):
+            validate_vectordb_arguments(args)
+
+        assert '--milvus-uri must be a local .db path' in capsys.readouterr().err
 
 
 class TestVectorDBClosedMode:

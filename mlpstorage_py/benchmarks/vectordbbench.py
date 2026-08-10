@@ -99,6 +99,15 @@ class VectorDBBenchmark(Benchmark):
         return str(args.vdb_index)
 
     def __init__(self, args, **kwargs):
+        # Keep the existing workload scripts, which accept --host/--port,
+        # compatible with the explicit local Milvus Lite option.
+        milvus_uri = getattr(args, "milvus_uri", None)
+        if milvus_uri:
+            # The child scripts predate the URI option and pass --host into
+            # open_connection(). Resolve the local path here so the connector
+            # can distinguish it from a remote host whose name ends in .db.
+            args.host = str(Path(milvus_uri).expanduser().resolve())
+
         # Resolve the index before the base initializer calls
         # generate_output_location(); the VectorDB path includes vdb_index.
         vdb_index = self._resolve_vdb_index_arguments(args)

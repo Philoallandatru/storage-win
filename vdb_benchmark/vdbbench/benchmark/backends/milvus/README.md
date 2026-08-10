@@ -9,9 +9,12 @@ Adapter for [Milvus](https://milvus.io/) / [Zilliz Cloud](https://zilliz.com/)
 pip install pymilvus
 ```
 
-A running Milvus server (standalone or cluster) is required. See the
-[Milvus quickstart](https://milvus.io/docs/install_standalone-docker.md)
-for Docker-based setup.
+Remote runs require a running Milvus server (standalone or cluster). For a
+single-node local smoke test, install `pymilvus[milvus-lite]` and pass a local
+`.db` path as the URI; Milvus Lite starts in-process through PyMilvus. See the
+[Milvus Lite documentation](https://milvus.io/docs/milvus_lite.md) for
+platform and installation details. For Docker-based remote setup, see the
+[Milvus quickstart](https://milvus.io/docs/install_standalone-docker.md).
 
 ## Connection
 
@@ -19,6 +22,7 @@ for Docker-based setup.
 |-----------|-------------|---------|-------------|
 | `host` | `MILVUS__HOST` | `127.0.0.1` | Milvus server hostname or IP |
 | `port` | `MILVUS__PORT` | `19530` | Milvus gRPC port |
+| `uri` | `MILVUS__URI` | *(none)* | Remote URI or local `.db` path for Milvus Lite |
 | `max_message_length` | `MILVUS__MAX_MESSAGE_LENGTH` | `514983574` | Max gRPC message size in bytes (~491 MB) |
 
 Connection uses the `pymilvus.connections.connect()` API with the

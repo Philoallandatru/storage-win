@@ -179,6 +179,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "KV-compatible CSV trace"
         ),
     )
+    p.add_argument(
+        "--milvus-uri",
+        type=str,
+        dest="milvus_uri",
+        help=(
+            "Milvus endpoint URI. Pass a local .db path to start Milvus "
+            "Lite from Python without Docker."
+        ),
+    )
 
     # Introspection
     p.add_argument("--what-if", action="store_true",
@@ -201,12 +210,23 @@ def _merge_cli_over_yaml(yaml_cfg: dict, cli_ns: argparse.Namespace) -> dict:
         else:
             flat[key] = val
 
-    skip = {"config", "what_if", "plan", "debug", "output_dir", "artifacts_dir"}
+    skip = {
+        "config",
+        "what_if",
+        "plan",
+        "debug",
+        "output_dir",
+        "artifacts_dir",
+        "milvus_uri",
+    }
     for key, val in vars(cli_ns).items():
         if key in skip:
             continue
         if val is not None:
             flat[key] = val
+
+    if cli_ns.milvus_uri is not None:
+        flat["uri"] = cli_ns.milvus_uri
 
     return flat
 
@@ -483,9 +503,12 @@ def main(argv: list[str] | None = None) -> int:
             print("\nConnection parameters (source):")
             for p in desc.connection_params:
                 k = p.name
+                cli_val = args.milvus_uri if k == "uri" else None
                 env_val = _env.get(k)
                 yaml_val = flat.get(k)
-                if env_val is not None:
+                if cli_val is not None:
+                    print(f"  {k}: {cli_val!r}  (CLI: --milvus-uri)")
+                elif env_val is not None:
                     print(f"  {k}: {env_val!r}  (env: {backend_name.upper()}__{k.upper()})")
                 elif yaml_val is not None:
                     print(f"  {k}: {yaml_val!r}  (config)")
@@ -534,15 +557,20 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     # Connect backend.
-    # Precedence: environment variables (.env / shell) > YAML config > defaults
+    # Precedence: explicit CLI URI > environment variables (.env / shell)
+    # > YAML config > backend defaults.  The modular runner exposes the URI
+    # explicitly because a local Milvus Lite path is a runtime choice.
     backend = desc.backend_class()
     env_kwargs = env_for_backend(backend_name, desc)
     conn_kwargs: dict = {}
     for p in desc.connection_params:
         k = p.name
+        cli_val = args.milvus_uri if k == "uri" else None
         env_val = env_kwargs.get(k)              # env var / .env file
         yaml_val = flat.get(k)                   # YAML config
-        if env_val is not None:
+        if cli_val is not None:
+            conn_kwargs[k] = cli_val
+        elif env_val is not None:
             conn_kwargs[k] = env_val
         elif yaml_val is not None:
             conn_kwargs[k] = yaml_val

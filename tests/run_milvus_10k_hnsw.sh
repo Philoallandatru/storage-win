@@ -29,26 +29,44 @@ OUT_DIR="${OUT_DIR:-/tmp/pr316_milvus_hnsw_10k}"
 
 MILVUS_HOST="${MILVUS_HOST:-127.0.0.1}"
 MILVUS_PORT="${MILVUS_PORT:-19530}"
+MILVUS_URI="${MILVUS_URI:-}"
 
 echo "Running Milvus modular VDB smoke test"
 echo "Repo root: $(pwd)"
 echo "Config: ${CONFIG}"
 echo "Output: ${OUT_DIR}"
-echo "Milvus: ${MILVUS_HOST}:${MILVUS_PORT}"
+if [[ -n "${MILVUS_URI}" ]]; then
+  echo "Milvus Lite DB: ${MILVUS_URI}"
+else
+  echo "Milvus: ${MILVUS_HOST}:${MILVUS_PORT}"
+fi
 
 uv sync --extra vectordb-milvus
+if [[ -n "${MILVUS_URI}" ]]; then
+  uv pip install "pymilvus[milvus-lite]"
+fi
 uv pip install -e ./vdb_benchmark
 
 rm -rf "${OUT_DIR}"
 
-MILVUS__HOST="${MILVUS_HOST}" \
-MILVUS__PORT="${MILVUS_PORT}" \
-uv run python -m vdbbench.benchmark \
-  --config "${CONFIG}" \
-  --backend milvus \
-  --mode both \
-  --force \
-  --output-dir "${OUT_DIR}"
+if [[ -n "${MILVUS_URI}" ]]; then
+  MILVUS__URI="${MILVUS_URI}" \
+  uv run python -m vdbbench.benchmark \
+    --config "${CONFIG}" \
+    --backend milvus \
+    --mode both \
+    --force \
+    --output-dir "${OUT_DIR}"
+else
+  MILVUS__HOST="${MILVUS_HOST}" \
+  MILVUS__PORT="${MILVUS_PORT}" \
+  uv run python -m vdbbench.benchmark \
+    --config "${CONFIG}" \
+    --backend milvus \
+    --mode both \
+    --force \
+    --output-dir "${OUT_DIR}"
+fi
 
 test -f "${OUT_DIR}/query_vectors.npy"
 test -f "${OUT_DIR}/ground_truth.npz"

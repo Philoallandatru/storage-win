@@ -18,6 +18,7 @@ The `mlpstorage` path is recommended for standard benchmark workflows.
 ## Table of Contents
 
 - [1. Prerequisites](#1-prerequisites)
+  - [Python-only local smoke test with Milvus Lite](#python-only-local-smoke-test-with-milvus-lite)
 - [2. Deploy Milvus](#2-deploy-milvus)
   - [Option A: Local Storage with MinIO](#option-a-local-storage-with-minio)
   - [Option B: S3 Storage](#option-b-s3-storage)
@@ -67,8 +68,8 @@ The `mlpstorage` path is recommended for standard benchmark workflows.
 | Requirement | Version | Notes |
 |-------------|---------|-------|
 | Python | ≥ 3.12 | Required |
-| Docker Engine | ≥ 20.10 | For running Milvus containers |
-| Docker Compose | v2+ | `docker compose` (v2 CLI plugin) preferred |
+| Docker Engine | ≥ 20.10 | Only for the Milvus standalone container path |
+| Docker Compose | v2+ | Only for the Milvus standalone container path |
 | Git | Any | To clone the repository |
 | `uv` | Latest | Recommended package manager ([install](https://docs.astral.sh/uv/getting-started/installation/)) |
 | MPI (MPICH or OpenMPI) | Any | Only for distributed/multi-node runs; requires `mpi4py ≥ 4.0.0` |
@@ -84,7 +85,12 @@ The `mlpstorage` path is recommended for standard benchmark workflows.
 | `tabulate` | ≥ 0.9.0 | Collection info table display |
 
 The `datasize` command does not require Milvus or `pymilvus`.
-Load and run commands require a running Milvus server.
+Load and run commands require either a running Milvus server or the local
+Milvus Lite extra described below.
+
+For a single-node functional test, Docker is optional: Milvus Lite can be
+started by PyMilvus from a local `.db` path. The official Milvus Lite package
+currently targets Ubuntu and macOS; use WSL2 on Windows.
 
 ### Clone the Repository
 
@@ -93,11 +99,67 @@ git clone https://github.com/mlcommons/storage.git
 cd storage
 ```
 
+### Python-only local smoke test with Milvus Lite
+
+Install the optional local backend dependencies:
+
+```bash
+uv sync --extra vectordb-milvus
+uv pip install "pymilvus[milvus-lite]"
+uv pip install -e ./vdb_benchmark
+```
+
+Run the existing modular benchmark against a persistent local database file:
+
+```bash
+python -m vdbbench.benchmark \
+  --config tests/configs/milvus_10k_hnsw.yaml \
+  --backend milvus \
+  --mode both \
+  --force \
+  --milvus-uri ./runtime/milvus_lite.db \
+  --output-dir ./runtime/milvus_lite_10k
+```
+
+The same runner can be called directly from Python:
+
+```python
+from vdbbench.benchmark.run_benchmark import main
+
+raise SystemExit(main([
+    "--config", "tests/configs/milvus_10k_hnsw.yaml",
+    "--backend", "milvus",
+    "--mode", "both",
+    "--force",
+    "--milvus-uri", "./runtime/milvus_lite.db",
+    "--output-dir", "./runtime/milvus_lite_10k",
+]))
+```
+
+The MLPerf Storage CLI also accepts the same local path:
+
+```bash
+./mlpstorage init MLCommons ./runtime/results
+
+mlpstorage open vectordb run \
+  --config tests/configs/milvus_10k_hnsw.yaml \
+  --milvus-uri ./runtime/milvus_lite.db \
+  --systemname local-milvus-lite \
+  --results-dir ./runtime/results \
+  file
+```
+
+This path is intended for small, single-node HNSW/FLAT validation. It does
+not replace a standalone Milvus service for multi-node runs or storage
+benchmarking with DISKANN.
+
 ---
 
 ## 2. Deploy Milvus
 
-A running Milvus instance is required for all load (`datagen`) and benchmark (`run`) commands. This section applies to both the mlpstorage CLI and direct script paths.
+A running Milvus instance is required for remote load (`datagen`) and
+benchmark (`run`) commands. For a local single-node smoke test, use the
+Milvus Lite path above. This section applies to the standalone server paths.
 
 Standalone Milvus stacks are available in the `vdb_benchmark/stacks` directory:
 

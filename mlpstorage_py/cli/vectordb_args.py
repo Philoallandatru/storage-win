@@ -250,7 +250,20 @@ def _add_vectordb_core_args(parser, command, index_choices):
             '--host', '-s',
             type=str,
             default="127.0.0.1",
-            help=HELP_MESSAGES["db_ip_address"],
+            help=(
+                f"{HELP_MESSAGES['db_ip_address']} A local .db path can be "
+                "passed with --milvus-uri for Milvus Lite."
+            ),
+        )
+        parser.add_argument(
+            '--milvus-uri',
+            dest='milvus_uri',
+            type=str,
+            default=None,
+            help=(
+                "Local Milvus .db path for a single-node Milvus Lite run. "
+                "Use --host/--port for a remote Milvus server."
+            ),
         )
         parser.add_argument(
             '--port', '-p',
@@ -659,6 +672,28 @@ def validate_vectordb_arguments(args):
                     ", ".join(allowed_indexes),
                 )
             )
+
+    local_uri = getattr(args, "milvus_uri", None)
+    is_local_uri = (
+        local_uri
+        and str(local_uri).lower().endswith(".db")
+        and "://" not in str(local_uri)
+    )
+    if local_uri and not is_local_uri:
+        error_messages.append(
+            "--milvus-uri must be a local .db path; use --host/--port "
+            "for a remote Milvus server."
+        )
+    is_distributed = bool(
+        getattr(args, "distributed", False)
+        or getattr(args, "hosts", None)
+        or int(getattr(args, "npernode", 1) or 1) > 1
+    )
+    if is_local_uri and is_distributed:
+        error_messages.append(
+            "A local --milvus-uri .db path only supports single-node "
+            "VectorDB runs; use --host/--port for distributed runs."
+        )
 
     if error_messages:
         for message in error_messages:
