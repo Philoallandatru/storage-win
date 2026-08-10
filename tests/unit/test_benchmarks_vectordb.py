@@ -9,6 +9,9 @@ Tests cover:
 """
 
 import os
+import subprocess
+import sys
+from pathlib import Path
 import pytest
 from unittest.mock import MagicMock, patch
 from argparse import Namespace
@@ -85,6 +88,54 @@ class TestVectorDBCommandMap:
 
             assert bm.command_method_map['run'] == bm.execute_run
             assert bm.command_method_map['datagen'] == bm.execute_datagen
+
+    def test_build_command_uses_windows_path_quoting(self, basic_args, tmp_path):
+        """Windows command strings must not use POSIX single-quote paths."""
+        if os.name != "nt":
+            pytest.skip("This regression covers Windows command invocation")
+
+        with patch('mlpstorage_py.benchmarks.base.generate_output_location') as mock_gen, \
+             patch('mlpstorage_py.benchmarks.vectordbbench.read_config_from_file', return_value={}), \
+             patch('mlpstorage_py.benchmarks.vectordbbench.VectorDBBenchmark.verify_benchmark'), \
+             patch('mlpstorage_py.benchmarks.vectordbbench.VectorDBBenchmark._validate_vdb_dependencies'):
+            mock_gen.return_value = str(tmp_path / "output")
+
+            from mlpstorage_py.benchmarks.vectordbbench import VectorDBBenchmark
+            bm = VectorDBBenchmark(basic_args)
+            config_path = r"D:\results with spaces\default.yaml"
+            bm.config_file = config_path
+
+            command = bm.build_command("vdbbench")
+
+        expected = subprocess.list2cmdline([config_path])
+        assert f"--config {expected}" in command
+        assert f"--config '{config_path}'" not in command
+
+    def test_build_command_uses_installed_windows_vdbbench(self, basic_args, tmp_path):
+        """Windows workload commands must not let uv replace the parent exe."""
+        if os.name != "nt":
+            pytest.skip("This regression covers Windows command invocation")
+
+        scripts = tmp_path / "venv" / "Scripts"
+        scripts.mkdir(parents=True)
+        python_exe = scripts / "python.exe"
+        vdbbench_exe = scripts / "vdbbench.exe"
+        python_exe.touch()
+        vdbbench_exe.touch()
+
+        with patch('mlpstorage_py.benchmarks.base.generate_output_location') as mock_gen, \
+             patch('mlpstorage_py.benchmarks.vectordbbench.read_config_from_file', return_value={}), \
+             patch('mlpstorage_py.benchmarks.vectordbbench.VectorDBBenchmark.verify_benchmark'), \
+             patch('mlpstorage_py.benchmarks.vectordbbench.VectorDBBenchmark._validate_vdb_dependencies'), \
+             patch.object(sys, 'executable', str(python_exe)):
+            mock_gen.return_value = str(tmp_path / "output")
+
+            from mlpstorage_py.benchmarks.vectordbbench import VectorDBBenchmark
+            command = VectorDBBenchmark(basic_args).build_command("vdbbench")
+
+        expected = subprocess.list2cmdline([str(vdbbench_exe)])
+        assert command.startswith(expected + " ")
+        assert not command.startswith("uv run ")
 
 
 class TestVectorDBMetadata:

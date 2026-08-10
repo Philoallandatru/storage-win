@@ -16,25 +16,23 @@ def _filename(case_id: str) -> str:
     return f"test_{case_id.lower().replace('-', '_')}.py"
 
 
-def test_full_plan_has_all_72_cases_in_workbook_order() -> None:
+def test_full_plan_contains_only_executable_native_cases() -> None:
     cases = load_catalog()
 
-    assert len(cases) == 72
+    assert len(cases) == 33
     assert [case["case_id"] for case in cases[:5]] == [
-        "AI-BASE-001",
-        "AI-BASE-002",
-        "AI-BASE-003",
-        "AI-BASE-004",
-        "AI-TRN-001",
+        "AI-TRN-003",
+        "AI-TRN-004",
+        "AI-TRN-005",
+        "AI-CKP-001",
+        "AI-CKP-002",
     ]
-    assert cases[-1]["case_id"] == "AI-MIX-005"
+    assert cases[-1]["case_id"] == "AI-VDB-016"
     assert Counter(case["family"] for case in cases) == {
-        "Base": 4,
-        "Training": 16,
-        "Checkpoint": 9,
-        "KV Cache": 22,
-        "VectorDB": 16,
-        "Mixed": 5,
+        "Training": 3,
+        "Checkpoint": 7,
+        "KV Cache": 8,
+        "VectorDB": 15,
     }
     assert SOURCE_SHA256 == "fada60afe5124244551ce248d3e8e3149a57a5b1b25bed2bc212d860d1d27656"
 
@@ -52,13 +50,16 @@ def test_each_case_has_a_self_contained_entrypoint() -> None:
 
 def test_catalog_keeps_workbook_command_separate_from_native_command() -> None:
     training = next(case for case in load_catalog() if case["case_id"] == "AI-TRN-003")
-    mixed = next(case for case in load_catalog() if case["case_id"] == "AI-MIX-001")
 
     assert "--model unet3d" in training["workbook_command"]
     assert "open training unet3d datagen file" in training["source_command"]
+    assert "dataset.num_files_train=7200" in training["source_command"]
     assert training["native_status"] == "SUPPORTED"
-    assert mixed["native_status"] == "BLOCKED"
-    assert "no native" in mixed["source_command"].lower()
+    assert all(
+        command["argv"][0] == "open"
+        for case in load_catalog()
+        for command in case["native_commands"]
+    )
 
 
 def test_native_training_plan_uses_model_positional_and_optional_prepare(tmp_path: Path) -> None:
@@ -83,6 +84,14 @@ def test_native_training_plan_uses_model_positional_and_optional_prepare(tmp_pat
     assert completed.returncode == 0, completed.stderr
     assert "mlpstorage open training unet3d datagen file" in completed.stdout
     assert "mlpstorage open training unet3d run file" in completed.stdout
+
+
+def test_case_supports_native_results_init_and_data_cleanup_flags(tmp_path: Path) -> None:
+    source = (CASE_DIR / "test_ai_trn_003.py").read_text(encoding="utf-8")
+
+    assert "--init-results" in source
+    assert "--cleanup-data" in source
+    assert "--cleanup-root" in source
 
 
 def test_run_all_forwards_to_case_files_and_fast_fails(monkeypatch) -> None:

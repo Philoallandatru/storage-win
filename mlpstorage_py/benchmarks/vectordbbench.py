@@ -31,6 +31,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
@@ -342,9 +343,28 @@ class VectorDBBenchmark(Benchmark):
         """Return the uv execution prefix used by subprocess commands."""
         return "uv run "
 
+    def _tool_command(self, script_name: str) -> str:
+        """Resolve an installed VDB console script without re-syncing uv.
+
+        ``uv run`` may refresh the editable project before starting a child.
+        On Windows the parent ``mlpstorage.exe`` is still open during that
+        refresh, so uv cannot replace it and the workload fails with a file
+        sharing error.  Use the already-installed venv executable directly
+        when it is available; retain uv as the fallback for other platforms
+        and source-only environments.
+        """
+        if os.name == "nt":
+            candidate = Path(sys.executable).parent / f"{script_name}.exe"
+            if candidate.is_file():
+                return subprocess.list2cmdline([str(candidate)])
+        return f"{self._get_uv_prefix()}{script_name}"
+
     @staticmethod
     def _quote(value: Any) -> str:
-        return shlex.quote(str(value))
+        text = str(value)
+        if os.name == "nt":
+            return subprocess.list2cmdline([text])
+        return shlex.quote(text)
 
     @staticmethod
     def _option_name(param: str) -> str:
@@ -406,7 +426,7 @@ class VectorDBBenchmark(Benchmark):
         """Build a single-node vdbbench command string."""
         os.makedirs(self.run_result_output, exist_ok=True)
 
-        parts = [f"{self._get_uv_prefix()}{script_name}"]
+        parts = [self._tool_command(script_name)]
 
         # All VDB scripts accept --config, --host, and --port.
         self._append_cli_option(parts, "config", self.config_file)
@@ -546,7 +566,7 @@ class VectorDBBenchmark(Benchmark):
     ) -> int:
         """Run post-MPI aggregation script for filesystem coordination."""
         cmd = (
-            f"{self._get_uv_prefix()}vdb-aggregate "
+            f"{self._tool_command('vdb-aggregate')} "
             f"--phase {self._quote(phase)} "
             f"--base-output-dir {self._quote(base_output_dir)} "
             f"--expected-ranks {expected_ranks}"
@@ -836,7 +856,7 @@ class VectorDBBenchmark(Benchmark):
 
         wrapper_parts = [
             self._mpi_prefix(),
-            f"{self._get_uv_prefix()}vdb-mpi-wrapper load",
+            f"{self._tool_command('vdb-mpi-wrapper')} load",
         ]
 
         wrapper_params = {
@@ -992,7 +1012,7 @@ class VectorDBBenchmark(Benchmark):
 
         wrapper_parts = [
             self._mpi_prefix(),
-            f"{self._get_uv_prefix()}vdb-mpi-wrapper {phase}",
+            f"{self._tool_command('vdb-mpi-wrapper')} {phase}",
         ]
 
         wrapper_params = {

@@ -172,10 +172,14 @@ def check_executable_available(
 
     # Check additional search paths
     if search_paths:
+        executable_names = [executable]
+        if os.name == "nt" and not executable.lower().endswith(".exe"):
+            executable_names.append(f"{executable}.exe")
         for search_path in search_paths:
-            full_path = os.path.join(search_path, executable)
-            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                return full_path
+            for executable_name in executable_names:
+                full_path = os.path.join(search_path, executable_name)
+                if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                    return full_path
 
     raise DependencyError(
         message=f"{friendly_name} not found",

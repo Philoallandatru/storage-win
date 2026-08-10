@@ -1533,8 +1533,8 @@ class TestCollectChassisModel:
         assert collect_chassis_model(dmi_path=str(nonexistent)) == ""
 
     @pytest.mark.skipif(
-        os.geteuid() == 0,
-        reason="root bypasses chmod 0o000 file-mode permission denial",
+        os.name == "nt" or getattr(os, "geteuid", lambda: -1)() == 0,
+        reason="Windows has no geteuid/chmod permission model for this test; root bypasses chmod denial",
     )
     def test_unreadable_file_returns_empty(self, tmp_path):
         """D-2 universal failure rule: permission denied (hardened container,

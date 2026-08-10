@@ -1,7 +1,7 @@
 # Consumer AI-PC SSD executable cases
 
-This directory contains one launchable Python file for every case in the
-consumer AI-PC matrix (29 core cases plus 8 optional cases). The files under
+This directory contains one launchable Python file for every native workload
+case in the consumer AI-PC matrix (17 core cases plus 3 optional cases). The files under
 `cases/` are intentionally small entry points; `runner.py` provides the common
 implementation so that preflight, command construction, monitoring and result
 format stay consistent.
@@ -76,20 +76,17 @@ changed to underscores. The complete machine-readable catalog is in
 
 | Stage | Case files |
 |---|---|
-| Stage 0 | `s0_env_01.py`, `s0_cap_02.py`, `s0_config_03.py` |
-| Stage 1 | `s1_io_01.py`–`s1_io_04.py` |
 | Stage 2 | `s2_trn_01.py`, `s2_ckpt_01.py`, `s2_kv_01.py`, `s2_vdb_01.py` |
-| Stage 3 | `s3_trn_01.py`–`s3_trn_03.py`, `s3_ckpt_01.py`–`s3_ckpt_03.py`, `s3_kv_01.py`–`s3_kv_03.py`, `s3_vdb_01.py`–`s3_vdb_02.py` |
+| Stage 3 | `s3_trn_01.py`–`s3_trn_02.py`, `s3_ckpt_01.py`–`s3_ckpt_03.py`, `s3_kv_01.py`–`s3_kv_02.py`, `s3_vdb_01.py`–`s3_vdb_02.py` |
 | Stage 4 | `s4_mix_01.py`–`s4_mix_03.py` |
-| Stage 5 | `s5_soak_01.py`, `s5_soak_02.py` |
-| Stage 6 | `s6_rec_01.py`, `s6_rec_02.py` |
-| Optional | `o_trn_04.py`, `o_trn_05.py`, `o_ckpt_04.py`, `o_ckpt_05.py`, `o_kv_04.py`, `o_kv_05.py`, `o_vdb_03.py`, `o_soak_03.py` |
+| Stage 5 | `s5_soak_02.py` |
+| Optional | `o_ckpt_04.py`, `o_kv_05.py`, `o_vdb_03.py` |
 
 ## Scope boundary
 
-The scripts invoke the repository's real `mlpstorage`, `vdbbench` and Docker
-commands where the current Windows implementation supports them. A large
-model “subset” is not silently emulated as a full model: if no subset fixture
-or trace is supplied, the case returns `NOT_RUN` and explains how to provide
-one. Similarly, replay results are labeled as logical SSD replay and are never
-reported as native model performance.
+The remaining scripts invoke the repository's real `mlpstorage` commands.
+Environment probes, trace replay, fill-only actions, Docker restart actions and
+empty integrity checks are not cases in this directory. A large model “subset”
+is not silently emulated as a full model: if no subset fixture or explicit
+full-model confirmation is supplied, the case returns `NOT_RUN` and explains
+how to provide one.

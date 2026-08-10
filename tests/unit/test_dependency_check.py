@@ -129,6 +129,16 @@ class TestCheckDlioAvailable:
             path = check_dlio_available(dlio_bin_path=str(tmp_path))
             assert path == str(dlio_exe)
 
+    def test_finds_windows_dlio_exe_in_custom_path(self, tmp_path):
+        """Windows console scripts use the .exe suffix on disk."""
+        dlio_exe = tmp_path / "dlio_benchmark.exe"
+        dlio_exe.touch()
+        dlio_exe.chmod(0o755)
+
+        with patch('shutil.which', return_value=None):
+            path = check_dlio_available(dlio_bin_path=str(tmp_path))
+            assert path == str(dlio_exe)
+
     def test_raises_with_helpful_message(self):
         """Should raise DependencyError with installation instructions."""
         with patch('shutil.which', return_value=None):

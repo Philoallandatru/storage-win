@@ -45,7 +45,11 @@ def _training_file_count(model: str, accelerator: str) -> int | None:
     for path in candidates:
         if not path.is_file():
             continue
-        match = re.search(r"^\s*num_files_train:\s*(\d+)\s*$", path.read_text(encoding="utf-8"), re.MULTILINE)
+        match = re.search(
+            r"^\s*num_files_train:\s*(\d+)(?:\s+#.*)?$",
+            path.read_text(encoding="utf-8"),
+            re.MULTILINE,
+        )
         if match:
             return int(match.group(1))
     return None
@@ -87,7 +91,11 @@ def _native_case_definition(case: dict[str, Any]) -> dict[str, Any]:
             return _blocked_native(f"无法从 Case 配置解析 native training model/accelerator: {case['model_config']}")
         model = model_match.group(1)
         accelerator = accelerator_match.group(1)
-        mode = "open" if model in {"unet3d", "retinanet"} and accelerator in {"b200", "mi355"} else "whatif"
+        if not (model in {"unet3d", "retinanet"} and accelerator in {"b200", "mi355"}):
+            return _blocked_native(
+                "当前训练 Case 没有可执行的 native open 命令；whatif 只用于估算，不能作为 workload Case。"
+            )
+        mode = "open"
         file_count = _training_file_count(model, accelerator)
         params = ["--params", f"dataset.num_files_train={file_count}"] if file_count else []
         common = [
@@ -138,7 +146,7 @@ def _native_case_definition(case: dict[str, Any]) -> dict[str, Any]:
     if family == "VectorDB":
         if case_id == "AI-VDB-015":
             return _blocked_native(
-                "logical trace replay 不是 vectordb 的 native mlpstorage 子命令，不能改用 vdbbench.replay 冒充。"
+                "AI-VDB-015 是仓库已实现的 VectorDB Trace capture/replay；它不是 native mlpstorage Case，入口位于 trace_test_cases/，不能与 native 成绩混报。"
             )
         index = next((item for item in ("DISKANN", "HNSW", "AISAQ", "IVF_FLAT", "IVF_SQ8", "FLAT") if item in config.upper()), "HNSW")
         dim_match = re.search(r"[x×](\d+)", config)
@@ -218,6 +226,12 @@ def build_catalog(inspect_path: Path) -> list[dict[str, Any]]:
             "model_config": coverage[5],
             "primary_variables": coverage[7],
         })
+        # Keep only cases that invoke a real native workload.  BLOCKED and
+        # whatif entries are planning material, not executable test cases.
+        if native["status"] != "SUPPORTED" or not native["commands"]:
+            continue
+        if any(command["argv"][0] != "open" for command in native["commands"]):
+            continue
         native_commands = ["mlpstorage " + " ".join(item["argv"]) for item in native["commands"]]
         tool = "mlpstorage" if native["status"] == "SUPPORTED" else "BLOCKED: no native mlpstorage command"
         source_command = (
@@ -298,6 +312,9 @@ def main() -> int:
     parser.add_argument("--prepare", action="store_true")
     parser.add_argument("--o-direct", action="store_true")
     parser.add_argument("--confirm-dut", action="store_true")
+    parser.add_argument("--init-results", action="store_true")
+    parser.add_argument("--cleanup-data", action="store_true")
+    parser.add_argument("--cleanup-root", type=Path)
     args = parser.parse_args()
 
     if NATIVE_STATUS != "SUPPORTED":
@@ -329,6 +346,36 @@ def main() -> int:
     if args.mode == "execute" and not args.confirm_dut:
         print(f"{CASE_ID} BLOCKED: execute requires --confirm-dut")
         return 2
+    if args.cleanup_data and args.cleanup_root is None:
+        print(f"{CASE_ID} BLOCKED: --cleanup-data requires --cleanup-root")
+        return 2
+
+    def finalize(code: int) -> int:
+        if not args.cleanup_data:
+            return code
+        data_path = args.data_dir.resolve()
+        root_path = args.cleanup_root.resolve()
+        if data_path == root_path or root_path not in data_path.parents:
+            print(f"{CASE_ID} CLEANUP_FAILED: data path is outside cleanup root")
+            return 1
+        try:
+            if data_path.exists():
+                shutil.rmtree(data_path)
+            print(f"TEST_DATA_ROOT={data_path}")
+            print(f"TEST_DATA_CLEANED={not data_path.exists()}")
+            return code if not data_path.exists() else 1
+        except OSError as error:
+            print(f"{CASE_ID} CLEANUP_FAILED: {error}")
+            return 1
+
+    if args.init_results and args.mode in {"preflight", "dry-run", "execute"}:
+        args.results_dir.parent.mkdir(parents=True, exist_ok=True)
+        init_command = [str(cli), "init", args.systemname or f"{CASE_ID.lower()}-native", str(args.results_dir.resolve())]
+        print(f"{CASE_ID} init: {subprocess.list2cmdline(['mlpstorage', *init_command[1:]])}")
+        if args.mode == "execute":
+            initialized = subprocess.run(init_command, check=False)
+            if initialized.returncode != 0:
+                return finalize(initialized.returncode)
     for item in selected:
         command = [str(cli), *[values.get(arg, arg) for arg in item["argv"] if arg != "<COMMAND>"]]
         if args.o_direct and ("training" in command or "checkpointing" in command) and "--o-direct" not in command:
@@ -339,16 +386,20 @@ def main() -> int:
             ranks = int(command[command.index("--num-processes") + 1])
             if ranks > 1:
                 print(f"{CASE_ID} BLOCKED: checkpointing rank case requires --launcher mpi (requested {ranks} ranks)")
-                return 2
+                return finalize(2)
         print(f"{CASE_ID} {item['phase']}: {subprocess.list2cmdline(['mlpstorage', *command[1:]])}")
         if args.mode in {"plan", "preflight"}:
             continue
         if args.mode == "dry-run":
             command.append("--dry-run")
-        completed = subprocess.run(command, check=False)
+        try:
+            completed = subprocess.run(command, check=False)
+        except OSError as error:
+            print(f"{CASE_ID} FAIL phase={item['phase']}: {error}")
+            return finalize(1)
         if completed.returncode != 0:
             print(f"{CASE_ID} FAIL phase={item['phase']} rc={completed.returncode}")
-            return completed.returncode
+            return finalize(completed.returncode)
     if args.mode == "preflight" and not cli.is_file() and shutil.which(str(cli)) is None:
         print(f"{CASE_ID} BLOCKED: mlpstorage executable not found: {cli}")
         return 2
@@ -357,7 +408,7 @@ def main() -> int:
         return 3
     if args.mode == "execute":
         print(f"{CASE_ID} PASS")
-    return 0
+    return finalize(0)
 
 
 if __name__ == "__main__":
@@ -388,6 +439,10 @@ def main() -> int:
         json.dumps(catalog, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
+    expected_files = {_filename(case["case_id"]) for case in catalog}
+    for stale in cases_dir.glob("test_*.py"):
+        if stale.name not in expected_files:
+            stale.unlink()
     for case in catalog:
         (cases_dir / _filename(case["case_id"])).write_text(_entrypoint(case), encoding="utf-8")
     print(f"generated {len(catalog)} FULL_TEST_PLAN scripts in {cases_dir}")

@@ -29,6 +29,7 @@ from mlpstorage_py.benchmarks.base import Benchmark
 from mlpstorage_py.cluster_collector import _is_localhost
 from mlpstorage_py.config import (
     BENCHMARK_TYPES,
+    EXEC_TYPE,
     KVCACHE_DEFAULT_DURATION,
     KVCACHE_MODEL_DEFAULT,
 )
@@ -294,20 +295,30 @@ class KVCacheBenchmark(Benchmark):
         # that OpenMPI's last-wins resolution for repeated --mca keys keeps
         # the abort-suppression flag authoritative even if the user supplies a
         # conflicting value (kvcache expects per-rank non-zero exits).
-        user_mpi_params = list(getattr(self.args, 'mpi_params', None) or [])
-        mpi_params = user_mpi_params + _abort_suppression_mpi_params(
-            getattr(self.args, 'mpi_bin', 'mpirun'))
-
-        mpi_prefix = generate_mpi_prefix_cmd(
-            mpi_cmd=getattr(self.args, 'mpi_bin', 'mpirun'),
-            hosts=hosts,
-            num_processes=total_ranks,
-            oversubscribe=getattr(self.args, 'oversubscribe', False),
-            allow_run_as_root=getattr(self.args, 'allow_run_as_root', False),
-            params=mpi_params,
-            logger=self.logger,
-            processes_per_node=npernode,
-        )
+        # ``--exec-type docker`` is the project's single-process execution
+        # mode.  It does not mean that Docker Engine should be started.  In
+        # that mode the wrapper must be invoked directly; using the default
+        # Linux ``mpirun`` here makes Windows fail with WinError 2 before the
+        # KV workload even starts.  Keep ``None`` as MPI for compatibility
+        # with callers that predate the explicit execution-type argument.
+        use_mpi = getattr(self.args, 'exec_type', None) in (None, EXEC_TYPE.MPI)
+        if use_mpi:
+            user_mpi_params = list(getattr(self.args, 'mpi_params', None) or [])
+            mpi_params = user_mpi_params + _abort_suppression_mpi_params(
+                getattr(self.args, 'mpi_bin', 'mpirun'))
+            mpi_prefix = generate_mpi_prefix_cmd(
+                mpi_cmd=getattr(self.args, 'mpi_bin', 'mpirun'),
+                hosts=hosts,
+                num_processes=total_ranks,
+                oversubscribe=getattr(self.args, 'oversubscribe', False),
+                allow_run_as_root=getattr(self.args, 'allow_run_as_root', False),
+                params=mpi_params,
+                logger=self.logger,
+                processes_per_node=npernode,
+            )
+        else:
+            mpi_prefix = ''
+        launch_prefix = f"{mpi_prefix} " if mpi_prefix else ''
 
         # Issue #521: rank result JSONs are written on the node where each rank
         # lands, but aggregation globs them locally on the controller. Without a
@@ -342,7 +353,7 @@ class KVCacheBenchmark(Benchmark):
                 # flags to kv-cache.py verbatim; both option_kv_args and
                 # global_kv_args land on kv-cache.py's argparse.
                 wrapper_cmd = (
-                    f"{mpi_prefix} {sys.executable} {wrapper_path}"
+                    f"{launch_prefix}{sys.executable} {wrapper_path}"
                     f" --rank-output-base {option_trial_dir}"
                     f" --rank-cache-base {cache_dir}"
                     f" --seed-base {seed}"
@@ -452,11 +463,13 @@ class KVCacheBenchmark(Benchmark):
     # config.py LLM_SIZE_BY_RANK / LLAMA3_* constants. The two tables track
     # different things (KV cache footprint vs full model weights).
     _MODEL_CACHE_ESTIMATES = {
-        'tiny-1b': {'per_token_bytes': 768, 'typical_sequence': 2048},
-        'mistral-7b': {'per_token_bytes': 4096, 'typical_sequence': 4096},
-        'llama2-7b': {'per_token_bytes': 8192, 'typical_sequence': 4096},
-        'llama3.1-8b': {'per_token_bytes': 4096, 'typical_sequence': 8192},
-        'llama3.1-70b-instruct': {'per_token_bytes': 16384, 'typical_sequence': 8192},
+        # These values come from ModelConfig.kv_cache_size_per_token:
+        # num_layers * kv_heads * head_dim * 2 (K/V) * dtype_bytes.
+        'tiny-1b': {'per_token_bytes': 24576, 'typical_sequence': 2048},
+        'mistral-7b': {'per_token_bytes': 131072, 'typical_sequence': 4096},
+        'llama2-7b': {'per_token_bytes': 524288, 'typical_sequence': 4096},
+        'llama3.1-8b': {'per_token_bytes': 131072, 'typical_sequence': 8192},
+        'llama3.1-70b-instruct': {'per_token_bytes': 327680, 'typical_sequence': 8192},
     }
     _MODEL_CACHE_DEFAULT = {'per_token_bytes': 4096, 'typical_sequence': 4096}
 
@@ -665,11 +678,11 @@ class KVCacheBenchmark(Benchmark):
 
         # Import model configs from kv-cache.py or use estimates
         model_cache_estimates = {
-            'tiny-1b': {'per_token_bytes': 768, 'typical_sequence': 2048},
-            'mistral-7b': {'per_token_bytes': 4096, 'typical_sequence': 4096},
-            'llama2-7b': {'per_token_bytes': 8192, 'typical_sequence': 4096},
-            'llama3.1-8b': {'per_token_bytes': 4096, 'typical_sequence': 8192},
-            'llama3.1-70b-instruct': {'per_token_bytes': 16384, 'typical_sequence': 8192},
+            'tiny-1b': {'per_token_bytes': 24576, 'typical_sequence': 2048},
+            'mistral-7b': {'per_token_bytes': 131072, 'typical_sequence': 4096},
+            'llama2-7b': {'per_token_bytes': 524288, 'typical_sequence': 4096},
+            'llama3.1-8b': {'per_token_bytes': 131072, 'typical_sequence': 8192},
+            'llama3.1-70b-instruct': {'per_token_bytes': 327680, 'typical_sequence': 8192},
         }
 
         model_info = model_cache_estimates.get(self.model, {

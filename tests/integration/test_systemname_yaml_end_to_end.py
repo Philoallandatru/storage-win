@@ -1478,6 +1478,19 @@ def _patch_statvfs_available(available_bytes):
     return _statvfs_side_effect
 
 
+def _patch_capacity_available(available_bytes):
+    """Patch the platform-specific free-space API used by CAP-01."""
+    if hasattr(__import__('os'), 'statvfs'):
+        return patch(
+            'mlpstorage_py.benchmarks.capacity_gate.os.statvfs',
+            side_effect=_patch_statvfs_available(available_bytes),
+        )
+    return patch(
+        'mlpstorage_py.benchmarks.capacity_gate.shutil.disk_usage',
+        return_value=MagicMock(free=available_bytes),
+    )
+
+
 class TestPhase5Cap01:
     """End-to-end coverage for CAP-01 capacity gate.
 
@@ -1494,8 +1507,7 @@ class TestPhase5Cap01:
 
         # Patch the leaf I/O surface; the gate's check_capacity_4field
         # raises naturally from the patched statvfs result.
-        with patch('mlpstorage_py.benchmarks.capacity_gate.os.statvfs',
-                   side_effect=_patch_statvfs_available(1)):
+        with _patch_capacity_available(1):
             from mlpstorage_py.benchmarks.capacity_gate import check_capacity_4field
             with pytest.raises(FileSystemError) as exc_info:
                 check_capacity_4field(str(tmp_path), 10**15, MagicMock())
@@ -1513,8 +1525,7 @@ class TestPhase5Cap01:
         returns None and emits NO logger output (no info/warning/error)."""
         logger = MagicMock()
         # Patch statvfs to return abundant space.
-        with patch('mlpstorage_py.benchmarks.capacity_gate.os.statvfs',
-                   side_effect=_patch_statvfs_available(10**18)):
+        with _patch_capacity_available(10**18):
             from mlpstorage_py.benchmarks.capacity_gate import check_capacity_4field
             result = check_capacity_4field(str(tmp_path), 1, logger)
         assert result is None
@@ -1543,8 +1554,7 @@ class TestPhase5Cap01:
         bm._capacity_gate_destination = MagicMock(return_value=str(tmp_path))
         bm.required_bytes_for_capacity_gate = MagicMock(return_value=10**15)
 
-        with patch('mlpstorage_py.benchmarks.capacity_gate.os.statvfs',
-                   side_effect=_patch_statvfs_available(1)):
+        with _patch_capacity_available(1):
             with pytest.raises(FileSystemError):
                 bm.run()
         # _run must NOT have been called — the gate aborted before write/run.
@@ -1563,8 +1573,7 @@ class TestPhase5Cap01:
         target = _yaml_path(tmp_path)
         assert not target.exists()
 
-        with patch('mlpstorage_py.benchmarks.capacity_gate.os.statvfs',
-                   side_effect=_patch_statvfs_available(1)):
+        with _patch_capacity_available(1):
             with pytest.raises(FileSystemError):
                 bm.run()
 

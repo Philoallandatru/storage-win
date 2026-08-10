@@ -31,6 +31,7 @@ import math
 import os
 import pprint
 import psutil
+import re
 import subprocess
 import shlex
 import select
@@ -327,6 +328,19 @@ def quote_command_token(value: Any) -> str:
     """Quote one command-line token using the host platform's conventions."""
     value = str(value)
     if os.name == "nt":
+        # Hydra parses ``key=value`` overrides after the Windows process
+        # launcher has already received the argument.  A drive-letter path
+        # therefore needs Hydra-level quoting (single quotes are preserved by
+        # CommandLineToArgvW); shell-level quoting alone is not sufficient and
+        # produces ``LexerNoViableAltException`` at ``C:\\``.
+        if value.startswith("++"):
+            equals = value.find("=")
+            if equals >= 0:
+                override_value = value[equals + 1:]
+                if re.match(r"^[A-Za-z]:[\\/]", override_value) and not (
+                    override_value.startswith("'") and override_value.endswith("'")
+                ):
+                    value = f"{value[:equals + 1]}'{override_value}'"
         return subprocess.list2cmdline([value])
     return value
 
@@ -745,6 +759,18 @@ def generate_mpi_prefix_cmd(
         logger.debug(f"Configured slots for hosts: {hosts}")
 
     # Build MPI command prefix
+    # ---- Microsoft MPI on Windows ----
+    # MS-MPI uses the Hydra-style ``-n`` launcher syntax but does not accept
+    # the PALS-only ``--ppn``, ``--hosts`` or ``--cpu-bind`` options below.
+    # Keep the Windows single-host path minimal; this is the normal AI-PC
+    # configuration and avoids passing Linux scheduler flags to mpiexec.exe.
+    if mpi_cmd == MPIEXEC and sys.platform == "win32":
+        prefix = f"{MPI_EXEC_BIN} -n {num_processes}"
+        if params:
+            for param in params:
+                prefix += f" {param}"
+        return prefix
+
     # ---- HPE Cray PALS mpiexec (ALCF Crux/Polaris/Aurora) ----
     # PALS mpiexec uses `--ppn` and a bare comma-separated `--hosts` list, with
     # `--cpu-bind` for affinity. It does NOT accept the OpenMPI flags this

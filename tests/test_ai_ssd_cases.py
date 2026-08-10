@@ -17,8 +17,8 @@ def _filename(case_id: str) -> str:
     return case_id.lower().replace("-", "_") + ".py"
 
 
-def test_consumer_matrix_has_37_cases_and_entrypoints() -> None:
-    assert len(CASES) == 37
+def test_consumer_matrix_has_native_cases_and_entrypoints() -> None:
+    assert len(CASES) == 20
     for case_id in CASES:
         assert (CASE_DIR / _filename(case_id)).is_file(), case_id
 
@@ -35,13 +35,11 @@ def test_case_entrypoints_are_one_file_per_case() -> None:
 def test_case_dry_run_writes_a_verdict(tmp_path: Path) -> None:
     dut = tmp_path / "dut"
     results = tmp_path / "results"
-    trace = REPO_ROOT / "vdb_benchmark" / "results" / "formal_vdbbench_trace.csv"
     rc = run_case(
         "S2-CKPT-01",
         [
             "--dut-root", str(dut),
             "--results-root", str(results),
-            "--trace", str(trace),
             "--mode", "dry-run",
         ],
     )

@@ -893,6 +893,30 @@ class TestExecuteRun:
         assert '--mca orte_abort_on_non_zero_status 0' in cmd0, \
             f"Missing --mca orte_abort_on_non_zero_status 0 in: {cmd0}"
 
+    def test_docker_exec_type_runs_wrapper_without_mpi_prefix(self, bm, fake_agg_result):
+        """Windows single-process execution must not invoke absent mpirun."""
+        bm.args.exec_type = EXEC_TYPE.DOCKER
+        bm.args.mpi_bin = 'mpiexec'
+        bm.args.trials = 1
+        bm.args.inter_option_delay = 0
+        executed_cmds = []
+
+        def fake_execute(cmd, **kwargs):
+            executed_cmds.append(cmd)
+            return ('', '', 0)
+
+        with patch.object(bm, '_execute_command', side_effect=fake_execute), \
+             patch.object(bm, '_interruptible_sleep'), \
+             patch.object(bm, '_aggregate_option_results', return_value=fake_agg_result), \
+             patch.object(bm, '_write_run_summary'), \
+             patch.object(bm, 'write_metadata'):
+            bm._execute_run()
+
+        assert executed_cmds
+        assert 'mpiexec' not in executed_cmds[0]
+        assert executed_cmds[0].startswith(sys.executable)
+        assert 'mlperf_wrapper.py' in executed_cmds[0]
+
     def test_mpirun_passes_through_user_mpi_params(self, bm, fake_agg_result):
         """User --mpi-params must reach mpirun, ordered before the mandatory
         --mca orte_abort_on_non_zero_status 0 flag so OpenMPI's last-wins
@@ -2354,6 +2378,9 @@ class TestKVCacheSystemnameYamlHook:
         # see _make_run_benchmark docstring.
         self._install_cluster_info_mock(bm)
         self._mock_remaining_lifecycle(bm)
+        # This test verifies the shared lifecycle write hook, not real disk
+        # capacity.  Keep it independent of the host's available space.
+        bm.required_bytes_for_capacity_gate = MagicMock(return_value=0)
 
         rc = bm.run()
         assert rc == 0

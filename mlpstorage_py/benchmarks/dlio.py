@@ -1,4 +1,5 @@
 import abc
+import math
 import os
 import os.path
 import pprint
@@ -30,6 +31,26 @@ from mlpstorage_py.utils import (
     quote_command_token,
 )
 from mlpstorage_py.storage_config import resolve_object_storage_config
+
+
+def _explicit_datagen_bytes(dataset_params) -> int:
+    """Estimate bytes written by datagen from its explicit workload shape.
+
+    Datagen has no client-memory CLI argument, so the closed-run 5x-memory
+    sizing rule cannot be evaluated on that path.  It still has enough
+    information to prevent a partial write: the requested train-file count,
+    samples per file, and record size are all present in the merged workload
+    configuration.
+    """
+    try:
+        num_files = int(dataset_params.get("num_files_train", 0) or 0)
+        samples_per_file = int(dataset_params.get("num_samples_per_file", 0) or 0)
+        record_length = float(dataset_params.get("record_length_bytes", 0) or 0)
+    except (TypeError, ValueError):
+        return 0
+    if num_files <= 0 or samples_per_file <= 0 or record_length <= 0:
+        return 0
+    return int(num_files * samples_per_file * math.ceil(record_length))
 
 
 class DLIOBenchmark(Benchmark, abc.ABC):
@@ -1009,11 +1030,19 @@ class TrainingBenchmark(DLIOBenchmark):
                 # reject. See issue #575 (and the earlier confusion in #578).
                 command = getattr(self.args, 'command', None)
                 if command == 'datagen':
+                    explicit_bytes = _explicit_datagen_bytes(
+                        self.combined_params.get('dataset', {})
+                    )
+                    if explicit_bytes:
+                        self.logger.info(
+                            "CAP-01 datagen estimate uses the explicit workload "
+                            f"shape: {explicit_bytes} bytes."
+                        )
+                        return explicit_bytes
                     self.logger.info(
                         "CAP-01 skipped for datagen: the disk-capacity gate "
-                        "needs --client-host-memory-in-gb, which datagen does "
-                        "not accept by design. This notice is informational; "
-                        "the run will proceed."
+                        "needs --client-host-memory-gb and the workload does "
+                        "not expose enough explicit size information."
                     )
                 else:
                     self.logger.info(

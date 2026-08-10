@@ -572,7 +572,7 @@ def test_symlink_attack_at_target_path_returns_none(args, cluster_info, tmp_path
 
 def test_filesystem_error_propagates_eacces(args, cluster_info, tmp_path):
     """D-9: non-FileExistsError filesystem errors propagate as exceptions."""
-    if os.geteuid() == 0:
+    if os.name == "nt" or getattr(os, "geteuid", lambda: -1)() == 0:
         pytest.skip("root bypasses chmod restrictions")
 
     # Pre-create the org directory and make it non-writable so mkdir of

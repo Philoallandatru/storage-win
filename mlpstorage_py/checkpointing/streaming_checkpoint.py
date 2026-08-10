@@ -61,6 +61,18 @@ def _local_ranks_per_node(env=None):
     return 1
 
 
+def _throughput_gib_per_sec(byte_count, elapsed_seconds):
+    """Return GiB/s without dividing by zero on sub-tick workloads.
+
+    A tiny local checkpoint can be generated and handed to the writer within
+    one wall-clock timer tick.  Its throughput is not measurable, but that
+    must not turn a completed checkpoint into a benchmark crash.
+    """
+    if elapsed_seconds <= 0:
+        return 0.0
+    return (byte_count / (1024 ** 3)) / elapsed_seconds
+
+
 # Selecting the streaming-checkpoint writer subprocess start method.
 #
 # The right method depends on the backend, so it is a *choice* with a
@@ -604,7 +616,7 @@ class StreamingCheckpointing:
             buffer_idx = (buffer_idx + 1) % self.num_buffers  # Round-robin reuse
         
         gen_time = time.time() - gen_start
-        print(f"[Main] Generation complete: {gen_time:.2f}s, {(total_size_bytes / (1024**3)) / gen_time:.2f} GB/s")
+        print(f"[Main] Generation complete: {gen_time:.2f}s, {_throughput_gib_per_sec(total_size_bytes, gen_time):.2f} GB/s")
         return gen_time
     
     @staticmethod
@@ -750,12 +762,16 @@ class StreamingCheckpointing:
     
     def _format_results(self, stats, gen_time, total_time, total_size_bytes):
         """Format results for return."""
-        gen_throughput = (total_size_bytes / (1024**3)) / gen_time
-        io_throughput = (stats['total_bytes'] / (1024**3)) / stats['io_time']
+        gen_throughput = _throughput_gib_per_sec(total_size_bytes, gen_time)
+        io_throughput = _throughput_gib_per_sec(stats['total_bytes'], stats['io_time'])
         
         # Calculate improved metrics
-        throughput_ratio = gen_throughput / io_throughput
-        pipeline_overhead = ((total_time - max(gen_time, stats['io_time'])) / total_time) * 100
+        throughput_ratio = gen_throughput / io_throughput if io_throughput > 0 else 0.0
+        pipeline_overhead = (
+            ((total_time - max(gen_time, stats['io_time'])) / total_time) * 100
+            if total_time > 0
+            else 0.0
+        )
         bottleneck = "I/O" if stats['io_time'] > gen_time else "Generation"
         
         results = {

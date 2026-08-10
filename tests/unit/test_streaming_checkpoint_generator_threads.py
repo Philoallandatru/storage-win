@@ -41,6 +41,7 @@ import pytest
 from mlpstorage_py.checkpointing.streaming_checkpoint import (
     StreamingCheckpointing,
     _local_ranks_per_node,
+    _throughput_gib_per_sec,
 )
 
 
@@ -200,3 +201,28 @@ class TestInitGeneratorThreadCount:
             ckpt._init_generator(total_size_bytes=1024)
 
         assert mock_dgen.Generator.call_args.kwargs['max_threads'] == 1
+
+
+class TestStreamingCheckpointMetrics:
+    """Tiny checkpoints must not crash metric calculation."""
+
+    def test_zero_elapsed_generation_reports_zero_throughput(self):
+        assert _throughput_gib_per_sec(10_240, 0.0) == 0.0
+
+    def test_negative_elapsed_generation_reports_zero_throughput(self):
+        assert _throughput_gib_per_sec(10_240, -1.0) == 0.0
+
+    def test_zero_timing_metrics_are_reported_without_division_errors(self):
+        checkpoint = StreamingCheckpointing(
+            chunk_size=1024 * 1024, num_buffers=2, use_dgen=False, backend="file",
+        )
+        result = checkpoint._format_results(
+            {"total_bytes": 10_240, "io_time": 0.0, "chunks_written": 1},
+            gen_time=0.0,
+            total_time=0.0,
+            total_size_bytes=10_240,
+        )
+        assert result["gen_throughput_gbps"] == 0.0
+        assert result["io_throughput_gbps"] == 0.0
+        assert result["throughput_ratio"] == 0.0
+        assert result["pipeline_overhead_pct"] == 0.0

@@ -118,10 +118,12 @@ class TestCheckCapacity4Field:
         assert exc_info.value.error.code == ErrorCode.FS_PATH_NOT_FOUND
 
     def test_statvfs_oserror_raises_fs_permission_denied(self, tmp_path):
-        with patch(
-            "mlpstorage_py.benchmarks.capacity_gate.os.statvfs",
-            side_effect=OSError("EACCES"),
-        ):
+        usage_api = (
+            "mlpstorage_py.benchmarks.capacity_gate.os.statvfs"
+            if hasattr(os, "statvfs")
+            else "mlpstorage_py.benchmarks.capacity_gate.shutil.disk_usage"
+        )
+        with patch(usage_api, side_effect=OSError("EACCES")):
             with pytest.raises(FileSystemError) as exc_info:
                 check_capacity_4field(str(tmp_path), 1, None)
         assert exc_info.value.error.code == ErrorCode.FS_PERMISSION_DENIED
@@ -530,6 +532,42 @@ class TestTrainingBenchmarkRequiredBytes:
             f"on the datagen subparser. Got: {logged!r}"
         )
 
+    def test_datagen_without_cluster_info_uses_explicit_dataset_bytes(self):
+        """Datagen must fail before writing when host-memory discovery is absent.
+
+        Datagen already has an explicit file count and record shape in the
+        merged workload config.  Those values are sufficient to protect the
+        destination from a partial write even though datagen intentionally
+        does not accept ``--client-host-memory-in-gb``.
+        """
+        from mlpstorage_py.benchmarks.dlio import TrainingBenchmark
+
+        bm = MagicMock(spec=TrainingBenchmark)
+        bm.args = SimpleNamespace(data_dir="/data", command="datagen")
+        try:
+            del bm.cluster_information
+        except AttributeError:
+            pass
+        bm.combined_params = {
+            "dataset": {
+                "num_files_train": 4,
+                "num_samples_per_file": 10,
+                "record_length_bytes": 1024,
+            },
+            "reader": {},
+        }
+        bm.logger = MagicMock()
+        bm.accumulate_host_info = MagicMock(side_effect=AttributeError(
+            "'Namespace' object has no attribute 'client_host_memory_in_gb'"
+        ))
+
+        result = TrainingBenchmark.required_bytes_for_capacity_gate(bm)
+
+        assert result == 40_960
+        assert "explicit workload shape" in " ".join(
+            str(call.args[0]) for call in bm.logger.info.call_args_list
+        ).lower()
+
     def test_deferral_message_keeps_rerun_suggestion_for_non_datagen_commands(self):
         """Guardrail for #575: the rewrite must not silently drop the
         actionable suggestion for the datasize / configview commands
@@ -880,6 +918,20 @@ class TestVectorDBBenchmarkRequiredBytes:
 class TestKVCacheBenchmarkRequiredBytes:
     """A6 1x lock + cache-path destination + internal model table source."""
 
+    def test_llama31_8b_uses_architectural_kv_bytes_per_token(self):
+        """The gate must use the model's real KV footprint, not a 32x-low estimate."""
+        from mlpstorage_py.benchmarks.kvcache import KVCacheBenchmark
+
+        bm = MagicMock(spec=KVCacheBenchmark)
+        bm._MODEL_CACHE_ESTIMATES = KVCacheBenchmark._MODEL_CACHE_ESTIMATES
+        bm._MODEL_CACHE_DEFAULT = KVCacheBenchmark._MODEL_CACHE_DEFAULT
+        bm.model = "llama3.1-8b"
+        bm.num_users = 1
+
+        # 32 layers * 8 KV heads * 128 head dim * K/V * float16 = 131072 B/token;
+        # the configured 8192-token sequence is 1 GiB per user.
+        assert KVCacheBenchmark.required_bytes_for_capacity_gate(bm) == 1024**3
+
     def test_returns_total_cache_bytes_at_1x_per_a6(self):
         """A6 KEY LOCK: returns int(total_cache_mb * 1024 * 1024), NOT *2.
 
@@ -892,13 +944,13 @@ class TestKVCacheBenchmarkRequiredBytes:
         # Bind the real class-level tables so .get() returns real values.
         bm._MODEL_CACHE_ESTIMATES = KVCacheBenchmark._MODEL_CACHE_ESTIMATES
         bm._MODEL_CACHE_DEFAULT = KVCacheBenchmark._MODEL_CACHE_DEFAULT
-        bm.model = "llama3.1-8b"  # per_token=4096, seq=8192
+        bm.model = "llama3.1-8b"  # per_token=131072, seq=8192
         bm.num_users = 10
 
-        # cache_per_user_mb = (4096 * 8192) / (1024*1024) = 32
-        # total_cache_mb = 32 * 10 = 320
-        # expected = int(320 * 1024 * 1024) = 335544320
-        expected = int(((4096 * 8192) / (1024 * 1024)) * 10 * 1024 * 1024)
+        # cache_per_user_mb = (131072 * 8192) / (1024*1024) = 1024
+        # total_cache_mb = 1024 * 10 = 10240
+        # expected = int(10240 * 1024 * 1024) = 10737418240
+        expected = int(((131072 * 8192) / (1024 * 1024)) * 10 * 1024 * 1024)
         result = KVCacheBenchmark.required_bytes_for_capacity_gate(bm)
         assert result == expected
         # 1x lock guard — make sure we did NOT multiply by 2.

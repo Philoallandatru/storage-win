@@ -63,7 +63,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot "tools\verify_windows_benchmark_environment.ps1") -Destination $staging -Force
 
     foreach ($relative in @(
-        "mlpstorage_py", "configs", "full_test_plan_cases", "ai_ssd_test_cases",
+        "mlpstorage_py", "configs", "full_test_plan_cases",
         "kv_cache_benchmark", "vdb_benchmark", "pyproject.toml", "uv.lock",
         ".python-version", "mlpstorage.yaml", ".env.example"
     )) {

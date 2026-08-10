@@ -10,7 +10,6 @@ under the selected results root.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import os
 import platform
@@ -28,7 +27,6 @@ from .catalog import CASES, CaseSpec, get_case
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS_ROOT = REPO_ROOT / "outputs" / "ai_ssd_case_runs"
-DEFAULT_TRACE = REPO_ROOT / "vdb_benchmark" / "results" / "formal_vdbbench_trace.csv"
 PS1 = REPO_ROOT / "tools" / "record_windows_io.ps1"
 
 
@@ -64,14 +62,6 @@ def _inside(child: Path, parent: Path) -> bool:
         return False
 
 
-def _hash_file(path: Path, chunk_size: int = 8 * 1024 * 1024) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        while chunk := handle.read(chunk_size):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def _parser(case: CaseSpec) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=f"Execute {case.case_id}: {case.purpose}",
@@ -87,22 +77,17 @@ def _parser(case: CaseSpec) -> argparse.ArgumentParser:
     parser.add_argument("--data-dir", type=Path, default=None, help="Training data or auxiliary input directory")
     parser.add_argument("--cache-dir", type=Path, default=None, help="KV cache directory")
     parser.add_argument("--checkpoint-dir", type=Path, default=None, help="Checkpoint directory")
-    parser.add_argument("--trace", type=Path, default=None, help="Logical trace CSV for replay cases")
     parser.add_argument("--mode", choices=("execute", "dry-run", "preflight"), default="execute")
     parser.add_argument("--monitor", action="store_true", help="Wrap the command with Windows ETW/PhysicalDisk capture")
-    parser.add_argument("--confirm-destructive", action="store_true", help="Allow fill, overwrite, reset or long-soak actions")
-    parser.add_argument("--reboot", action="store_true", help="Allow S1-IO-03 to invoke a real Windows reboot")
+    parser.add_argument("--confirm-destructive", action="store_true", help="Allow overwrite or long-soak actions")
     parser.add_argument("--allow-full-model", action="store_true", help="Allow a full large-model command where no subset fixture exists")
-    parser.add_argument("--division", choices=("open", "whatif"), default=None, help="mlpstorage division for training/checkpoint cases")
     parser.add_argument("--accelerator-type", choices=("a100", "h100", "b200", "mi355"), default=None)
     parser.add_argument("--num-accelerators", type=int, default=1)
     parser.add_argument("--num-processes", type=int, default=8)
     parser.add_argument("--host-memory-gb", type=int, default=64)
     parser.add_argument("--users", type=int, default=25)
     parser.add_argument("--duration", type=int, default=None, help="Override the case runtime in seconds")
-    parser.add_argument("--repeat", type=int, default=1, help="Repeat count for replay/profile actions")
-    parser.add_argument("--scale", type=int, default=1, choices=(1, 2, 4), help="Trace replay rate multiplier")
-    parser.add_argument("--fill-percent", type=int, default=50, choices=(50, 80, 90), help="Requested occupancy for fill/soak cases")
+    parser.add_argument("--repeat", type=int, default=1, help="Repeat count for checkpoint profile actions")
     parser.add_argument("--direct", action="store_true", help="Use direct/unbuffered mode where supported")
     parser.add_argument("--extra-arg", action="append", default=[], help="Append one argument to the underlying command")
     return parser
@@ -122,7 +107,6 @@ def _resolve_paths(args: argparse.Namespace, case: CaseSpec) -> dict[str, Path]:
         "data": data,
         "cache": cache,
         "checkpoint": checkpoint,
-        "trace": args.trace or DEFAULT_TRACE,
     }
 
 
@@ -154,8 +138,8 @@ def _training_command(
     model_override: str | None = None,
 ) -> list[str]:
     model = model_override or case.default_model or "unet3d"
-    division = args.division or ("open" if model in {"unet3d", "retinanet"} else "whatif")
-    accelerator = args.accelerator_type or ("b200" if division == "open" else "a100")
+    division = "open"
+    accelerator = args.accelerator_type or "b200"
     action = "run" if run else "datagen"
     if run:
         command = _base_mlp(division, "training", action, "file") + [
@@ -186,7 +170,7 @@ def _checkpoint_command(
     reads: int = 1,
 ) -> list[str]:
     model = case.default_model or "llama3-8b"
-    division = args.division or "open"
+    division = "open"
     command = _base_mlp(division, "checkpointing", "run", "file") + [
         "--model", model,
         "--num-processes", str(args.num_processes),
@@ -256,51 +240,8 @@ def _vdb_command(args: argparse.Namespace, paths: dict[str, Path], result_dir: P
     return command
 
 
-def _replay_command(args: argparse.Namespace, paths: dict[str, Path], result_dir: Path, *, direct: bool = False) -> list[str]:
-    if not paths["trace"].is_file():
-        raise FileNotFoundError(f"trace not found: {paths['trace']}")
-    command = [sys.executable, "-m", "vdbbench.replay", _path_text(paths["trace"]), "--data-dir", _path_text(paths["dut"])]
-    if direct:
-        command.append("--direct-io")
-    if args.scale != 1:
-        command.extend(["--speed", str(args.scale)])
-    command.extend(args.extra_arg)
-    return command
-
-
-def _shell_command(command: str) -> list[str]:
-    powershell = _powershell()
-    if not powershell:
-        raise RuntimeError("PowerShell is required for this case on Windows")
-    return [powershell, "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", command]
-
-
-def _fill_command(paths: dict[str, Path], percent: int) -> list[str]:
-    """Create an explicitly named occupancy file using Windows allocation."""
-
-    usage = shutil.disk_usage(paths["dut"])
-    target_bytes = max(1, int(usage.total * percent / 100))
-    fill_path = paths["dut"] / f".ai_ssd_fill_{percent:02d}.bin"
-    command = f"fsutil file createnew '{fill_path}' {target_bytes}"
-    return _shell_command(command)
-
-
 def _build_commands(args: argparse.Namespace, paths: dict[str, Path], result_dir: Path, case: CaseSpec) -> list[list[str]]:
     kind = case.kind
-    if kind == "environment":
-        return [_shell_command("Get-Volume | Select-Object DriveLetter,FileSystem,Size,SizeRemaining | ConvertTo-Json")]
-    if kind == "capacity":
-        return [_shell_command("Get-PSDrive -PSProvider FileSystem | Select-Object Name,Used,Free | ConvertTo-Json")]
-    if kind == "config":
-        return [_shell_command("Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,LastBootUpTime | ConvertTo-Json")]
-    if kind == "vdb_replay":
-        return [_replay_command(args, paths, result_dir)]
-    if kind == "vdb_replay_direct":
-        return [_replay_command(args, paths, result_dir, direct=True)]
-    if kind == "cache_matrix":
-        return [_replay_command(args, paths, result_dir)]
-    if kind == "fill_replay":
-        return [_fill_command(paths, args.fill_percent), _replay_command(args, paths, result_dir)]
     if kind == "training_smoke":
         return [_training_command(args, paths, result_dir, case, run=False), _training_command(args, paths, result_dir, case, run=True)]
     if kind in {"training_profile"}:
@@ -314,17 +255,13 @@ def _build_commands(args: argparse.Namespace, paths: dict[str, Path], result_dir
         count = max(1, min(args.repeat, 10))
         return [_checkpoint_command(args, paths, result_dir, case, writes=count, reads=0)]
     if kind == "checkpoint_subset":
-        if not args.allow_full_model and not args.trace:
-            raise RuntimeError("No subset flag exists in the current CLI; provide --trace or explicitly pass --allow-full-model")
-        if args.trace:
-            return [_replay_command(args, paths, result_dir)]
+        if not args.allow_full_model:
+            raise RuntimeError("No subset flag exists in the current CLI; explicitly pass --allow-full-model")
         return [_checkpoint_command(args, paths, result_dir, case, writes=1, reads=1)]
     if kind in {"kv_smoke", "kv_native", "kv_persona"}:
         return [_kv_command(args, paths, result_dir, case, cpu_gb=4 if kind == "kv_persona" else 0)]
     if kind == "kv_spill":
         return [_kv_command(args, paths, result_dir, case, cpu_gb=4)]
-    if kind == "kv_trace_replay":
-        return [_replay_command(args, paths, result_dir, direct=args.direct)]
     if kind == "vdb_smoke":
         return [_vdb_command(args, paths, result_dir, case, index="HNSW", dim=128)]
     if kind == "vdb_native":
@@ -345,19 +282,12 @@ def _build_commands(args: argparse.Namespace, paths: dict[str, Path], result_dir
             _training_command(args, paths, result_dir, case, run=True, model_override="unet3d"),
             _checkpoint_command(args, paths, result_dir, case, writes=1, reads=0),
         ]
-    if kind in {"soak_fill", "soak_mixed"}:
-        if kind == "soak_fill":
-            return [_fill_command(paths, args.fill_percent), _replay_command(args, paths, result_dir)] if args.trace else [_fill_command(paths, args.fill_percent)]
+    if kind == "soak_mixed":
         return [
             _kv_command(args, paths, result_dir, case, cpu_gb=0, model_override="llama3.1-8b"),
             _checkpoint_command(args, paths, result_dir, case, writes=1, reads=0),
             _vdb_command(args, paths, result_dir, case, index="HNSW", dim=128),
         ]
-    if kind == "recovery":
-        compose = REPO_ROOT / "vdb_benchmark" / "docker-compose.win.yml"
-        return [["docker", "compose", "-f", str(compose), "restart"]]
-    if kind == "integrity":
-        return []
     raise RuntimeError(f"No command builder for {case.case_id} ({kind})")
 
 
@@ -374,11 +304,6 @@ def _preflight(case: CaseSpec, args: argparse.Namespace, paths: dict[str, Path])
     if "PowerShell" in case.requirements and not _powershell():
         issues.append("PowerShell executable not found")
     if "Docker Desktop" in case.requirements and not _tool_exists("docker"):
-        issues.append("docker executable not found")
-    if case.kind in {"vdb_replay", "vdb_replay_direct", "cache_matrix", "fill_replay", "kv_trace_replay", "soak_fill"}:
-        if not paths["trace"].is_file():
-            issues.append(f"trace file not found: {paths['trace']}")
-    if case.kind == "recovery" and not _tool_exists("docker"):
         issues.append("docker executable not found")
     return issues
 
@@ -418,20 +343,6 @@ def _run_one(command: Sequence[str], *, run_dir: Path, label: str, args: argpars
         stderr_path.write_text(str(error), encoding="utf-8")
         result.update({"status": "FAIL", "returncode": None, "duration_seconds": round(time.time() - started, 3), "stderr": str(stderr_path), "error": str(error)})
     return result
-
-
-def _run_integrity(paths: dict[str, Path], run_dir: Path) -> dict[str, object]:
-    roots = [paths["checkpoint"], paths["data"]]
-    files: list[dict[str, object]] = []
-    for root in roots:
-        if not root.is_dir():
-            continue
-        for path in sorted(root.rglob("*")):
-            if path.is_file():
-                files.append({"path": str(path), "bytes": path.stat().st_size, "sha256": _hash_file(path)})
-    payload = {"generated_at": datetime.now(timezone.utc).isoformat(), "files": files, "file_count": len(files)}
-    _json_dump(run_dir / "integrity.json", payload)
-    return {"label": "integrity", "status": "PASS" if files else "NOT_RUN", "returncode": 0 if files else None, "file_count": len(files)}
 
 
 def _run_monitored(command: Sequence[str], *, run_dir: Path, label: str, args: argparse.Namespace) -> dict[str, object]:
@@ -497,18 +408,7 @@ def run_case(case_id: str, argv: Iterable[str] | None = None) -> int:
         return 0 if not issues else 2
 
     results: list[dict[str, object]] = []
-    if case.kind == "integrity":
-        results.append(_run_integrity(paths, run_dir))
-    elif case.kind == "cache_matrix":
-        for idx in range(max(1, args.repeat)):
-            results.append(_run_monitored(commands[0], run_dir=run_dir, label=f"warm_{idx+1}", args=args))
-        if args.reboot:
-            if not args.confirm_destructive:
-                results.append({"label": "reboot-cold", "status": "NOT_RUN", "reason": "--confirm-destructive is required for reboot"})
-            else:
-                reboot = _shell_command("Restart-Computer -Force")
-                results.append(_run_one(reboot, run_dir=run_dir, label="reboot_cold_manual", args=args))
-    elif case.kind in {"mix_kv_checkpoint", "mix_training_checkpoint", "soak_mixed"}:
+    if case.kind in {"mix_kv_checkpoint", "mix_training_checkpoint", "soak_mixed"}:
         if args.mode != "execute":
             results.extend(
                 {

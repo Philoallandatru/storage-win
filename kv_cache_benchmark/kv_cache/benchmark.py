@@ -186,6 +186,21 @@ class IntegratedBenchmark:
         self.stop_event: Optional[threading.Event] = None
         self.rag_ingest_done = threading.Event() if self.enable_rag else None
 
+    def _enqueue_request(self, request: InferenceRequest):
+        """Enqueue a request with a comparable tie-breaker.
+
+        ``PriorityQueue`` compares the whole tuple when the priority and
+        timestamp are equal.  The request object is not orderable, so the
+        request id must be part of the priority tuple to keep concurrent
+        producers from raising ``TypeError``.
+        """
+        priority_tuple = (
+            -QOS_PROFILES[request.qos_level].priority,
+            time.time(),
+            request.request_id,
+        )
+        self.request_queue.put((priority_tuple, request))
+
     def _ingest_rag_documents(self, num_docs: int, stop_event: Optional[threading.Event] = None):
         """Ingests RAG documents for the workload."""
         logger.info(f"Ingesting {num_docs} RAG documents...")
@@ -316,8 +331,7 @@ class IntegratedBenchmark:
                     cache_key=f"{user_id}_req_{req_id:04d}"
                 )
 
-                priority_tuple = (-QOS_PROFILES[request.qos_level].priority, time.time())
-                self.request_queue.put((priority_tuple, request))
+                self._enqueue_request(request)
 
                 request_index += 1
                 rows_in_cycle += 1
@@ -404,8 +418,7 @@ class IntegratedBenchmark:
                 turn_number=turn['turn_number'] if self.enable_multi_turn else None
             )
 
-            priority_tuple = (-QOS_PROFILES[request.qos_level].priority, time.time())
-            self.request_queue.put((priority_tuple, request))
+            self._enqueue_request(request)
 
             turn_index += 1
 
@@ -423,8 +436,7 @@ class IntegratedBenchmark:
             ).start()
 
         def enqueue_request(request: InferenceRequest):
-            priority_tuple = (-QOS_PROFILES[request.qos_level].priority, time.time())
-            self.request_queue.put((priority_tuple, request))
+            self._enqueue_request(request)
 
         def user_worker(user: UserProfile):
             """Simulates an individual user generating traffic."""

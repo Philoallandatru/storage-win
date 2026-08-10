@@ -103,7 +103,10 @@ def _print_workload_yaml(lines: List[str], section_label: str, path: Optional[st
         return
 
     try:
-        with open(path, 'r') as f:
+        # Workload YAML files in the repository are UTF-8.  Pin the encoding
+        # so Windows hosts configured for GBK do not fail before a what-if
+        # command is printed (the failure is unrelated to the DUT workload).
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
             data = yaml.safe_load(f)
     except (OSError, yaml.YAMLError) as exc:
         lines.append(_row("status:", f"[unreadable: {exc}]"))
