@@ -34,6 +34,7 @@ mlp-storage hosts **four benchmark workloads**:
 
 | Your goal | Start here |
 |-----------|------------|
+| 中文了解四类测试的实现原理和完整执行流程 | [MLPerf Storage 测试项原理与执行流程](MLPERF_STORAGE_TEST_ITEMS_IMPLEMENTATION_ZH.md) |
 | First time — install and run any benchmark | [QUICK_START.md](QUICK_START.md) |
 | Run or understand any test (unit, integration, object-store) | [../tests/README.md](../tests/README.md) |
 | Benchmark LLM KV-cache offload storage | [kv_cache_benchmark/README.md](../kv_cache_benchmark/README.md) |

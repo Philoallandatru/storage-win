@@ -9,15 +9,16 @@
 
 ## 1. 文档层级和 Case 对应关系
 
-本仓库目前有三层材料，含义不同：
+本仓库现在区分规划材料和可执行 workload 入口：
 
 | 层级 | 数量/内容 | 使用方式 |
 |---|---|---|
-| 完整场景矩阵 | 72 个 AI workload Case | 覆盖分析、扩展模型、参数 sweep 和混合场景 |
-| 消费级发布套件 | 29 个核心 + 8 个可选 Case | 面向 1 TB/2 TB/4 TB AI PC 的分阶段执行 |
-| 可执行入口 | `tools/ai_ssd_cases/cases/` | 做 preflight、dry-run、执行和证据归档 |
+| 完整场景矩阵 | 72 个规划项 | 只用于覆盖分析；其中 BLOCKED/whatif 项不生成执行入口 |
+| 直接 native 套件 | 33 个 Case | `full_test_plan_cases/cases/`，直接调用 `mlpstorage open ...` |
+| Trace 套件 | 1 个可执行 Case | `trace_test_cases/AI-VDB-015`，已验证 VectorDB capture/replay；KV trace 仍是扩展要求，不登记为假 Case |
+| 消费级 native 套件 | 17 个核心 + 3 个可选 Case | `tools/ai_ssd_cases/cases/`，只保留真实 native workload |
 
-管理报告应优先引用发布套件；完整矩阵用于解释覆盖范围；trace/replay 和 scaled 结果必须带执行模式标签。
+管理报告应优先引用可执行 native 套件；Trace 套件必须以 `TRACE-CAPTURE`/`TRACE-REPLAY` 单独引用；完整矩阵只用于解释覆盖范围。环境探测、填盘、Docker restart、空 integrity 和 whatif 项不作为测试结果引用。
 
 ## 2. 术语解释
 
