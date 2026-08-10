@@ -4,6 +4,7 @@ Training benchmark run rules checker.
 Validates training benchmark parameters for individual runs.
 """
 
+import os
 from typing import Optional, List
 
 from mlpstorage_py.config import BENCHMARK_TYPES, PARAM_VALIDATION, UNET, DLRM, RETINANET, FLUX, MODELS
@@ -84,6 +85,22 @@ class TrainingRunRulesChecker(RunRulesChecker):
         # TOOL_INJECTED entry is needed here.)
         'dataset.total_disk_bytes',
     })
+
+    # ``fork`` is the Linux workload default, but Windows can only execute
+    # the PyTorch reader with ``spawn``.  This is a platform compatibility
+    # override, not a workload tuning knob.  Keep it separate from
+    # TOOL_INJECTED_PARAMS so an explicit non-platform value is still checked.
+    WINDOWS_PLATFORM_PARAMS = frozenset({
+        'reader.multiprocessing_context',
+    })
+
+    @classmethod
+    def _is_windows_platform_param(cls, param: str, value) -> bool:
+        return (
+            os.name == 'nt'
+            and param in cls.WINDOWS_PLATFORM_PARAMS
+            and str(value).lower() == 'spawn'
+        )
 
     def check_benchmark_type(self) -> Optional[Issue]:
         """Verify this is a training benchmark."""
@@ -182,7 +199,14 @@ class TrainingRunRulesChecker(RunRulesChecker):
 
             self.logger.debug(f"Processing override parameter: {param} = {value}")
 
-            if param in self.TOOL_INJECTED_PARAMS:
+            if self._is_windows_platform_param(param, value):
+                issues.append(Issue(
+                    validation=PARAM_VALIDATION.CLOSED,
+                    message=f"Windows platform parameter: {param} = {value}",
+                    parameter="Platform Parameters",
+                    actual=value
+                ))
+            elif param in self.TOOL_INJECTED_PARAMS:
                 # Tool-managed knob (skip_listing, object-storage backend,
                 # auto-resolved data_folder, etc).  Surface it for audit but
                 # don't subject it to the user-override allow-list.

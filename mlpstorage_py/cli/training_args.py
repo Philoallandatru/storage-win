@@ -9,7 +9,8 @@ import argparse
 import sys
 
 from mlpstorage_py.config import (
-    MODELS, MODELS_CLOSED, MODELS_OPEN, ACCELERATORS, ACCELERATORS_CLOSED,
+    MODELS, MODELS_CLOSED, MODELS_OPEN, ACCELERATORS, ACCELERATORS_OPEN,
+    ACCELERATORS_CLOSED,
     DEFAULT_HOSTS, EXEC_TYPE, EXIT_CODE
 )
 
@@ -52,7 +53,11 @@ def add_training_arguments(parser, mode):
         "open":   MODELS_OPEN,
         "whatif": MODELS,
     }[mode]
-    accel_choices = ACCELERATORS if mode == "whatif" else ACCELERATORS_CLOSED
+    accel_choices = {
+        "closed": ACCELERATORS_CLOSED,
+        "open": ACCELERATORS_OPEN,
+        "whatif": ACCELERATORS,
+    }[mode]
 
     # Model positional registered BEFORE subparsers — consumed before the command token
     parser.add_argument(

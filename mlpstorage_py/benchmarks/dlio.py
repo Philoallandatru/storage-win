@@ -679,6 +679,25 @@ class DLIOBenchmark(Benchmark, abc.ABC):
     def process_dlio_params(self, config_file):
         params_dict = dict() if not self.args.params else {k: v for k, v in (item.split("=") for item in self.args.params)}
 
+        # The workload YAMLs are shared with Linux, where ``fork`` is the
+        # historical default for the PyTorch reader.  Windows has no fork
+        # start method; passing that value through to multiprocessing causes
+        # DLIO to fail before the first batch (and, on some Python builds, to
+        # fail with an opaque SemLock error).  Apply the platform-safe value
+        # only when the operator did not explicitly override it.  Keeping the
+        # override in the merged parameter path means datagen and run use the
+        # same behavior and the generated DLIO command is auditable.
+        if (
+            os.name == "nt"
+            and self.BENCHMARK_TYPE == BENCHMARK_TYPES.training
+            and "reader.multiprocessing_context" not in params_dict
+        ):
+            params_dict["reader.multiprocessing_context"] = "spawn"
+            self.logger.debug(
+                "Windows detected; overriding reader.multiprocessing_context "
+                "from the Linux workload default to spawn"
+            )
+
         storage_root = params_dict.get('storage.storage_root')
         if storage_root:
             normalized = DLIOBenchmark._strip_uri_scheme(storage_root)

@@ -129,7 +129,8 @@ Test-Path 'C:\Program Files\Microsoft MPI\Bin\mpiexec.exe'
 ```powershell
 uv venv --python 3.12.3 .venv       # 仅当 .venv 不存在时
 $env:UV_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
-uv sync --frozen --all-groups --extra test --extra vectordb
+uv lock --check
+uv sync --frozen --python .venv\Scripts\python.exe --all-groups --extra test --extra vectordb
 uv pip install --python .venv\Scripts\python.exe --editable .\kv_cache_benchmark
 uv pip install --python .venv\Scripts\python.exe --editable .\vdb_benchmark
 # Required for the native Windows local VectorDB smoke path.
@@ -216,7 +217,31 @@ run.cmd -InitResults -OrgName ai-trn-003 -Case AI-TRN-003 `
 
 ### `uv sync` 因网络或依赖失败
 
-这是构建机准备阶段的问题。构建机必须在线；目标机安装 ZIP 时不会重新执行 `uv sync`、`pip install` 或下载依赖。检查 `uv.lock` 是否与当前源码匹配后重试。
+先确认使用的是仓库要求的 Python 3.12，而不是 PATH 中的 Python 3.14：
+
+```powershell
+uv lock --check
+uv sync --frozen --python .venv\Scripts\python.exe `
+    --all-groups --extra test --extra vectordb --verbose
+```
+
+`dlio-benchmark` 是锁定的 Git 依赖，首次安装会下载并构建它，同时还会下载 Torch、TensorFlow、PyArrow 等完整训练依赖，可能需要数分钟。看到
+`Building dlio-benchmark @ git+...` 不代表失败；必须继续看最后一个 `Caused by:` 或最终退出码。构建机必须在线；目标机安装 ZIP 时不会重新执行 `uv sync`、`pip install` 或下载依赖。
+
+如果仍失败，保留完整输出并确认底层原因：
+
+```powershell
+uv sync --frozen --python .venv\Scripts\python.exe `
+    --all-groups --extra test --extra vectordb --verbose 2>&1 |
+    Tee-Object .\uv-sync.log
+```
+
+成功标准不是单独看到 Git 构建信息，而是随后能通过：
+
+```powershell
+.\.venv\Scripts\python.exe -c "import dlio_benchmark; print('dlio=ok')"
+.\.venv\Scripts\dlio_benchmark.exe --help
+```
 
 ### `mpiexec` 找不到
 

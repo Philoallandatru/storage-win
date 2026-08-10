@@ -319,6 +319,16 @@ class TestModelAcceleratorRestrictions:
                 parse_arguments()
         assert exc.value.code != 0
 
+    @pytest.mark.parametrize('accel', ['h100', 'a100'])
+    def test_open_training_accepts_ai_pc_accelerators(self, accel):
+        """open training exposes the AI-PC workload definitions."""
+        argv = ['mlpstorage', 'open', 'training', 'unet3d', 'run',
+                '-cm', '64', '-at', accel, '-na', '1', '-rd', '/tmp',
+                '-sn', 'sys-v1', '-dd', '/tmp', 'file']
+        with patch('sys.argv', argv):
+            args = parse_arguments()
+        assert args.accelerator_type == accel
+
     @pytest.mark.parametrize('accel', ['b200', 'mi355'])
     def test_closed_training_accepts_closed_accelerators(self, accel):
         """closed training run must accept all accelerators in ACCELERATORS_CLOSED."""

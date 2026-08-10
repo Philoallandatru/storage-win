@@ -54,8 +54,22 @@ try {
         & $uvCommand.Source lock
         if ($LASTEXITCODE -ne 0) { throw "uv lock failed with exit code $LASTEXITCODE" }
     }
-    Write-Host "Syncing the root project from uv.lock"
-    & $uvCommand.Source sync --frozen --all-groups --extra test --extra vectordb
+    Write-Host "Checking uv.lock"
+    & $uvCommand.Source lock --check
+    if ($LASTEXITCODE -ne 0) {
+        throw "uv.lock is out of date. Run this script once with -UpdateLock on the online build machine."
+    }
+
+    # Always bind sync to the validated Python 3.12 interpreter.  Without
+    # --python, uv can select a different project interpreter when the host
+    # also has Python 3.14 (or another unsupported version) on PATH.
+    Write-Host "Syncing the root project from uv.lock with $venvPython"
+    $syncArgs = @(
+        "sync", "--frozen", "--python", $venvPython,
+        "--all-groups", "--extra", "test", "--extra", "vectordb"
+    )
+    if ($VerbosePreference -eq "Continue") { $syncArgs += "--verbose" }
+    & $uvCommand.Source @syncArgs
     if ($LASTEXITCODE -ne 0) { throw "uv sync failed with exit code $LASTEXITCODE" }
 
     foreach ($project in @($kvCacheProject, $vdbProject)) {
@@ -87,6 +101,8 @@ try {
 if ($LASTEXITCODE -ne 0) { throw "mlpstorage_py import failed" }
 & $venvPython -c "import dlio_benchmark; print('dlio_benchmark=' + dlio_benchmark.__file__)"
 if ($LASTEXITCODE -ne 0) { throw "dlio_benchmark import failed" }
+& (Join-Path $venvPath "Scripts\dlio_benchmark.exe") --help | Select-Object -First 1
+if ($LASTEXITCODE -ne 0) { throw "dlio_benchmark executable failed" }
 & $venvPython -c "import pymilvus, milvus_lite; print('pymilvus=' + pymilvus.__version__); print('milvus_lite=' + milvus_lite.__file__)"
 if ($LASTEXITCODE -ne 0) { throw "Milvus Lite import failed; the offline bundle cannot run local VectorDB tests" }
 Write-Host "Build environment is ready. Dot-source tools\activate_windows_venv.ps1 before running commands."

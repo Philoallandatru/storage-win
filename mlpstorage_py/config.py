@@ -60,6 +60,10 @@ A100 = "a100"
 B200 = "b200"
 MI355 = "mi355"
 ACCELERATORS = [H100, A100, B200, MI355]
+# OPEN training cases include the A100/H100 workload definitions used by the
+# AI-PC test plan.  CLOSED submission eligibility remains restricted to the
+# v3.0 accelerator set below.
+ACCELERATORS_OPEN = [H100, A100, B200, MI355]
 ACCELERATORS_CLOSED = [B200, MI355]
 
 OPEN = "open"

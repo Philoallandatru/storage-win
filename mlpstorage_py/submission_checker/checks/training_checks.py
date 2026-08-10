@@ -20,13 +20,18 @@ from .helpers import (
 from mlpstorage_py.rules.run_checkers.training import (
     TrainingRunRulesChecker as _TrainingRunRulesChecker,
 )
-from mlpstorage_py.rules.param_hints import format_typo_hint
-_TOOL_INJECTED_PARAMS = _TrainingRunRulesChecker.TOOL_INJECTED_PARAMS
-
 import math
 import os
 import hashlib
 import re
+
+from mlpstorage_py.rules.param_hints import format_typo_hint
+_TOOL_INJECTED_PARAMS = _TrainingRunRulesChecker.TOOL_INJECTED_PARAMS
+
+
+def _is_windows_platform_param(param_key, value):
+    """Return whether a stored override is the Windows DLIO compatibility fix."""
+    return _TrainingRunRulesChecker._is_windows_platform_param(param_key, value)
 
 
 class TrainingCheck(BaseCheck):
@@ -796,12 +801,12 @@ class TrainingCheck(BaseCheck):
             if verification == "closed":
                 params_dict = metadata.get("override_parameters", {})
 
-                for param_key in params_dict.keys():
+                for param_key, value in params_dict.items():
                     # Tool-injected params (skip_listing, data_folder derived
                     # from --data-dir, object-storage backend keys, …) are not
                     # user overrides and must not count against the CLOSED
                     # allow-list. See _TOOL_INJECTED_PARAMS comment above. (#503)
-                    if param_key in _TOOL_INJECTED_PARAMS:
+                    if param_key in _TOOL_INJECTED_PARAMS or _is_windows_platform_param(param_key, value):
                         continue
                     if param_key not in allowed_params:
                         # storage#795: append "Did you mean X?" for known
@@ -865,12 +870,12 @@ class TrainingCheck(BaseCheck):
             if verification == "open":
                 params_dict = metadata.get("override_parameters", {})
 
-                for param_key in params_dict.keys():
+                for param_key, value in params_dict.items():
                     # Tool-injected params (skip_listing, data_folder derived
                     # from --data-dir, object-storage backend keys, …) are not
                     # user overrides and must not count against the OPEN
                     # allow-list. See _TOOL_INJECTED_PARAMS comment above. (#503)
-                    if param_key in _TOOL_INJECTED_PARAMS:
+                    if param_key in _TOOL_INJECTED_PARAMS or _is_windows_platform_param(param_key, value):
                         continue
                     if param_key not in allowed_params:
                         # storage#795: same "Did you mean X?" hint as 3.6.2.

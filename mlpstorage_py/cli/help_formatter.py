@@ -179,6 +179,7 @@ TR_DATASIZE_CLOSED
 
 TR_DATASIZE_OPEN
   = TR_DATASIZE_CLOSED plus:
+    --accelerator-type choices: {h100,a100,b200,mi355}
     --params/-p KEY=VALUE...        DLIO parameter overrides (repeatable)
   + OPEN_STD
 
@@ -229,6 +230,7 @@ TR_RUN_CLOSED
 
 TR_RUN_OPEN
   = TR_RUN_CLOSED plus:
+    --accelerator-type choices: {h100,a100,b200,mi355}
     --params/-p KEY=VALUE...
   + OPEN_STD
   + TIMESERIES
