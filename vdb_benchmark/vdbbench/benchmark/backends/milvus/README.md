@@ -6,14 +6,17 @@ Adapter for [Milvus](https://milvus.io/) / [Zilliz Cloud](https://zilliz.com/)
 ## Requirements
 
 ```bash
-pip install pymilvus
+pip install pymilvus milvus-lite
 ```
 
 Remote runs require a running Milvus server (standalone or cluster). For a
-single-node local smoke test, install `pymilvus[milvus-lite]` and pass a local
-`.db` path as the URI; Milvus Lite starts in-process through PyMilvus. See the
+single-node local smoke test, install `milvus-lite` and pass a local `.db` path
+as the URI; Milvus Lite starts in-process through PyMilvus. See the
 [Milvus Lite documentation](https://milvus.io/docs/milvus_lite.md) for
-platform and installation details. For Docker-based remote setup, see the
+platform and installation details. For the tested native Windows MLPerf
+Storage flow, see
+[`docs/WINDOWS_VDB_MILVUS_LITE.md`](../../../../../docs/WINDOWS_VDB_MILVUS_LITE.md).
+For Docker-based remote setup, see the
 [Milvus quickstart](https://milvus.io/docs/install_standalone-docker.md).
 
 ## Connection

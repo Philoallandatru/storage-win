@@ -43,7 +43,9 @@ fi
 
 uv sync --extra vectordb-milvus
 if [[ -n "${MILVUS_URI}" ]]; then
-  uv pip install "pymilvus[milvus-lite]"
+  # Install milvus-lite explicitly. On native Windows, the PyMilvus extra
+  # alone may not pull in the separate milvus-lite distribution.
+  uv pip install "pymilvus[milvus-lite]" milvus-lite
 fi
 uv pip install -e ./vdb_benchmark
 

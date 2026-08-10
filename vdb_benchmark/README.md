@@ -19,6 +19,7 @@ The `mlpstorage` path is recommended for standard benchmark workflows.
 
 - [1. Prerequisites](#1-prerequisites)
   - [Python-only local smoke test with Milvus Lite](#python-only-local-smoke-test-with-milvus-lite)
+  - [Native Windows end-to-end flow](#native-windows-end-to-end-flow)
 - [2. Deploy Milvus](#2-deploy-milvus)
   - [Option A: Local Storage with MinIO](#option-a-local-storage-with-minio)
   - [Option B: S3 Storage](#option-b-s3-storage)
@@ -89,8 +90,8 @@ Load and run commands require either a running Milvus server or the local
 Milvus Lite extra described below.
 
 For a single-node functional test, Docker is optional: Milvus Lite can be
-started by PyMilvus from a local `.db` path. The official Milvus Lite package
-currently targets Ubuntu and macOS; use WSL2 on Windows.
+started by PyMilvus from a local `.db` path. Native Windows is supported by
+installing the `milvus-lite` package explicitly. WSL is not required.
 
 ### Clone the Repository
 
@@ -105,7 +106,7 @@ Install the optional local backend dependencies:
 
 ```bash
 uv sync --extra vectordb-milvus
-uv pip install "pymilvus[milvus-lite]"
+uv pip install "pymilvus[milvus-lite]" milvus-lite
 uv pip install -e ./vdb_benchmark
 ```
 
@@ -152,6 +153,22 @@ mlpstorage open vectordb run \
 This path is intended for small, single-node HNSW/FLAT validation. It does
 not replace a standalone Milvus service for multi-node runs or storage
 benchmarking with DISKANN.
+
+### Native Windows end-to-end flow
+
+For the complete native Windows setup, including a PowerShell virtual
+environment, explicit `milvus-lite` installation, MLPerf Storage result
+initialization, `datagen`, and `run`, follow
+[`docs/WINDOWS_VDB_MILVUS_LITE.md`](../docs/WINDOWS_VDB_MILVUS_LITE.md).
+
+The one-command runner is:
+
+```powershell
+.\tests\run_milvus_10k_hnsw.ps1
+```
+
+It starts Milvus Lite from a local `.db` URI. The local URI path is limited to
+single-node runs; use `--host` and `--port` for a remote Milvus server.
 
 ---
 
