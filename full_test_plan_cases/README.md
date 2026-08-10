@@ -1,4 +1,4 @@
-# FULL_TEST_PLAN：72 个直接 native Case
+# FULL_TEST_PLAN：33 个直接 native Case
 
 `cases/` 中的每个文件都是独立入口，文件内直接写出并调用仓库的 `mlpstorage` 命令；不依赖第二层 workload runner，也不执行标准库模拟 probe。
 
@@ -12,13 +12,15 @@
 例如 Windows Training Case：
 
 ```powershell
-mlpstorage init ai-trn-003 D:\ai_ssd\results
 .\.venv\Scripts\python.exe full_test_plan_cases\cases\test_ai_trn_003.py `
-  --mode execute --confirm-dut --prepare --launcher single `
-  --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+  --mode execute --confirm-dut --prepare --init-results `
+  --cleanup-data --cleanup-root D:\ai_ssd\data `
+  --launcher single --data-dir D:\ai_ssd\data\AI-TRN-003\run-001 `
+  --results-dir E:\ai_ssd\results\AI-TRN-003\run-001
 ```
 
-`mlpstorage init` 是项目原生命令，脚本不会替用户初始化、清理或改写结果目录。
+`--init-results` 调用项目原生 `mlpstorage init`；`--cleanup-data` 只删除
+`--cleanup-root` 下本次 case 的 data/cache/checkpoint 目录，不删除 results 或源 trace。
 
 生成的命令形态是：
 
@@ -35,15 +37,12 @@ Windows 的 `--launcher single` 也使用项目原生 MPI 执行路径，但只�
 --launcher mpi --mpi-bin mpiexec
 ```
 
-## Native 支持边界
+## Native 入口边界
 
-Case catalog 同时保存：
-
-- `workbook_command`：工作簿原始命令，仅用于追溯；
-- `source_command`：当前版本可执行的 native 命令；
-- `native_status`：`SUPPORTED` 或 `BLOCKED`。
-
-没有统一 `mlpstorage` 命令的 Base、Mixed、Trace replay、扩展 KV、TP/prefill/decode 等 Case 会明确返回 `BLOCKED`，不会改成 `SMOKE_PASS` 或调用其他工具冒充 MLPerf Storage。
+目录只保留当前版本可以直接调用 `mlpstorage open ...` 的 33 个 workload Case。
+没有 native 命令的规划项、`whatif` 估算项、扩展 KV、TP/prefill/decode
+和混合编排项不在这个目录生成 Case 脚本。VectorDB 的正式 Trace capture/replay
+已经实现，但它属于独立的 `trace_test_cases/` 集合，不能与 Native 成绩混报。
 
 VectorDB Case 不负责启动 Milvus；执行前必须确认 `127.0.0.1:19530` 已有可访问服务。Checkpoint cold-cache、SSD 填充和混合编排等外部动作必须由 DUT 管理者提供，不能由脚本臆造。
 
@@ -60,10 +59,11 @@ VectorDB Case 不负责启动 Milvus；执行前必须确认 `127.0.0.1:19530` �
 
 ```powershell
 .\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
-  --mode execute --confirm-dut --launcher single --prepare `
-  --data-dir D:\ai_ssd\data --results-dir E:\ai_ssd\results
+  --mode execute --confirm-dut --init-results --cleanup-data `
+  --cleanup-root D:\ai_ssd\data --launcher single --prepare `
+  --data-dir D:\ai_ssd\data --results-dir C:\ai_ssd\results
 ```
 
-`run_all` 直接启动每个 `cases/test_*.py` 文件；在 `execute`、`dry-run` 或 `preflight` 模式下第一个非零返回码会触发套件级 fast-fail。`plan` 模式会列出所有 native blocker。
+`run_all` 直接启动每个 `cases/test_*.py` 文件；在 `execute`、`dry-run` 或 `preflight` 模式下第一个非零返回码会触发套件级 fast-fail。
 
-正式 `PASS` 只能来自真实 native workload 的返回结果和输出文件；`PLANNED`、`DRY_RUN`、`BLOCKED` 都不算通过。
+正式 `PASS` 只能来自真实 native workload 的返回结果和输出文件；`DRY_RUN` 不算通过。

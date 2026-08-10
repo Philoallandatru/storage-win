@@ -37,6 +37,9 @@ def main() -> int:
     parser.add_argument("--prepare", action="store_true")
     parser.add_argument("--o-direct", action="store_true")
     parser.add_argument("--confirm-dut", action="store_true")
+    parser.add_argument("--init-results", action="store_true")
+    parser.add_argument("--cleanup-data", action="store_true")
+    parser.add_argument("--cleanup-root", type=Path)
     args = parser.parse_args()
 
     if NATIVE_STATUS != "SUPPORTED":
@@ -68,6 +71,36 @@ def main() -> int:
     if args.mode == "execute" and not args.confirm_dut:
         print(f"{CASE_ID} BLOCKED: execute requires --confirm-dut")
         return 2
+    if args.cleanup_data and args.cleanup_root is None:
+        print(f"{CASE_ID} BLOCKED: --cleanup-data requires --cleanup-root")
+        return 2
+
+    def finalize(code: int) -> int:
+        if not args.cleanup_data:
+            return code
+        data_path = args.data_dir.resolve()
+        root_path = args.cleanup_root.resolve()
+        if data_path == root_path or root_path not in data_path.parents:
+            print(f"{CASE_ID} CLEANUP_FAILED: data path is outside cleanup root")
+            return 1
+        try:
+            if data_path.exists():
+                shutil.rmtree(data_path)
+            print(f"TEST_DATA_ROOT={data_path}")
+            print(f"TEST_DATA_CLEANED={not data_path.exists()}")
+            return code if not data_path.exists() else 1
+        except OSError as error:
+            print(f"{CASE_ID} CLEANUP_FAILED: {error}")
+            return 1
+
+    if args.init_results and args.mode in {"preflight", "dry-run", "execute"}:
+        args.results_dir.parent.mkdir(parents=True, exist_ok=True)
+        init_command = [str(cli), "init", args.systemname or f"{CASE_ID.lower()}-native", str(args.results_dir.resolve())]
+        print(f"{CASE_ID} init: {subprocess.list2cmdline(['mlpstorage', *init_command[1:]])}")
+        if args.mode == "execute":
+            initialized = subprocess.run(init_command, check=False)
+            if initialized.returncode != 0:
+                return finalize(initialized.returncode)
     for item in selected:
         command = [str(cli), *[values.get(arg, arg) for arg in item["argv"] if arg != "<COMMAND>"]]
         if args.o_direct and ("training" in command or "checkpointing" in command) and "--o-direct" not in command:
@@ -78,16 +111,20 @@ def main() -> int:
             ranks = int(command[command.index("--num-processes") + 1])
             if ranks > 1:
                 print(f"{CASE_ID} BLOCKED: checkpointing rank case requires --launcher mpi (requested {ranks} ranks)")
-                return 2
+                return finalize(2)
         print(f"{CASE_ID} {item['phase']}: {subprocess.list2cmdline(['mlpstorage', *command[1:]])}")
         if args.mode in {"plan", "preflight"}:
             continue
         if args.mode == "dry-run":
             command.append("--dry-run")
-        completed = subprocess.run(command, check=False)
+        try:
+            completed = subprocess.run(command, check=False)
+        except OSError as error:
+            print(f"{CASE_ID} FAIL phase={item['phase']}: {error}")
+            return finalize(1)
         if completed.returncode != 0:
             print(f"{CASE_ID} FAIL phase={item['phase']} rc={completed.returncode}")
-            return completed.returncode
+            return finalize(completed.returncode)
     if args.mode == "preflight" and not cli.is_file() and shutil.which(str(cli)) is None:
         print(f"{CASE_ID} BLOCKED: mlpstorage executable not found: {cli}")
         return 2
@@ -96,7 +133,7 @@ def main() -> int:
         return 3
     if args.mode == "execute":
         print(f"{CASE_ID} PASS")
-    return 0
+    return finalize(0)
 
 
 if __name__ == "__main__":

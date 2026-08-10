@@ -42,6 +42,9 @@ def main() -> int:
     parser.add_argument("--dlio-bin-path", type=Path)
     parser.add_argument("--o-direct", action="store_true")
     parser.add_argument("--confirm-dut", action="store_true")
+    parser.add_argument("--init-results", action="store_true")
+    parser.add_argument("--cleanup-data", action="store_true")
+    parser.add_argument("--cleanup-root", type=Path)
     args = parser.parse_args()
     selected = [
         case for case in load_catalog()
@@ -73,6 +76,11 @@ def main() -> int:
     for flag, enabled in (("--prepare", args.prepare), ("--o-direct", args.o_direct)):
         if enabled:
             common_args.append(flag)
+    for flag, enabled in (("--init-results", args.init_results), ("--cleanup-data", args.cleanup_data)):
+        if enabled:
+            common_args.append(flag)
+    if args.cleanup_root is not None:
+        common_args.extend(["--cleanup-root", str(args.cleanup_root)])
     for case in selected:
         command = [
             sys.executable,

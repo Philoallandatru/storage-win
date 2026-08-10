@@ -21,7 +21,7 @@ def _catalog() -> tuple[dict[str, Any], ...]:
 
 
 def load_catalog() -> list[dict[str, Any]]:
-    """Return the 72 cases in workbook order."""
+    """Return the executable native cases in workbook order."""
     return list(_catalog())
 
 
