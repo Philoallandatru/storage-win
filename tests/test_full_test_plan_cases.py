@@ -123,3 +123,72 @@ def test_run_all_forwards_to_case_files_and_fast_fails(monkeypatch) -> None:
     assert len(calls) == 1
     assert calls[0][1].endswith("full_test_plan_cases\\cases\\test_ai_trn_001.py")
     assert "full_test_plan_cases.runner" not in " ".join(calls[0])
+
+
+def test_run_case_needs_only_case_id_and_uses_site_config(monkeypatch, tmp_path: Path) -> None:
+    import full_test_plan_cases.run_case as run_case
+
+    calls: list[tuple[list[str], dict[str, object]]] = []
+    config = {
+        "mode": "execute",
+        "data_root": str(tmp_path / "dut"),
+        "results_root": str(tmp_path / "results"),
+        "launcher": "mpi",
+        "mpi_bin": "mpiexec",
+        "mlpstorage": str(tmp_path / "venv" / "mlpstorage.exe"),
+        "duration_sec": 60,
+        "loops": 1,
+        "client_memory_gb": 64,
+        "accelerators": 1,
+        "query_processes": 1,
+        "prepare": True,
+        "confirm_dut": True,
+        "init_results": True,
+        "cleanup_data": True,
+    }
+
+    class Completed:
+        returncode = 0
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return Completed()
+
+    monkeypatch.setattr(run_case, "load_site_config", lambda _path: config)
+    monkeypatch.setattr(run_case.subprocess, "run", fake_run)
+    monkeypatch.setattr(run_case.sys, "argv", ["run_case.py", "AI-KV-005"])
+
+    assert run_case.main() == 0
+    assert len(calls) == 1
+    command, kwargs = calls[0]
+    assert command[1].endswith("full_test_plan_cases\\cases\\test_ai_kv_005.py")
+    assert command[command.index("--mode") + 1] == "execute"
+    assert command[command.index("--data-dir") + 1] == str((tmp_path / "dut" / "AI-KV-005").resolve())
+    assert command[command.index("--results-dir") + 1] == str((tmp_path / "results" / "AI-KV-005").resolve())
+    assert "--confirm-dut" in command
+    assert "--prepare" in command
+    assert "--init-results" in command
+    assert "--cleanup-data" in command
+    assert command[command.index("--cleanup-root") + 1] == str((tmp_path / "dut").resolve())
+    assert kwargs["cwd"] == REPO_ROOT
+
+
+def test_run_case_rejects_unknown_case_before_spawning(monkeypatch) -> None:
+    import full_test_plan_cases.run_case as run_case
+
+    monkeypatch.setattr(run_case.sys, "argv", ["run_case.py", "AI-NOT-REAL"])
+    monkeypatch.setattr(
+        run_case,
+        "load_site_config",
+        lambda _path: {"data_root": "D:/dut", "results_root": "C:/results"},
+    )
+
+    assert run_case.main() == 2
+
+
+def test_windows_run_case_launcher_has_one_argument_interface() -> None:
+    launcher = REPO_ROOT / "run_case.cmd"
+
+    source = launcher.read_text(encoding="utf-8")
+    assert "-m full_test_plan_cases.run_case %*" in source
+    assert ".venv\\Scripts\\python.exe" in source

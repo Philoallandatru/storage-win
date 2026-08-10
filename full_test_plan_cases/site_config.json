@@ -1,0 +1,18 @@
+{
+  "mode": "execute",
+  "data_root": "G:/MLPerfTestData",
+  "results_root": "C:/MLPerfTestRuns/single-cases",
+  "launcher": "mpi",
+  "mpi_bin": "mpiexec",
+  "mlpstorage": ".venv/Scripts/mlpstorage.exe",
+  "duration_sec": 60,
+  "loops": 1,
+  "client_memory_gb": 64,
+  "accelerators": 1,
+  "query_processes": 1,
+  "prepare": true,
+  "confirm_dut": true,
+  "init_results": true,
+  "cleanup_data": true,
+  "o_direct": false
+}

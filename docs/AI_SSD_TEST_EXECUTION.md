@@ -32,6 +32,20 @@ GPU 不作为 Windows storage workload 的通用前置条件。命令中的 acce
 
 ## 3. Native 执行规则
 
+测试人员日常运行单个 Case 时，只使用顶层入口并传 Case ID：
+
+```powershell
+.\run_case.cmd AI-KV-005
+```
+
+安装或迁移机器后，只需一次性修改
+[`full_test_plan_cases/site_config.json`](../full_test_plan_cases/site_config.json) 中的
+`data_root`、`results_root`、MPI 和运行策略。入口会自动选择对应 native case、
+初始化结果目录、执行准备和正式阶段，并按配置清理该 Case 的 workload 数据。
+
+测试人员不应在每次运行时重新输入 DUT 路径、结果路径、MPI、时长、初始化和清理参数。
+下面的原生长命令用于实现审计和开发排错，不是日常操作界面。
+
 Native case 只允许直接使用仓库 CLI：
 
 ```text

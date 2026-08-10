@@ -2,6 +2,57 @@
 
 `cases/` 中的每个文件都是独立入口，文件内直接写出并调用仓库的 `mlpstorage` 命令；不依赖第二层 workload runner，也不执行标准库模拟 probe。
 
+## 单个 Case：日常唯一入口
+
+Windows 下只传 Case ID：
+
+```powershell
+.\run_case.cmd AI-KV-005
+```
+
+运行参数不应由测试人员每次重新输入。机器相关配置集中在
+[`site_config.json`](site_config.json)，安装或迁移机器后只修改一次：
+
+```json
+{
+  "data_root": "G:/MLPerfTestData",
+  "results_root": "C:/MLPerfTestRuns/single-cases",
+  "mpi_bin": "mpiexec",
+  "duration_sec": 60,
+  "loops": 1,
+  "prepare": true,
+  "cleanup_data": true
+}
+```
+
+入口会自动完成以下工作：
+
+1. 根据 Case ID 找到唯一的 native case 文件；
+2. 派生 `<data_root>/<CASE_ID>` 和 `<results_root>/<CASE_ID>`；
+3. 初始化结果目录、确认 DUT、配置 MPI 和 venv PATH；
+4. Training/VectorDB 自动执行准备阶段，再执行正式 run；
+5. workload 非零退出码原样返回；
+6. 成功或失败后只清理该 Case 的数据目录，保留 results。
+
+只在诊断时使用以下可选参数：
+
+```powershell
+# 查看最终命令，不启动 workload
+.\run_case.cmd AI-KV-005 --print-command
+
+# 本次保留 workload 数据
+.\run_case.cmd AI-KV-005 --keep-data
+
+# 临时覆盖配置中的运行模式
+.\run_case.cmd AI-KV-005 --mode preflight
+```
+
+`AI-VDB-015` 是独立的 trace capture/replay case，不在这 33 个 Native Case 中。
+
+## 独立 Case 文件：高级调试入口
+
+只有开发或排查参数映射时，才直接调用 `cases/test_*.py` 并逐项覆盖配置。
+
 ## 模式
 
 - `--mode plan`：只打印该 Case 的 native 命令，不执行。
@@ -9,7 +60,7 @@
 - `--mode dry-run`：直接把 `--dry-run` 传给 `mlpstorage`，结果只能视为命令验证。
 - `--mode execute --confirm-dut`：执行真实 native workload；命令失败立即停止当前 Case。
 
-例如 Windows Training Case：
+例如 Windows Training Case 的高级调试命令：
 
 ```powershell
 .\.venv\Scripts\python.exe full_test_plan_cases\cases\test_ai_trn_003.py `
