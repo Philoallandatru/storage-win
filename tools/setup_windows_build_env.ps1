@@ -68,6 +68,17 @@ try {
             if ($LASTEXITCODE -ne 0) { throw "Editable install failed for $project" }
         }
     }
+
+    # Milvus Lite is a separate distribution. The pymilvus extra is not
+    # sufficient on every native Windows/Python combination, so install it
+    # explicitly into the prepared environment that will be copied into the
+    # offline bundle.
+    Write-Host "Installing Milvus Lite for the native Windows VectorDB path"
+    $milvusLiteArgs = @("pip", "install", "--python", $venvPython)
+    if ($PythonIndexUrl) { $milvusLiteArgs += @("--index-url", $PythonIndexUrl) }
+    $milvusLiteArgs += "milvus-lite"
+    & $uvCommand.Source @milvusLiteArgs
+    if ($LASTEXITCODE -ne 0) { throw "milvus-lite installation failed with exit code $LASTEXITCODE" }
 } finally {
     Pop-Location
 }
@@ -76,4 +87,6 @@ try {
 if ($LASTEXITCODE -ne 0) { throw "mlpstorage_py import failed" }
 & $venvPython -c "import dlio_benchmark; print('dlio_benchmark=' + dlio_benchmark.__file__)"
 if ($LASTEXITCODE -ne 0) { throw "dlio_benchmark import failed" }
+& $venvPython -c "import pymilvus, milvus_lite; print('pymilvus=' + pymilvus.__version__); print('milvus_lite=' + milvus_lite.__file__)"
+if ($LASTEXITCODE -ne 0) { throw "Milvus Lite import failed; the offline bundle cannot run local VectorDB tests" }
 Write-Host "Build environment is ready. Dot-source tools\activate_windows_venv.ps1 before running commands."

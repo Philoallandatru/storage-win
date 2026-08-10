@@ -60,6 +60,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repoRoot "windows_offline_bundle\install.cmd") -Destination $staging -Force
     Copy-Item -LiteralPath (Join-Path $repoRoot "windows_offline_bundle\run.cmd") -Destination $staging -Force
     Copy-Item -LiteralPath (Join-Path $repoRoot "windows_offline_bundle\README.md") -Destination $staging -Force
+    Copy-Item -LiteralPath (Join-Path $repoRoot "windows_offline_bundle\VDB_MILVUS_LITE.md") -Destination $staging -Force
     Copy-Item -LiteralPath (Join-Path $repoRoot "tools\verify_windows_benchmark_environment.ps1") -Destination $staging -Force
 
     foreach ($relative in @(
@@ -71,9 +72,16 @@ try {
     }
 
     $venvSource = Join-Path $repoRoot ".venv"
-    if (-not (Test-Path -LiteralPath (Join-Path $venvSource "Scripts\python.exe"))) {
+    $venvPython = Join-Path $venvSource "Scripts\python.exe"
+    if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
         throw "A prepared Windows .venv is required: $venvSource"
     }
+
+    & $venvPython -c "import pymilvus, milvus_lite; print('Milvus Lite payload verified')"
+    if ($LASTEXITCODE -ne 0) {
+        throw "The prepared .venv does not contain milvus-lite. Run tools\setup_windows_build_env.ps1 before building the offline bundle."
+    }
+
     Copy-Item -Path (Join-Path $venvSource "*") -Destination $venv -Recurse -Force
     $venvCacheDirectories = Get-ChildItem -LiteralPath $venv -Directory -Recurse -Force |
         Where-Object { $_.Name -in @("__pycache__", ".pytest_cache") } |
@@ -106,6 +114,11 @@ try {
         Set-Content -LiteralPath $finder.FullName -Value $content -Encoding utf8 -NoNewline
     }
 
+    # Keep the local VectorDB launcher beside the copied application sources.
+    # It uses ..\venv\Scripts\python.exe after install.ps1 relocates the bundle.
+    Copy-Item -LiteralPath (Join-Path $repoRoot "windows_offline_bundle\run-vdb.ps1") -Destination (Join-Path $app "run-vdb.ps1") -Force
+    Copy-Item -LiteralPath (Join-Path $repoRoot "windows_offline_bundle\run-vdb.cmd") -Destination (Join-Path $app "run-vdb.cmd") -Force
+
     if (Test-Path -LiteralPath $mpiInstallerPath) {
         $mpiDestination = Join-Path $payload "mpi"
         New-Item -ItemType Directory -Path $mpiDestination -Force | Out-Null
@@ -124,7 +137,8 @@ try {
         includes_microsoft_mpi_installer = (Test-Path -LiteralPath (Join-Path $payload "mpi\MSMpiSetup.exe"))
         network_required_at_install = $false
         data_included = $false
-        milvus_included = $false
+        milvus_included = $true
+        includes_milvus_lite = $true
     }
     $manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $staging "manifest.json") -Encoding utf8
 

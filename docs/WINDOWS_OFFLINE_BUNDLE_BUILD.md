@@ -132,6 +132,8 @@ $env:UV_INDEX_URL = "https://pypi.tuna.tsinghua.edu.cn/simple"
 uv sync --frozen --all-groups --extra test --extra vectordb
 uv pip install --python .venv\Scripts\python.exe --editable .\kv_cache_benchmark
 uv pip install --python .venv\Scripts\python.exe --editable .\vdb_benchmark
+# Required for the native Windows local VectorDB smoke path.
+uv pip install --python .venv\Scripts\python.exe milvus-lite
 ```
 
 ### 3.3 激活 venv
@@ -204,7 +206,7 @@ run.cmd -InitResults -OrgName ai-trn-003 -Case AI-TRN-003 `
     -DataDir D:\ai_ssd\data -ResultsDir E:\ai_ssd\results
 ```
 
-包不包含数据集、checkpoint、results、Milvus 服务或 Docker。VectorDB Case 仍要求目标机预先提供可访问的 Milvus 服务；不满足前置条件的 Case 应保持 `BLOCKED`，不会被脚本伪装成通过。
+包不包含数据集、checkpoint、results、独立 Milvus 服务或 Docker。构建好的 `.venv` 会包含 `pymilvus` 和 `milvus-lite`，因此安装包无需 WSL 或 Docker 即可运行原生 Windows 单节点 VectorDB smoke test。使用 `app\run-vdb.ps1` 启动；它会创建本地 `milvus_lite.db`，依次执行 MLPerf Storage 的 `init`、`vectordb datagen` 和 `vectordb run`。Milvus Lite 仅支持单节点；正式的远程或多节点 VectorDB Case 仍使用 `--host`/`--port` 连接单独管理的 Milvus 服务。
 
 ## 6. 常见问题
 
