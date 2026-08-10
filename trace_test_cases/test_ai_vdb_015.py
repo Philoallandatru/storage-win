@@ -15,7 +15,11 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
-from vdbbench.replay import load_trace, replay_trace
+VDB_BENCHMARK_ROOT = Path(__file__).resolve().parents[1] / "vdb_benchmark"
+if str(VDB_BENCHMARK_ROOT) not in sys.path:
+    sys.path.insert(0, str(VDB_BENCHMARK_ROOT))
+
+from vdbbench.replay import load_trace, replay_trace  # noqa: E402
 
 
 CASE_ID = "AI-VDB-015"

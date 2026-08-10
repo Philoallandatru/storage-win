@@ -40,6 +40,7 @@ full = [
 ]
 vectordb = [
   "pymilvus>=2.4.0",
+  "milvus-lite>=3.2.0",
   "psycopg2-binary>=2.9",
   "pgvector>=0.2",
   "elasticsearch>=8.0",
@@ -51,6 +52,7 @@ vectordb = [
 
 vectordb-milvus = [
   "pymilvus>=2.4.0",
+  "milvus-lite>=3.2.0",
   "numpy>=1.24",
   "pandas>=2.0",
   "pyyaml>=6.0",
@@ -79,7 +81,7 @@ vectordb-elasticsearch = [
 "Bug Tracker" = "https://github.com/mlcommons/storage/issues"
 
 [tool.setuptools]
-packages = {find = {include = ["mlpstorage_py*", "vdbbench*", "full_test_plan_cases*"]}}
+packages = {find = {include = ["mlpstorage_py*", "vdbbench*", "full_test_plan_cases*", "ai_ssd_test_cases*"]}}
 
 [tool.setuptools.package-data]
 "mlpstorage_py" = [

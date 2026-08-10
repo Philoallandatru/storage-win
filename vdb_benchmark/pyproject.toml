@@ -23,6 +23,7 @@ dependencies = [
 [project.optional-dependencies]
 milvus = [
   "pymilvus>=2.4.0",
+  "milvus-lite>=3.2.0",
 ]
 
 pgvector = [
@@ -40,6 +41,7 @@ dotenv = [
 
 all = [
   "pymilvus>=2.4.0",
+  "milvus-lite>=3.2.0",
   "psycopg2-binary>=2.9",
   "pgvector>=0.2",
   "elasticsearch>=8.0",
