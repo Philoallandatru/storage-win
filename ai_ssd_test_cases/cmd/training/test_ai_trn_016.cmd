@@ -1,7 +1,7 @@
 @echo off
 REM =============================================================================
 REM  AI-TRN-016 :: 冷热直读对比（python_scaled）
-REM  model = warm-cold-direct  |  data_format = mixed  |  容量 ~ 1 GiB
+REM  model = warm-cold-direct  |  data_format = mixed  |  容量 ~1 GiB（python_scaled 兜底）
 REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 否  |  家族 = training（训练）
 REM  预期阻塞：python_scaled 兜底；必须带 --scale-mb
 REM

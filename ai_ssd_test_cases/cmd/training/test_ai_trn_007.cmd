@@ -1,7 +1,7 @@
 @echo off
 REM =============================================================================
 REM  AI-TRN-007 :: CosmoFlow H100 TFRecord 训练（python_scaled）
-REM  model = cosmoflow  |  accelerator = H100  |  data_format = tfrecord  |  容量 ~ 1 GiB
+REM  model = cosmoflow  |  accelerator = H100  |  data_format = tfrecord  |  容量 ~1.3 TiB（原生数据集）
 REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 否  |  家族 = training（训练）
 REM  预期阻塞：python_scaled 兜底；必须带 --scale-mb
 REM

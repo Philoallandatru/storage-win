@@ -1,9 +1,9 @@
 @echo off
 REM =============================================================================
 REM  AI-TRN-003 :: UNet3D B200 多文件训练（native）
-REM  model = unet3d  |  accelerator = B200  |  data_format = npz  |  容量 ~ 983 GiB
+REM  model = unet3d  |  accelerator = B200  |  data_format = npz  |  容量 ~983.0 GiB（原生数据集）
 REM  执行方式 = native（原生 mlpstorage 命令）  |  破坏性 = 否  |  家族 = training（训练）
-REM  预期阻塞：需要 DUT 上有 983 GiB 空间；需先 mlpstorage init + native datagen
+REM  预期阻塞：需要 DUT 上有 983.0 GiB 空间；需先 mlpstorage init + native datagen
 REM
 REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
 REM  runner 会直接拒掉路径嵌套的情况。

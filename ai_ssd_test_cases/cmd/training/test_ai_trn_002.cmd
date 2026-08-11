@@ -1,7 +1,7 @@
 @echo off
 REM =============================================================================
 REM  AI-TRN-002 :: UNet3D H100 多文件训练（python_scaled）
-REM  model = unet3d  |  accelerator = H100  |  data_format = npz  |  容量 ~ 22.9
+REM  model = unet3d  |  accelerator = H100  |  data_format = npz  |  容量 ~22.9 GiB（原生数据集）
 REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 否  |  家族 = training（训练）
 REM  预期阻塞：python_scaled 兜底；必须带 --scale-mb
 REM

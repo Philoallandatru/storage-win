@@ -1,7 +1,7 @@
 @echo off
 REM =============================================================================
 REM  AI-TRN-012 :: Flux B200 Parquet 训练（python_scaled）
-REM  model = flux  |  accelerator = B200  |  data_format = parquet  |  容量 ~ 1 GiB
+REM  model = flux  |  accelerator = B200  |  data_format = parquet  |  容量 ~? GiB（yaml 无 record_length）
 REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 否  |  家族 = training（训练）
 REM  预期阻塞：python_scaled 兜底；必须带 --scale-mb
 REM
