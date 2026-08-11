@@ -1,14 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-MIX-003 :: VectorDB search + ingest concurrency (python_scaled, DESTRUCTIVE)
-REM  model = vdb-search-ingest  |  capacity ~ 1 GiB
-REM  execution = python_scaled  |  destructive = True   |  family = Mixed
-REM  expected blocker: --scale-mb + --confirm-dut required; VDB needs Milvus or lite
+REM =============================================================================
+REM  AI-MIX-003 :: VDB search + ingest 并发（python_scaled，破坏性）
+REM  model = vdb-search-ingest  |  容量 ~ 1 GiB
+REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 是（破坏性，必须 --confirm-dut）  |  家族 = mixed（混合负载）
+REM  预期阻塞：破坏性；需要 Milvus；必须 --confirm-dut + --scale-mb
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"

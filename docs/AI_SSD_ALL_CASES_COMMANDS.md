@@ -1,48 +1,46 @@
-# AI SSD — All 72 Case Commands
+# AI SSD — 全部 72 个 case 的命令
 
-> Source: `docs/AI_SSD_ALL_CASE_PLAN.xlsx` (72 cases across 6 families).
-> **Each case has its own per-case command file at `ai_ssd_test_cases\cmd\<family>\test_ai_<id>.cmd`.**
-> The .cmd file already sets `PY`, `DUT`, `RES`, and the correct python module + flags.
-> Edit `DUT` and `RES` inside the .cmd (or set the env vars in your shell) before running.
+> 来源：`docs/AI_SSD_ALL_CASE_PLAN.xlsx`（6 个家族，共 72 个 case）
+> **每个 case 对应一份独立的命令文件**，路径是 `ai_ssd_test_cases\cmd\<家族>\test_ai_<id>.cmd`
+> `.cmd` 文件已经把 `PY`、`DUT`、`RES` 和正确的 python 模块与参数都设好了。
+> 跑之前只要把 `.cmd` 顶上的 `DUT` 和 `RES` 改成你的盘符（或者在 shell 里 export 这两个环境变量）就行。
 
-## 0. Layout of the per-case .cmd files
+## 0. 文件分布
 
 ```
 ai_ssd_test_cases\cmd\
-  _common.cmd                          <-- env-var reference (documentation)
-  base\test_ai_base_001..004.cmd       (4 cases)
-  checkpoint\test_ai_ckp_001..009.cmd  (9 cases)
-  kvcache\test_ai_kv_001..022.cmd      (22 cases)
-  training\test_ai_trn_001..016.cmd    (16 cases)
-  vectordb\test_ai_vdb_001..016.cmd    (16 cases)
-  mixed\test_ai_mix_001..005.cmd       (5 cases)
+  _common.cmd                          <-- 环境变量参考（仅文档）
+  base\test_ai_base_001..004.cmd       （4 个）
+  checkpoint\test_ai_ckp_001..009.cmd  （9 个）
+  kvcache\test_ai_kv_001..022.cmd      （22 个）
+  training\test_ai_trn_001..016.cmd    （16 个）
+  vectordb\test_ai_vdb_001..016.cmd    （16 个）
+  mixed\test_ai_mix_001..005.cmd       （5 个）
                                    ----
-                                   72 .cmd files (one per case)
+                                   72 份 .cmd，一个 case 一份
 ```
 
-Each file is self-contained: it `setlocal`s, `pushd`s to the repo root, runs the
-right `python -m ai_ssd_test_cases.test_<id>_<profile>` with all required flags,
-then `endlocal`s.
+每份都是自洽的：`setlocal` → `pushd` 回仓库根 → 用 catalog 里对应的 python 模块和参数跑 → `endlocal`。
 
-## 1. Run a single case (edit the .cmd, then double-click or run from cmd)
+## 1. 跑单个 case（编辑 .cmd 顶上的路径后双击或命令行调用）
 
 ```cmd
-:: edit DUT and RES inside the file first
 ai_ssd_test_cases\cmd\training\test_ai_trn_006.cmd
 ```
 
-## 2. Run all 72 in sequence
+## 2. 一次跑完全部 72 个
 
 ```powershell
-# 1) Edit DUT and RES at the top of every .cmd (or override via env in your shell)
-# 2) Run the batch script
+# 1) 先把所有 .cmd 顶上的 DUT 和 RES 改成你那边的盘符
+#    （或者在 shell 里 export DUT / RES 覆盖）
+# 2) 跑批跑脚本
 pwsh -NoProfile -Command "& cmd /c 'scripts\run_72_cases_smoke.cmd'"
 ```
 
-`SMOKE_MODE=quick` (default) runs 1-2 representative cases per family.
-`SMOKE_MODE=full` runs the full 72-case matrix.
+`SMOKE_MODE=quick`（默认）：每个家族跑 1-2 个代表 case
+`SMOKE_MODE=full`：跑完全部 72 个
 
-## 3. Run an ad-hoc subset (PowerShell)
+## 3. 自己挑几个跑（PowerShell 临时拼）
 
 ```powershell
 $cases = @(
@@ -53,54 +51,48 @@ $cases = @(
 foreach ($c in $cases) { cmd /c $c }
 ```
 
-## 4. Where to find each case's verdict
+## 4. 在哪里看每次跑的结果
 
-The runner writes a `verdict.json` per run under
-`%RES%\AI-<family>-<NN>\<timestamp>\`. Status values:
+每次跑完会在 `<RES>\AI-<家族>-<编号>\<时间戳>\` 下写一份 `verdict.json`。状态值含义：
 
-* `PASS`  – the workload completed and the inner runner reported success.
-* `BLOCKED` – the runner refused because a precondition was missing
-  (e.g. `--execute`, `--scale-mb`, `--confirm-dut`, no `mlpstorage init`).
-* `FAIL`  – the inner workload exited non-zero.
+- `PASS` — 跑完了，内部 runner 报成功
+- `BLOCKED` — runner 直接拒了，缺前置条件（比如 `--execute` / `--scale-mb` / `--confirm-dut`，或没 `mlpstorage init`）
+- `FAIL` — 内部 workload 退出码非零
 
-## 5. Required environment (verify before first run)
+## 5. 跑之前确认环境
 
-* Python: `.venv\Scripts\python.exe` (3.12.3)
-* mlpstorage CLI on `PATH`: `.venv\Scripts\mlpstorage.exe`
-* `mlpstorage init AI-SSD-Test <RES>` (only for native CKP/KV/TRN cases; the .cmd
-  will trigger this automatically for native cases that need it).
-* For VDB cases that need Milvus: either start a Milvus server at
-  `127.0.0.1:19530` or pass `--backend lite` to the .cmd.
-* `DUT` and `RES` must be on **different physical disks**; the runner rejects
-  overlapping paths.
+- Python：`.venv\Scripts\python.exe`（3.12.3）
+- mlpstorage CLI 在 PATH 上：`.venv\Scripts\mlpstorage.exe`
+- 跑过 `mlpstorage init AI-SSD-Test <RES>`（只有 native 的 CKP / KV / TRN 才需要；`.cmd` 会在需要的时候自动跑一次）
+- 用到 Milvus 的 VDB case：要么启一个 `127.0.0.1:19530` 的 Milvus，要么给 `.cmd` 加 `--backend lite` 走 Milvus Lite
+- `DUT` 和 `RES` 必须在 **不同的物理盘** 上；runner 会直接拒掉路径嵌套的情况
 
-## 6. Known gaps in the xlsx command template
+## 6. xlsx 命令列里漏掉的参数（已修）
 
-| Family / Case | xlsx missing | Wrapper adds |
-|---------------|--------------|--------------|
-| All training  | `--execute`  | auto-injected by tools runner |
-| BASE-002/003/004 | `--scale-mb` (BASE cache/repeatability workloads require it) | .cmd now adds `--scale-mb 512` |
-| BASE-004, all CKP, all MIX | `--confirm-dut` (destructive) | .cmd adds it |
-| All python_scaled cases (TRN 2/6-16, CKP 8/9, KV 9-22, VDB 015, MIX 1-5) | `--scale-mb` | .cmd adds `--scale-mb 512` |
-| VDB-015 | `--source-trace` (default = `trace_test_cases\fixtures\logical_io_smoke.csv`) | .cmd adds the default |
+| 家族 / Case | xlsx 漏的 | .cmd 已经补上 |
+|-------------|-----------|----------------|
+| 全部 Training | `--execute` | 由 tools runner 自动注入 |
+| BASE-002/003/004 | `--scale-mb`（cache / repeatability / fill profile 都强制要） | `.cmd` 加了 `--scale-mb 512` |
+| BASE-004、全部 CKP、全部 MIX | `--confirm-dut`（破坏性 case） | `.cmd` 加了 |
+| 全部 python_scaled case（TRN 2/6-16、CKP 8/9、KV 9-22、VDB 015、MIX 1-5） | `--scale-mb` | `.cmd` 加了 `--scale-mb 512` |
+| VDB-015 | `--source-trace`（默认 `trace_test_cases\fixtures\logical_io_smoke.csv`） | `.cmd` 加了默认路径 |
 
-The .cmd files already include all of these, so copy-pasting the file path
-should be enough to start a run.
+`.cmd` 文件里这些都已经补齐了，直接复制路径就能跑。
 
-## 7. Smoke run that was used to verify all 72 files at least *start*
+## 7. 抽样冒烟跑结果
 
-See `docs/AI_SSD_SMOKE_RUN_20260811.md` (results below):
+详见 `docs\AI_SSD_SMOKE_RUN_20260811.md`，简单总结：
 
-| Family | Tested | Result |
-|--------|--------|--------|
-| BASE  | 4      | 4 PASS (`--scale-mb 512` injected) |
-| CKP   | 2 of 9 | 2 PASS |
-| KV    | 4 of 22 | 4 PASS |
-| TRN   | 3 of 16 | 2 PASS, 1 FAIL (TRN-001 needs native datagen pre-step) |
-| VDB   | 3 of 16 | 3 PASS (Milvus required for VDB-001/002/008; VDB-015 trace works without) |
-| MIX   | 2 of 5 | 2 PASS |
+| 家族 | 抽样 | 结果 |
+|------|------|------|
+| BASE  | 4      | 4 通过（`--scale-mb 512` 已注入） |
+| CKP   | 2/9   | 2 通过 |
+| KV    | 4/22  | 4 通过 |
+| TRN   | 3/16  | 2 通过 + 1 失败（TRN-001 需先跑 native datagen） |
+| VDB   | 3/16  | 3 通过（VDB-001/002/008 需 Milvus；VDB-015 trace 不需要） |
+| MIX   | 2/5   | 2 通过 |
 
-The .cmd files have been **hand-verified** to:
-1. Resolve the correct python module name (using the catalog `entrypoint`)
-2. Pass the right required flags
-3. Produce a `verdict.json` under the configured `RES` directory
+每份 `.cmd` 都已人工验证：
+1. 解析到正确的 python 模块（用 catalog 的 `entrypoint`）
+2. 带上必需参数
+3. 跑完在 `RES` 下写出 `verdict.json`

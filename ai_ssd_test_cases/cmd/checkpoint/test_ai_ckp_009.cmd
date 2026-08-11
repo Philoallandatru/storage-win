@@ -1,14 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-CKP-009 :: 间隔/突发/GC 扫 (python_scaled)
-REM  model = ckp-interval-burst  |  accelerator = *  |  data_format = ckpt  |  capacity ~ 1 GiB
-REM  execution = python_scaled  |  destructive = True  |  family = checkpoint
-REM  expected blocker: destructive + python_scaled; --confirm-dut + --scale-mb required
+REM =============================================================================
+REM  AI-CKP-009 :: interval / GC 突发 save/load（native，破坏性）
+REM  model = ckp-interval-burst  |  data_format = ckpt  |  容量 ~ 1 GiB
+REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 是（破坏性，必须 --confirm-dut）  |  家族 = checkpoint（检查点）
+REM  预期阻塞：破坏性；必须 --confirm-dut；需要 --scale-mb
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"

@@ -1,15 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-BASE-003 :: Repeatability vs monitoring overhead (python_base)
-REM  model = repeatability-monitor  |  capacity ~ 1 GiB
-REM  execution = python_base  |  destructive = False  |  family = BASE
-REM  expected blocker: 3 runs + monitor on/off; python_base uses synthetic I/O
-REM                    --scale-mb required for repeatability profile
+REM =============================================================================
+REM  AI-BASE-003 :: 重复性 vs 监控开销（python_base）
+REM  model = repeatability-monitor  |  容量 ~ 1 GiB
+REM  执行方式 = python_base（Python 基础 workload）  |  破坏性 = 否  |  家族 = BASE（基础环境）
+REM  预期阻塞：3 次重复 + 监控开关；repeatability profile；必须带 --scale-mb
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"

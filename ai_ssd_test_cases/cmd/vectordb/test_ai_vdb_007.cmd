@@ -1,14 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-VDB-007 :: 10M DISKANN (native)
-REM  model = diskann-10m  |  accelerator = *  |  data_format = vdb  |  capacity ~ 300 GiB
-REM  execution = native  |  destructive = False  |  family = vectordb
-REM  expected blocker: native: mlpstorage open vectordb diskann search file (10M 1536D)
+REM =============================================================================
+REM  AI-VDB-007 :: DiskANN 10M（native）
+REM  model = diskann-10m  |  data_format = vdb  |  容量 ~ 300 GiB
+REM  执行方式 = native（原生 mlpstorage 命令）  |  破坏性 = 否  |  家族 = vectordb（向量数据库）
+REM  预期阻塞：需要 Milvus；规模大
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"

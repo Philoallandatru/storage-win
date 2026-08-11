@@ -1,14 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-TRN-014 :: 训练并发 1..16 扫 (python_scaled)
-REM  model = training-concurrency  |  accelerator = *  |  data_format = mixed  |  capacity ~ 1 GiB
-REM  execution = python_scaled  |  destructive = False  |  family = training
-REM  expected blocker: python_scaled single-point; workers sweep not reproduced
+REM =============================================================================
+REM  AI-TRN-014 :: 训练并发压力（python_scaled）
+REM  model = training-concurrency  |  data_format = mixed  |  容量 ~ 1 GiB
+REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 否  |  家族 = training（训练）
+REM  预期阻塞：python_scaled 兜底；必须带 --scale-mb
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"

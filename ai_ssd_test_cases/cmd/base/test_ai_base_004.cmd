@@ -1,15 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-BASE-004 :: Fill-level / GC degradation (python_base, DESTRUCTIVE)
-REM  model = fill-level-degradation  |  capacity ~ 200 GiB (fill to 90%)
-REM  execution = python_base  |  destructive = True   |  family = BASE
-REM  expected blocker: destructive; --confirm-dut required; fill DUT 20-90%
-REM                    --scale-mb required for fill_degradation profile
+REM =============================================================================
+REM  AI-BASE-004 :: 填充水位 / GC 退化（python_base，破坏性）
+REM  model = fill-level-degradation  |  容量 ~ 200 GiB
+REM  执行方式 = python_base（Python 基础 workload）  |  破坏性 = 是（破坏性，必须 --confirm-dut）  |  家族 = BASE（基础环境）
+REM  预期阻塞：fill_degradation profile；破坏性；必须 --confirm-dut + --scale-mb
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"

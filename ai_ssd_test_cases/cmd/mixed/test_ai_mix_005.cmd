@@ -1,14 +1,13 @@
 @echo off
-REM ==============================================================================
-REM  AI-MIX-005 :: 4-class fill/GC 8h soak (python_scaled, DESTRUCTIVE)
-REM  model = four-class-soak  |  capacity ~ 50 GiB (8h loop)
-REM  execution = python_scaled  |  destructive = True   |  family = Mixed
-REM  expected blocker: --scale-mb + --confirm-dut required; long-running (~8h)
+REM =============================================================================
+REM  AI-MIX-005 :: 4 类 fill/GC 8 小时 soak（python_scaled，破坏性）
+REM  model = four-class-soak  |  容量 ~ 50 GiB
+REM  执行方式 = python_scaled（Python 缩放兜底）  |  破坏性 = 是（破坏性，必须 --confirm-dut）  |  家族 = mixed（混合负载）
+REM  预期阻塞：破坏性；长跑约 8 小时；必须 --confirm-dut + --scale-mb
 REM
-REM  Edit PY / DUT / RES below before running.  DUT and RES must live on
-REM  different physical disks so the runner can reject overlapping paths.
-REM ==============================================================================
-
+REM  跑之前编辑下面的 PY / DUT / RES。DUT 和 RES 必须在不同物理盘上，
+REM  runner 会直接拒掉路径嵌套的情况。
+REM =============================================================================
 setlocal
 set "PY=C:\Users\Administrator\Documents\Code\repos\storage\.venv\Scripts\python.exe"
 set "DUT=G:\ai-ssd\data"
