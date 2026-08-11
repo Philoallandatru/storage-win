@@ -22,18 +22,34 @@ ai_ssd_test_cases\cmd\
 
 每份都是自洽的：`setlocal` → `pushd` 回仓库根 → 用 catalog 里对应的 python 模块和参数跑 → `endlocal`。
 
-## 1. 跑单个 case（编辑 .cmd 顶上的路径后双击或命令行调用）
+## 1. 跑单个 case — 用环境变量，不要编辑 .cmd
 
 ```cmd
+:: 1) 设必填的 DUT 和 RES
+set DUT=E:\big-ssd\data
+set RES=D:\results
+
+:: 2) 可选：指定 python（默认会探测仓库里的 .venv\Scripts\python.exe）
+set PY=C:\path\to\python.exe
+
+:: 3) 跑
 ai_ssd_test_cases\cmd\training\test_ai_trn_006.cmd
 ```
+
+`.cmd` 自己做的事：
+
+- `PY` 没设：探测 `%~dp0..\..\..\.venv\Scripts\python.exe`（相对 .cmd 位置），找不到回退到 PATH 上的 `python`
+- `DUT` / `RES` 没设：直接报错退出，不会瞎猜盘符
+- `DUT` 目录不存在：报错退出
+- `RES` 目录不存在：自动创建
+- `pushd` 用相对路径，**clone 到任何位置都能跑**
+- PATH 自动加上 `.venv\Scripts`，所以 `mlpstorage` 命令能搜到
 
 ## 2. 一次跑完全部 72 个
 
 ```powershell
-# 1) 先把所有 .cmd 顶上的 DUT 和 RES 改成你那边的盘符
-#    （或者在 shell 里 export DUT / RES 覆盖）
-# 2) 跑批跑脚本
+$env:DUT = 'E:\big-ssd\data'
+$env:RES = 'D:\results'
 pwsh -NoProfile -Command "& cmd /c 'scripts\run_72_cases_smoke.cmd'"
 ```
 
@@ -43,6 +59,8 @@ pwsh -NoProfile -Command "& cmd /c 'scripts\run_72_cases_smoke.cmd'"
 ## 3. 自己挑几个跑（PowerShell 临时拼）
 
 ```powershell
+$env:DUT = 'E:\big-ssd\data'
+$env:RES = 'D:\results'
 $cases = @(
   "ai_ssd_test_cases\cmd\base\test_ai_base_001.cmd",
   "ai_ssd_test_cases\cmd\training\test_ai_trn_006.cmd",
@@ -53,19 +71,21 @@ foreach ($c in $cases) { cmd /c $c }
 
 ## 4. 在哪里看每次跑的结果
 
-每次跑完会在 `<RES>\AI-<家族>-<编号>\<时间戳>\` 下写一份 `verdict.json`。状态值含义：
+每次跑完会在 `%RES%\AI-<家族>-<编号>\<时间戳>\` 下写一份 `verdict.json`。状态值含义：
 
 - `PASS` — 跑完了，内部 runner 报成功
 - `BLOCKED` — runner 直接拒了，缺前置条件（比如 `--execute` / `--scale-mb` / `--confirm-dut`，或没 `mlpstorage init`）
 - `FAIL` — 内部 workload 退出码非零
 
-## 5. 跑之前确认环境
+## 5. 环境变量速查
 
-- Python：`.venv\Scripts\python.exe`（3.12.3）
-- mlpstorage CLI 在 PATH 上：`.venv\Scripts\mlpstorage.exe`
-- 跑过 `mlpstorage init AI-SSD-Test <RES>`（只有 native 的 CKP / KV / TRN 才需要；`.cmd` 会在需要的时候自动跑一次）
+| 变量 | 必填？ | 默认 | 说明 |
+|------|--------|------|------|
+| `PY`  | 否 | 探测 `.venv\Scripts\python.exe`，回退到 `python` | python 解释器 |
+| `DUT` | 是 | 报错退出 | 数据盘根目录，必须存在且可写 |
+| `RES` | 是 | 报错退出 | 结果目录，自动创建；必须与 DUT 在不同物理盘 |
+
 - 用到 Milvus 的 VDB case：要么启一个 `127.0.0.1:19530` 的 Milvus，要么给 `.cmd` 加 `--backend lite` 走 Milvus Lite
-- `DUT` 和 `RES` 必须在 **不同的物理盘** 上；runner 会直接拒掉路径嵌套的情况
 
 ## 6. xlsx 命令列里漏掉的参数（已修）
 
