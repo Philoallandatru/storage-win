@@ -15,11 +15,7 @@ if str(_REPO_ROOT) not in sys.path:
 from full_test_plan_cases.catalog import load_catalog
 
 
-CASE_DIR = _REPO_ROOT / "full_test_plan_cases" / "cases"
 
-
-def _case_filename(case_id: str) -> str:
-    return f"test_{case_id.lower().replace('-', '_')}.py"
 
 
 def main() -> int:
@@ -84,7 +80,9 @@ def main() -> int:
     for case in selected:
         command = [
             sys.executable,
-            str(CASE_DIR / _case_filename(case["case_id"])),
+            "-m",
+            "full_test_plan_cases.run_case",
+            case["case_id"],
             *common_args,
         ]
         completed = subprocess.run(command, cwd=_REPO_ROOT, check=False)

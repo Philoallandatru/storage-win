@@ -1,26 +1,31 @@
+"""All 33 native cases must plan (produce concrete mlpstorage commands) from
+the unified executor driven by case_catalog.json — no per-case entrypoints."""
+
 from __future__ import annotations
 
 import subprocess
 import sys
 from pathlib import Path
 
+from full_test_plan_cases.catalog import load_catalog
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CASE_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 
 
-def _plan(case_file: str) -> subprocess.CompletedProcess[str]:
+def _plan(case_id: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [
             sys.executable,
-            str(CASE_DIR / case_file),
+            "-m",
+            "full_test_plan_cases.run_case",
+            case_id,
             "--mode",
             "plan",
             "--data-dir",
             "D:/dut",
             "--results-dir",
             "E:/results",
-            "--prepare",
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -29,8 +34,19 @@ def _plan(case_file: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_training_case_prints_native_model_before_command() -> None:
-    completed = _plan("test_ai_trn_003.py")
+def test_every_catalog_case_plans_from_the_unified_executor() -> None:
+    cases = load_catalog()
+    assert len(cases) == 33
+    failed = []
+    for case in cases:
+        completed = _plan(case["case_id"])
+        if completed.returncode != 0 or "mlpstorage open" not in completed.stdout:
+            failed.append(f"{case['case_id']} rc={completed.returncode}")
+    assert failed == []
+
+
+def test_training_case_prints_native_model_positional_command() -> None:
+    completed = _plan("AI-TRN-003")
 
     assert completed.returncode == 0, completed.stderr
     assert "mlpstorage open training unet3d datagen file" in completed.stdout
@@ -38,32 +54,33 @@ def test_training_case_prints_native_model_before_command() -> None:
     assert "--model unet3d" not in completed.stdout
     assert "--exec-type mpi" in completed.stdout
     assert "--exec-type docker" not in completed.stdout
-    assert "runner.py" not in completed.stdout
 
 
 def test_checkpoint_case_prints_native_model_flag_and_real_rank_count() -> None:
-    completed = _plan("test_ai_ckp_003.py")
+    completed = _plan("AI-CKP-003")
 
     assert completed.returncode == 0, completed.stderr
     assert "mlpstorage open checkpointing run file" in completed.stdout
     assert "--model llama3-70b" in completed.stdout
     assert "--num-processes 64" in completed.stdout
-    assert "--model llama3-70b-full-64-ranks" not in completed.stdout
 
 
-def test_distributed_checkpoint_cannot_run_with_single_process_launcher(tmp_path: Path) -> None:
+def test_dev_overrides_flow_into_planned_commands() -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            str(CASE_DIR / "test_ai_ckp_003.py"),
+            "-m",
+            "full_test_plan_cases.run_case",
+            "AI-TRN-003",
             "--mode",
-            "preflight",
-            "--launcher",
-            "single",
+            "plan",
             "--data-dir",
-            str(tmp_path / "dut"),
+            "D:/dut",
             "--results-dir",
-            str(tmp_path / "results"),
+            "E:/results",
+            "--num-files-train",
+            "8",
+            "--allow-invalid-params",
         ],
         cwd=REPO_ROOT,
         capture_output=True,
@@ -71,16 +88,6 @@ def test_distributed_checkpoint_cannot_run_with_single_process_launcher(tmp_path
         check=False,
     )
 
-    assert completed.returncode == 2
-    assert "requires --launcher mpi" in completed.stdout
-
-
-def test_case_scripts_do_not_delegate_runtime_to_the_old_runner() -> None:
-    scripts = sorted(CASE_DIR.glob("test_*.py"))
-
-    assert len(scripts) == 33
-    for script in scripts:
-        source = script.read_text(encoding="utf-8")
-        assert "from full_test_plan_cases.runner import run_case" not in source
-        assert "mlpstorage init" not in source
-        assert "subprocess.run" in source
+    assert completed.returncode == 0, completed.stderr
+    assert "dataset.num_files_train=8" in completed.stdout
+    assert "--allow-invalid-params" in completed.stdout

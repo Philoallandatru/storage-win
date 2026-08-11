@@ -90,6 +90,33 @@ results 放到独立文件系统，可使用兼容配置中的 `data_root/result
 `--init-results` 调用项目原生 `mlpstorage init`；`--cleanup-data` 只删除
 `--cleanup-root` 下本次 case 的 data/cache/checkpoint 目录，不删除 results 或源 trace。
 
+## Dev 模式：直接从 case 文件运行（缩小数据集 / 本机验证）
+
+正式 `run_case.cmd` 链路使用完整数据集（unet3d 7200 文件 ≈ 983 GiB、retinanet
+1,170,301 文件 ≈ 352 GiB），受 CAP-01 容量门禁和 CAP-03 同盘门禁约束。本机开发
+验证时可以直接调用 case 文件，用以下参数缩小规模或绕过提交级门禁：
+
+| 参数 | 作用 |
+|---|---|
+| `--num-files-train N` | 覆盖 datagen/run 的 `dataset.num_files_train`（默认写死在 case 命令里） |
+| `--allow-invalid-params` / `-aip` | dev 用：放行 MLPerf"训练数据 ≥ 5× 客户端内存"规则校验（正式提交不可用） |
+| `--skip-fs-separation-gate` | dev 用：绕过 CAP-03 同盘门禁（分盘后可省略） |
+
+示例（分盘 D 数据 / E 结果，8 文件冒烟，不绕过 CAP 门禁）：
+
+```powershell
+.\.venv\Scripts\python.exe full_test_plan_cases\cases\test_ai_trn_003.py `
+  --mode execute --confirm-dut --prepare --init-results `
+  --data-dir D:\mlps_dev_data --results-dir E:\mlps_dev_res `
+  --systemname devdemo --num-files-train 8 --allow-invalid-params `
+  --launcher mpi --mpi-bin mpiexec --client-memory-gb 64 --accelerators 1
+```
+
+注意：
+- `--num-files-train` 只对 Training case（TRN-003/004/005）生效，其余家族忽略该参数；
+- dev 缩小跑的结果带 `--allow-invalid-params`，**不算正式 MLPerf PASS**；正式提交必须用完整数据集且不放行该参数；
+- `data-dir` 与 `results-dir` 必须在不同文件系统（CAP-03），否则需 `--skip-fs-separation-gate`。
+
 生成的命令形态是：
 
 ```text

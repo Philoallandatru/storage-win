@@ -9,11 +9,6 @@ from full_test_plan_cases.catalog import SOURCE_SHA256, load_catalog
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CASE_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
-
-
-def _filename(case_id: str) -> str:
-    return f"test_{case_id.lower().replace('-', '_')}.py"
 
 
 def test_full_plan_contains_only_executable_native_cases() -> None:
@@ -37,15 +32,14 @@ def test_full_plan_contains_only_executable_native_cases() -> None:
     assert SOURCE_SHA256 == "fada60afe5124244551ce248d3e8e3149a57a5b1b25bed2bc212d860d1d27656"
 
 
-def test_each_case_has_a_self_contained_entrypoint() -> None:
-    expected = {_filename(case["case_id"]) for case in load_catalog()}
-    actual = {path.name for path in CASE_DIR.glob("test_*.py")}
+def test_every_case_has_native_commands_in_catalog() -> None:
+    cases = load_catalog()
 
-    assert actual == expected
-    for path in sorted(CASE_DIR.glob("test_*.py")):
-        source = path.read_text(encoding="utf-8")
-        assert "subprocess.run" in source
-        assert "full_test_plan_cases.runner" not in source
+    for case in cases:
+        assert case["native_status"] == "SUPPORTED"
+        commands = case["native_commands"]
+        assert commands, case["case_id"]
+        assert all(command["argv"][0] == "open" for command in commands)
 
 
 def test_catalog_keeps_workbook_command_separate_from_native_command() -> None:
@@ -62,14 +56,15 @@ def test_catalog_keeps_workbook_command_separate_from_native_command() -> None:
     )
 
 
-def test_native_training_plan_uses_model_positional_and_optional_prepare(tmp_path: Path) -> None:
+def test_run_case_plans_training_with_model_positional_and_prepare(tmp_path: Path) -> None:
     completed = subprocess.run(
         [
             sys.executable,
-            str(CASE_DIR / "test_ai_trn_003.py"),
+            "-m",
+            "full_test_plan_cases.run_case",
+            "AI-TRN-003",
             "--mode",
             "plan",
-            "--prepare",
             "--data-dir",
             str(tmp_path / "dut"),
             "--results-dir",
@@ -86,15 +81,7 @@ def test_native_training_plan_uses_model_positional_and_optional_prepare(tmp_pat
     assert "mlpstorage open training unet3d run file" in completed.stdout
 
 
-def test_case_supports_native_results_init_and_data_cleanup_flags(tmp_path: Path) -> None:
-    source = (CASE_DIR / "test_ai_trn_003.py").read_text(encoding="utf-8")
-
-    assert "--init-results" in source
-    assert "--cleanup-data" in source
-    assert "--cleanup-root" in source
-
-
-def test_run_all_forwards_to_case_files_and_fast_fails(monkeypatch) -> None:
+def test_run_all_forwards_to_run_case_and_fast_fails(monkeypatch) -> None:
     import full_test_plan_cases.run_all as run_all
 
     calls: list[list[str]] = []
@@ -121,8 +108,8 @@ def test_run_all_forwards_to_case_files_and_fast_fails(monkeypatch) -> None:
 
     assert run_all.main() == 1
     assert len(calls) == 1
-    assert calls[0][1].endswith("full_test_plan_cases\\cases\\test_ai_trn_001.py")
-    assert "full_test_plan_cases.runner" not in " ".join(calls[0])
+    assert calls[0][2] == "full_test_plan_cases.run_case"
+    assert calls[0][3] == "AI-TRN-001"
 
 
 def test_run_case_needs_only_case_id_and_uses_site_config(monkeypatch, tmp_path: Path) -> None:
@@ -159,18 +146,16 @@ def test_run_case_needs_only_case_id_and_uses_site_config(monkeypatch, tmp_path:
     monkeypatch.setattr(run_case.sys, "argv", ["run_case.py", "AI-KV-005"])
 
     assert run_case.main() == 0
-    assert len(calls) == 1
-    command, kwargs = calls[0]
-    assert command[1].endswith("full_test_plan_cases\\cases\\test_ai_kv_005.py")
-    assert command[command.index("--mode") + 1] == "execute"
-    assert command[command.index("--data-dir") + 1] == str((tmp_path / "dut" / "AI-KV-005").resolve())
-    assert command[command.index("--results-dir") + 1] == str((tmp_path / "results" / "AI-KV-005").resolve())
-    assert "--confirm-dut" in command
-    assert "--prepare" in command
-    assert "--init-results" in command
-    assert "--cleanup-data" in command
-    assert command[command.index("--cleanup-root") + 1] == str((tmp_path / "dut").resolve())
-    assert kwargs["cwd"] == REPO_ROOT
+    assert len(calls) >= 2  # init + at least one phase
+    init_command, _ = calls[0]
+    assert init_command[1] == "init"
+    assert init_command[2] == "ai-kv-005-native"
+    assert init_command[3] == str((tmp_path / "results" / "AI-KV-005").resolve())
+    phase_command, phase_kwargs = calls[1]
+    assert phase_command[0].endswith("mlpstorage.exe")
+    assert "open" in phase_command
+    assert "kvcache" in phase_command
+    assert phase_kwargs["cwd"] == REPO_ROOT
 
 
 def test_run_case_uses_one_default_drive_and_accepts_drive_override(tmp_path: Path) -> None:
@@ -195,10 +180,11 @@ def test_run_case_uses_one_default_drive_and_accepts_drive_override(tmp_path: Pa
         drive_override="D",
     )
 
-    assert default_command[default_command.index("--data-dir") + 1].startswith("C:\\")
+    # KV cases carry the data-dir-derived --cache-dir instead of --data-dir
     assert default_command[default_command.index("--results-dir") + 1].startswith("C:\\")
-    assert overridden_command[overridden_command.index("--data-dir") + 1].startswith("D:\\")
+    assert default_command[default_command.index("--cache-dir") + 1].startswith("C:\\")
     assert overridden_command[overridden_command.index("--results-dir") + 1].startswith("D:\\")
+    assert overridden_command[overridden_command.index("--cache-dir") + 1].startswith("D:\\")
 
 
 def test_run_case_rejects_unknown_case_before_spawning(monkeypatch) -> None:

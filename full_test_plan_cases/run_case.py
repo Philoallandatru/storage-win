@@ -1,29 +1,32 @@
-"""Run one native FULL_TEST_PLAN case from a site-level configuration."""
+"""Run one native FULL_TEST_PLAN case directly from the catalog.
+
+The 33 case entrypoints in ``full_test_plan_cases/cases/`` have been merged
+into this single executor: the native command lists live in
+``case_catalog.json`` (``native_commands``), and this module owns the
+placeholder substitution, results-dir init, per-phase execution and data
+cleanup that the case files used to duplicate 33 times.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-from full_test_plan_cases.catalog import get_case
+from full_test_plan_cases.catalog import get_case, load_catalog
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-CASE_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 DEFAULT_CONFIG = Path(__file__).with_name("site_config.json")
 
 
 class SiteConfigError(ValueError):
     """Raised when the one-time site configuration is invalid."""
-
-
-def _case_filename(case_id: str) -> str:
-    return f"test_{case_id.lower().replace('-', '_')}.py"
 
 
 def load_site_config(path: Path) -> dict[str, Any]:
@@ -94,6 +97,92 @@ def _test_roots(config: dict[str, Any], drive_override: str | None) -> tuple[Pat
     return data_root.resolve(), results_root.resolve()
 
 
+def _find_mlpstorage(explicit: Path | None) -> Path:
+    if explicit is not None:
+        return explicit
+    for candidate in (Path(sys.executable).with_name("mlpstorage.exe"), Path(sys.executable).with_name("mlpstorage")):
+        if candidate.is_file():
+            return candidate
+    return Path(shutil.which("mlpstorage") or "mlpstorage")
+
+
+class Overrides:
+    """Runtime overrides applied on top of the site config."""
+
+    def __init__(
+        self,
+        *,
+        mode: str = "execute",
+        systemname: str | None = None,
+        data_dir: Path | None = None,
+        results_dir: Path | None = None,
+        num_files_train: int | None = None,
+        allow_invalid_params: bool = False,
+        skip_fs_separation_gate: bool = False,
+        keep_data: bool = False,
+        mlpstorage: Path | None = None,
+    ) -> None:
+        self.mode = mode
+        self.systemname = systemname
+        self.data_dir = data_dir
+        self.results_dir = results_dir
+        self.num_files_train = num_files_train
+        self.allow_invalid_params = allow_invalid_params
+        self.skip_fs_separation_gate = skip_fs_separation_gate
+        self.keep_data = keep_data
+        self.mlpstorage = mlpstorage
+
+
+def _build_commands(
+    case: dict[str, Any],
+    *,
+    data_dir: Path,
+    results_dir: Path,
+    systemname: str,
+    mpi_bin: str,
+    client_memory_gb: int,
+    accelerators: int,
+    query_processes: int,
+    duration_sec: int,
+    loops: int,
+    prepare: bool,
+    overrides: Overrides,
+) -> list[list[str]]:
+    """Resolve the case's native_commands into concrete mlpstorage argv lists."""
+    values = {
+        "<DATA_DIR>": str(data_dir.resolve()),
+        "<RESULTS_DIR>": str(results_dir.resolve()),
+        "<CHECKPOINT_DIR>": str(data_dir.resolve() / "checkpoint" / case["case_id"]),
+        "<CACHE_DIR>": str(data_dir.resolve() / "kvcache" / case["case_id"]),
+        "<STORAGE_ROOT>": str(data_dir.resolve() / "milvus" / case["case_id"]),
+        "<SYSTEMNAME>": systemname,
+        "<CLIENT_MEMORY_GB>": str(client_memory_gb),
+        "<ACCELERATORS>": str(accelerators),
+        "<QUERY_PROCESSES>": str(query_processes),
+        "<DURATION_SEC>": str(duration_sec),
+        "<LOOPS>": str(loops),
+        "<MPI_BIN>": mpi_bin,
+    }
+    commands: list[list[str]] = []
+    for item in case.get("native_commands") or []:
+        if item.get("phase") == "prepare" and not prepare:
+            continue
+        argv = [values.get(a, a) for a in item["argv"] if a != "<COMMAND>"]
+        if overrides.num_files_train is not None:
+            argv = [
+                f"dataset.num_files_train={overrides.num_files_train}"
+                if a.startswith("dataset.num_files_train=")
+                else a
+                for a in argv
+            ]
+        if overrides.skip_fs_separation_gate:
+            argv.append("--skip-fs-separation-gate")
+        if overrides.allow_invalid_params:
+            argv.append("--allow-invalid-params")
+        commands.append(argv)
+    return commands
+
+
 def build_case_command(
     case_id: str,
     config: dict[str, Any],
@@ -102,112 +191,206 @@ def build_case_command(
     mode_override: str | None = None,
     keep_data: bool = False,
     drive_override: str | None = None,
+    data_dir_override: Path | None = None,
+    results_dir_override: Path | None = None,
+    num_files_train: int | None = None,
+    allow_invalid_params: bool = False,
+    skip_fs_separation_gate: bool = False,
 ) -> list[str]:
-    """Build the independent case entrypoint command from site defaults."""
+    """Return the first concrete mlpstorage command (backwards-compatible view)."""
     case = get_case(case_id)
-    normalized = case["case_id"]
-    case_file = CASE_DIR / _case_filename(normalized)
-    if not case_file.is_file():
-        raise SiteConfigError(f"Case entrypoint is missing: {case_file}")
-
-    mode = mode_override or str(config.get("mode", "execute"))
-    if mode not in {"plan", "preflight", "dry-run", "execute"}:
-        raise SiteConfigError(f"Unsupported mode in site config: {mode}")
-    if mode == "execute" and not bool(config.get("confirm_dut", True)):
-        raise SiteConfigError("execute mode requires confirm_dut=true in site config")
-
+    if case.get("native_status") != "SUPPORTED":
+        raise SiteConfigError(f"{case_id} is not native-supported: {case.get('native_block_reason')}")
     data_root, results_root = _test_roots(config, drive_override)
-    data_dir = data_root / normalized
-    results_dir = results_root / normalized
+    data_dir = data_dir_override or data_root / case_id
+    results_dir = results_dir_override or results_root / case_id
+    overrides = Overrides(
+        mode=mode_override or "execute",
+        data_dir=data_dir if data_dir_override else None,
+        results_dir=results_dir if results_dir_override else None,
+        num_files_train=num_files_train,
+        allow_invalid_params=allow_invalid_params,
+        skip_fs_separation_gate=skip_fs_separation_gate,
+        keep_data=keep_data,
+    )
+    commands = _build_commands(
+        case,
+        data_dir=data_dir,
+        results_dir=results_dir,
+        systemname=str(config.get("systemname", f"{case_id.lower()}-native")),
+        mpi_bin=str(config.get("mpi_bin", "mpiexec")),
+        client_memory_gb=int(config.get("client_memory_gb", 64)),
+        accelerators=int(config.get("accelerators", 1)),
+        query_processes=int(config.get("query_processes", 1)),
+        duration_sec=int(config.get("duration_sec", 60)),
+        loops=int(config.get("loops", 1)),
+        prepare=bool(config.get("prepare", True)),
+        overrides=overrides,
+    )
+    if not commands:
+        raise SiteConfigError(f"no executable command for {case_id}")
     python = python_executable or Path(sys.executable)
+    return [str(python), "-m", "mlpstorage_py.main", *commands[0]]
 
-    command = [
-        str(python),
-        str(case_file),
-        "--mode",
-        mode,
-        "--data-dir",
-        str(data_dir),
-        "--results-dir",
-        str(results_dir),
-        "--launcher",
-        str(config.get("launcher", "mpi")),
-        "--mpi-bin",
-        str(config.get("mpi_bin", "mpiexec" if os.name == "nt" else "mpirun")),
-        "--systemname",
-        str(config.get("systemname", f"{normalized.lower()}-native")),
-        "--duration-sec",
-        str(config.get("duration_sec", 60)),
-        "--loops",
-        str(config.get("loops", 1)),
-        "--client-memory-gb",
-        str(config.get("client_memory_gb", 64)),
-        "--accelerators",
-        str(config.get("accelerators", 1)),
-        "--query-processes",
-        str(config.get("query_processes", 1)),
-    ]
-    mlpstorage = config.get("mlpstorage")
-    if mlpstorage:
-        command.extend(["--mlpstorage", str(_configured_path(config, "mlpstorage"))])
-    dlio_bin_path = config.get("dlio_bin_path")
-    if dlio_bin_path:
-        command.extend(["--dlio-bin-path", str(_configured_path(config, "dlio_bin_path"))])
-    for flag, enabled in (
-        ("--prepare", config.get("prepare", True)),
-        ("--confirm-dut", config.get("confirm_dut", True)),
-        ("--init-results", config.get("init_results", True)),
-        ("--o-direct", config.get("o_direct", False)),
-    ):
-        if enabled:
-            command.append(flag)
-    if config.get("cleanup_data", True) and not keep_data:
-        command.extend(["--cleanup-data", "--cleanup-root", str(data_root)])
-    return command
+
+def _run_mlpstorage(cli: Path, argv: list[str]) -> int:
+    command = [str(cli), *argv]
+    print(f"mlpstorage {' '.join(argv[:6])} ... (see phase output)", flush=True)
+    completed = subprocess.run(command, cwd=REPO_ROOT, check=False)
+    return completed.returncode
+
+
+def _cleanup(data_dir: Path, cleanup_root: Path) -> None:
+    data_path = data_dir.resolve()
+    root_path = cleanup_root.resolve()
+    if data_path == root_path or root_path not in data_path.parents:
+        print(f"CLEANUP_FAILED: data path is outside cleanup root: {data_path}")
+        return
+    if data_path.exists():
+        shutil.rmtree(data_path)
+    print(f"TEST_DATA_ROOT={data_path}")
+    print(f"TEST_DATA_CLEANED={not data_path.exists()}")
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Run one configured native MLPerf Storage case",
+        description="Run one native MLPerf Storage case directly from the catalog",
         epilog="Normal use: run_case.cmd AI-KV-005",
     )
     parser.add_argument("case_id", help="Case ID, for example AI-KV-005")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG)
-    parser.add_argument("--mode", choices=("plan", "preflight", "dry-run", "execute"))
+    parser.add_argument("--mode", choices=("plan", "preflight", "dry-run", "execute"), default=None)
     parser.add_argument("--test-drive", help="Override the configured single Windows test drive, for example D:")
+    parser.add_argument("--data-dir", type=Path, help="Override data directory (must be a different filesystem than results)")
+    parser.add_argument("--results-dir", type=Path, help="Override results directory (must be a different filesystem than data)")
+    parser.add_argument("--num-files-train", type=int, help="Dev: override dataset.num_files_train (training cases)")
+    parser.add_argument("--allow-invalid-params", "-aip", action="store_true", help="Dev: let mlpstorage run with invalid (e.g. shrunk) params")
+    parser.add_argument("--skip-fs-separation-gate", action="store_true", help="Dev: bypass CAP-03 same-filesystem gate")
     parser.add_argument("--keep-data", action="store_true")
     parser.add_argument("--print-command", action="store_true")
+    # site-config overrides (accepted by run_all forwarding)
+    parser.add_argument("--launcher", choices=("single", "mpi"), default=None)
+    parser.add_argument("--mpi-bin", choices=("mpiexec", "mpirun"), default=None)
+    parser.add_argument("--systemname", default=None)
+    parser.add_argument("--mlpstorage", type=Path, default=None)
+    parser.add_argument("--prepare", action="store_true", default=None)
+    parser.add_argument("--confirm-dut", action="store_true", default=None)
+    parser.add_argument("--init-results", action="store_true", default=None)
+    parser.add_argument("--cleanup-data", action="store_true", default=None)
+    parser.add_argument("--cleanup-root", type=Path, default=None)
+    parser.add_argument("--loops", type=int, default=None)
+    parser.add_argument("--duration-sec", type=int, default=None)
+    parser.add_argument("--accelerators", type=int, default=None)
+    parser.add_argument("--client-memory-gb", type=int, default=None)
+    parser.add_argument("--query-processes", type=int, default=None)
+    parser.add_argument("--dlio-bin-path", type=Path, default=None)
+    parser.add_argument("--o-direct", action="store_true", default=None)
     args = parser.parse_args()
 
     try:
-        get_case(args.case_id)
-    except KeyError:
+        case = get_case(args.case_id)
+    except KeyError as error:
         print(f"Unknown case ID: {args.case_id}", file=sys.stderr)
         return 2
+
     try:
         config = load_site_config(args.config.resolve())
-        command = build_case_command(
-            args.case_id,
-            config,
-            mode_override=args.mode,
-            keep_data=args.keep_data,
-            drive_override=args.test_drive,
-        )
     except SiteConfigError as error:
         print(f"Configuration error: {error}", file=sys.stderr)
         return 2
 
-    display = subprocess.list2cmdline(["python", *command[1:]])
+    if case.get("native_status") != "SUPPORTED":
+        print(f"{args.case_id.upper()} BLOCKED: {case.get('native_block_reason')}")
+        return 2
+
+    data_root, results_root = _test_roots(config, args.test_drive)
+    data_dir = (args.data_dir or (data_root / args.case_id)).resolve()
+    results_dir = (args.results_dir or (results_root / args.case_id)).resolve()
+    systemname = args.systemname or str(config.get("systemname", f"{args.case_id.lower()}-native"))
+    mode = args.mode or str(config.get("mode", "execute"))
+    mpi_bin = args.mpi_bin or str(config.get("mpi_bin", "mpiexec"))
+    prepare = args.prepare if args.prepare is not None else bool(config.get("prepare", True))
+    cleanup_data = (
+        args.cleanup_data if args.cleanup_data is not None else bool(config.get("cleanup_data", True))
+    ) and not args.keep_data
+    cleanup_root = args.cleanup_root or data_root
+    init_results = args.init_results if args.init_results is not None else bool(config.get("init_results", True))
+    confirm_dut = args.confirm_dut if args.confirm_dut is not None else bool(config.get("confirm_dut", True))
+
+    overrides = Overrides(
+        mode=mode,
+        data_dir=args.data_dir,
+        results_dir=args.results_dir,
+        num_files_train=args.num_files_train,
+        allow_invalid_params=args.allow_invalid_params,
+        skip_fs_separation_gate=args.skip_fs_separation_gate,
+        keep_data=args.keep_data,
+        mlpstorage=args.mlpstorage or (Path(str(config["mlpstorage"])) if config.get("mlpstorage") else None),
+    )
+
+    commands = _build_commands(
+        case,
+        data_dir=data_dir,
+        results_dir=results_dir,
+        systemname=systemname,
+        mpi_bin=mpi_bin,
+        client_memory_gb=args.client_memory_gb or int(config.get("client_memory_gb", 64)),
+        accelerators=args.accelerators or int(config.get("accelerators", 1)),
+        query_processes=args.query_processes or int(config.get("query_processes", 1)),
+        duration_sec=args.duration_sec or int(config.get("duration_sec", 60)),
+        loops=args.loops or int(config.get("loops", 1)),
+        prepare=prepare,
+        overrides=overrides,
+    )
+    if args.o_direct:
+        for argv in commands:
+            if not any(a == "--o-direct" for a in argv):
+                argv.append("--o-direct")
+    if args.dlio_bin_path:
+        for argv in commands:
+            argv.extend(["--dlio-bin-path", str(args.dlio_bin_path)])
+
+    cli = _find_mlpstorage(overrides.mlpstorage)
+    display = [str(Path(sys.executable)), "-m", "mlpstorage_py.main", *commands[0]]
     print(f"CASE={args.case_id.upper()}")
-    print(f"COMMAND={display}")
+    print(f"COMMAND={subprocess.list2cmdline(display)}")
     if args.print_command:
         return 0
 
-    env = os.environ.copy()
-    scripts_dir = str(Path(sys.executable).resolve().parent)
-    env["PATH"] = scripts_dir + os.pathsep + env.get("PATH", "")
-    completed = subprocess.run(command, cwd=REPO_ROOT, env=env, check=False)
-    return completed.returncode
+    if mode in ("plan", "preflight"):
+        for argv in commands:
+            print(f"mlpstorage {' '.join(argv)}")
+        return 0
+    if mode == "dry-run":
+        for argv in commands:
+            print(f"mlpstorage {' '.join(argv)} --dry-run")
+        return 3
+
+    # execute mode
+    if not confirm_dut:
+        print(f"{args.case_id.upper()} BLOCKED: confirm_dut is disabled in site config")
+        return 2
+    results_dir.parent.mkdir(parents=True, exist_ok=True)
+    if init_results:
+        init_command = [str(cli), "init", systemname, str(results_dir)]
+        print(f"{args.case_id} init: {subprocess.list2cmdline(init_command)}")
+        initialized = subprocess.run(init_command, check=False)
+        if initialized.returncode != 0:
+            return initialized.returncode
+
+    for phase_index, argv in enumerate(commands, start=1):
+        print(f"{args.case_id} phase {phase_index}/{len(commands)}: mlpstorage {' '.join(argv[:8])} ...")
+        rc = _run_mlpstorage(cli, argv)
+        if rc != 0:
+            print(f"{args.case_id} FAIL phase={phase_index} rc={rc}")
+            if cleanup_data:
+                _cleanup(data_dir, cleanup_root)
+            return rc
+
+    if cleanup_data:
+        _cleanup(data_dir, cleanup_root)
+    print(f"{args.case_id} PASS")
+    return 0
 
 
 if __name__ == "__main__":
