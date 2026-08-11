@@ -81,7 +81,7 @@ vectordb-elasticsearch = [
 "Bug Tracker" = "https://github.com/mlcommons/storage/issues"
 
 [tool.setuptools]
-packages = {find = {include = ["mlpstorage_py*", "vdbbench*", "full_test_plan_cases*", "ai_ssd_test_cases*"]}}
+packages = {find = {include = ["mlpstorage_py*", "vdbbench*", "full_test_plan_cases*"]}}
 
 [tool.setuptools.package-data]
 "mlpstorage_py" = [

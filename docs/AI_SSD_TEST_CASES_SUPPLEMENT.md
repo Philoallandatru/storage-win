@@ -5,7 +5,7 @@
 **用途**：解释管理层版文档中出现的指标、执行方式、证据要求和常见判定边界
 
 **适用范围**：Training、Checkpointing、KV Cache、VectorDB、Mixed、Soak、Recovery
-**上位文档**：[AI SSD 测试用例说明（管理层版）](AI_SSD_TEST_CASES_EXECUTIVE_GUIDE.md)
+**上位文档**：[AI SSD 测试用例说明（管理层版）](../archive/docs_historical/AI_SSD_TEST_CASES_EXECUTIVE_GUIDE.md)（已归档）
 
 ## 1. 文档层级和 Case 对应关系
 
@@ -16,7 +16,7 @@
 | 完整场景矩阵 | 72 个规划项 | 只用于覆盖分析；其中 BLOCKED/whatif 项不生成执行入口 |
 | 直接 native 套件 | 33 个 Case | `full_test_plan_cases/cases/`，直接调用 `mlpstorage open ...` |
 | Trace 套件 | 1 个可执行 Case | `trace_test_cases/AI-VDB-015`，已验证 VectorDB capture/replay；KV trace 仍是扩展要求，不登记为假 Case |
-| 消费级 native 套件 | 17 个核心 + 3 个可选 Case | `tools/ai_ssd_cases/cases/`，只保留真实 native workload |
+| 消费级 native 套件 | ~~17 个核心 + 3 个可选 Case~~ | 已移除（2026-08-11），不再保留 |
 
 管理报告应优先引用可执行 native 套件；Trace 套件必须以 `TRACE-CAPTURE`/`TRACE-REPLAY` 单独引用；完整矩阵只用于解释覆盖范围。环境探测、填盘、Docker restart、空 integrity 和 whatif 项不作为测试结果引用。
 

@@ -21,12 +21,12 @@ mlp-storage hosts **four benchmark workloads**:
 
 | Reader | Document |
 |---|---|
-| External / customer-facing | [AI SSD 对外测试案例矩阵](AI_SSD_EXTERNAL_TEST_CASE_MATRIX.md) |
-| Management / product decision makers | [AI SSD 测试用例说明（管理层版）](AI_SSD_TEST_CASES_EXECUTIVE_GUIDE.md) |
+| External / customer-facing | [AI SSD 对外测试案例矩阵](../archive/docs_historical/AI_SSD_EXTERNAL_TEST_CASE_MATRIX.md)（已归档） |
+| Management / product decision makers | [AI SSD 测试用例说明（管理层版）](../archive/docs_historical/AI_SSD_TEST_CASES_EXECUTIVE_GUIDE.md)（已归档） |
 | Test owners / engineers | [AI SSD 测试用例补充说明（技术与判定版）](AI_SSD_TEST_CASES_SUPPLEMENT.md) |
-| Case designers / test reviewers | [AI SSD 测试计划标准化 Case 设计](AI_SSD_TEST_PLAN_CASE_DESIGN.md) |
-| Full scenario plan | [AI SSD 场景测试方案](AI_SSD_TEST_PLAN.md) |
-| Consumer AI PC execution plan | [消费级 AI PC 多阶段测试方案](AI_PC_CONSUMER_SSD_MULTI_STAGE_TEST_PLAN.md) |
+| Case designers / test reviewers | [AI SSD 测试计划标准化 Case 设计](../archive/docs_historical/AI_SSD_TEST_PLAN_CASE_DESIGN.md)（已归档） |
+| Full scenario plan | [AI SSD 场景测试方案](../archive/docs_historical/AI_SSD_TEST_PLAN.md)（已归档） |
+| Consumer AI PC execution plan | [消费级 AI PC 多阶段测试方案](../archive/docs_historical/AI_PC_CONSUMER_SSD_MULTI_STAGE_TEST_PLAN.md)（已归档） |
 
 ---
 

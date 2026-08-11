@@ -7,7 +7,7 @@
 | Native | `full_test_plan_cases/cases/` | 真实 `mlpstorage open` workload |
 | Trace Capture | 已验证的 `vdbbench-modular --io-trace-log` | 逻辑 I/O 来源，不是 SSD 成绩 |
 | Trace Replay | `vdbbench.replay` | 固定逻辑 I/O 对目标 SSD 的条件性成绩 |
-| Consumer orchestration | `tools/ai_ssd_cases/` | 仅保留已有真实 workload 的阶段化入口 |
+| Consumer orchestration | ~~`tools/ai_ssd_cases/`~~ | 已移除（2026-08-11，不再保留） |
 
 ## 2. 当前 Native 集合
 
