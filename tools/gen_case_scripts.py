@@ -50,6 +50,20 @@ if "%ALLOW_INVALID%"=="1" set "EXTRA=%EXTRA% --allow-invalid-params"
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
 "%PY%" -m full_test_plan_cases.run_case {case_id} --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname {case_id_lower} %EXTRA%
 set "RC=%ERRORLEVEL%"
+
+REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------
+if "%CLEANUP%"=="0" goto :skip_cleanup
+echo "%DATA_DIR%" | findstr /i /c:"%~n0" >nul
+if errorlevel 1 (
+  echo [%~n0] CLEANUP_SKIPPED: DATA_DIR does not contain case id, refusing to delete: "%DATA_DIR%"
+  goto :skip_cleanup
+)
+if exist "%DATA_DIR%" (
+  echo [%~n0] cleaning data: %DATA_DIR%
+  rmdir /s /q "%DATA_DIR%" 2>nul
+  echo [%~n0] DATA_CLEANED
+)
+:skip_cleanup
 endlocal & exit /b %RC%
 """
 
@@ -87,9 +101,24 @@ def _label_for(base_id: str) -> str:
 
 def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    # clear stale scripts so every .cmd is regenerated from the current catalogs
+    for stale in OUT_DIR.glob("*.cmd"):
+        stale.unlink()
     generated = 0
 
-    # capacity variants (1TB / 2TB) default to a single drive (G: for both)
+    # native cases from case_catalog.json (the cases/ entrypoints were merged away)
+    catalog = json.loads((REPO_ROOT / "full_test_plan_cases" / "case_catalog.json").read_text(encoding="utf-8"))
+    for case in catalog:
+        case_id = case["case_id"]
+        content = TEMPLATE.format(
+            case_id=case_id,
+            case_id_lower=case_id.lower(),
+            model=case.get("model_config") or "native",
+        )
+        (OUT_DIR / f"{case_id}.cmd").write_text(content, encoding="utf-8", newline="\r\n")
+        generated += 1
+
+    # capacity variants (1TB / 2TB / 4TB) default to a single drive (G: for both)
     capacity_path = REPO_ROOT / "full_test_plan_cases" / "capacity_catalog.json"
     capacity = json.loads(capacity_path.read_text(encoding="utf-8"))
     for tier in ("1TB", "2TB", "4TB"):
@@ -110,17 +139,6 @@ def main() -> int:
             (OUT_DIR / f"{cid}.cmd").write_text(body, encoding="utf-8", newline="\r\n")
             generated += 1
 
-    # native cases
-    for py in sorted(CASES_DIR.glob("test_ai_*.py")):
-        case_id = py.stem.replace("test_", "").replace("_", "-").upper()
-        label = _model_label(py)
-        content = TEMPLATE.format(
-            case_id=case_id,
-            case_id_lower=case_id.lower(),
-            model=label or "native",
-        )
-        (OUT_DIR / f"{case_id}.cmd").write_text(content, encoding="utf-8", newline="\r\n")
-        generated += 1
     print(f"generated {generated} scripts in {OUT_DIR}")
     return 0
 

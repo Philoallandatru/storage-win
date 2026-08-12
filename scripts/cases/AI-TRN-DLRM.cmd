@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  AI-TRN-DLRM-4TB  capacity  - run this script directly
+REM  AI-TRN-DLRM  DLRM/B200  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
 REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================
@@ -13,8 +13,8 @@ if not exist "%PY%" set "PY=python"
 set "PATH=%REPO_ROOT%\.venv\Scripts;%PATH%"
 
 REM ---------- edit these two per machine (must be different drives) ----------
-set "DATA_DIR=G:\MLPerfStorageTest\data\AI-TRN-DLRM-4TB"
-set "RESULT_DIR=G:\MLPerfStorageTest\results\AI-TRN-DLRM-4TB"
+set "DATA_DIR=G:\MLPerfStorageTest\data\AI-TRN-DLRM"
+set "RESULT_DIR=D:\MLPerfStorageTest\results\AI-TRN-DLRM"
 
 REM ---------- dev: uncomment the two lines below to shrink the dataset ----------
 REM set "NUM_FILES_TRAIN=8"
@@ -25,7 +25,7 @@ if defined NUM_FILES_TRAIN set "EXTRA=%EXTRA% --num-files-train %NUM_FILES_TRAIN
 if "%ALLOW_INVALID%"=="1" set "EXTRA=%EXTRA% --allow-invalid-params"
 
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-TRN-DLRM-4TB --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-trn-dlrm-4tb %EXTRA%
+"%PY%" -m full_test_plan_cases.run_case AI-TRN-DLRM --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-trn-dlrm %EXTRA%
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

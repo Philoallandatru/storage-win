@@ -1,7 +1,8 @@
 @echo off
 REM ============================================================
-REM  AI-VDB-003  DISKANN  - run this script directly
+REM  AI-VDB-003  1Mx1536 DISKANN  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
+REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================
 setlocal
 
@@ -26,4 +27,18 @@ if "%ALLOW_INVALID%"=="1" set "EXTRA=%EXTRA% --allow-invalid-params"
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
 "%PY%" -m full_test_plan_cases.run_case AI-VDB-003 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-vdb-003 %EXTRA%
 set "RC=%ERRORLEVEL%"
+
+REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------
+if "%CLEANUP%"=="0" goto :skip_cleanup
+echo "%DATA_DIR%" | findstr /i /c:"%~n0" >nul
+if errorlevel 1 (
+  echo [%~n0] CLEANUP_SKIPPED: DATA_DIR does not contain case id, refusing to delete: "%DATA_DIR%"
+  goto :skip_cleanup
+)
+if exist "%DATA_DIR%" (
+  echo [%~n0] cleaning data: %DATA_DIR%
+  rmdir /s /q "%DATA_DIR%" 2>nul
+  echo [%~n0] DATA_CLEANED
+)
+:skip_cleanup
 endlocal & exit /b %RC%
