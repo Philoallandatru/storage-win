@@ -1,0 +1,46 @@
+# ---------------------------------------------------------------
+# VDB smoke config — shrink every case to a tiny local dataset
+# Used by run_case --vdb-config (dev verification only)
+# ---------------------------------------------------------------
+backend: milvus
+mode: both
+
+database:
+  host: 127.0.0.1
+  port: 19530
+
+dataset:
+  collection_name: bench_smoke
+  num_vectors: 100
+  dimension: 128
+  distribution: uniform
+  block_size: 100
+  batch_size: 100
+  seed: 42
+
+query:
+  num_query_vectors: 10
+  query_seed: 99
+
+ground_truth:
+  truth_k: 10
+
+index:
+  index_type: HNSW
+  metric_type: COSINE
+  index_params:
+    M: 16
+    efConstruction: 100
+  num_shards: 1
+
+search:
+  search_k: 10
+  num_search_rounds: 1
+  search_batch_size: 1
+  search_params:
+    ef: 64
+
+workflow:
+  force: true
+  compact: false
+  monitor_interval: 5

@@ -117,6 +117,14 @@ class Overrides:
         data_dir: Path | None = None,
         results_dir: Path | None = None,
         num_files_train: int | None = None,
+        num_processes: int | None = None,
+        num_checkpoints_write: int | None = None,
+        num_checkpoints_read: int | None = None,
+        num_vectors: int | None = None,
+        trials: int | None = None,
+        inter_option_delay: int | None = None,
+        milvus_uri: str | None = None,
+        vdb_config: Path | None = None,
         allow_invalid_params: bool = False,
         skip_fs_separation_gate: bool = False,
         keep_data: bool = False,
@@ -127,6 +135,14 @@ class Overrides:
         self.data_dir = data_dir
         self.results_dir = results_dir
         self.num_files_train = num_files_train
+        self.num_processes = num_processes
+        self.num_checkpoints_write = num_checkpoints_write
+        self.num_checkpoints_read = num_checkpoints_read
+        self.num_vectors = num_vectors
+        self.trials = trials
+        self.inter_option_delay = inter_option_delay
+        self.milvus_uri = milvus_uri
+        self.vdb_config = vdb_config
         self.allow_invalid_params = allow_invalid_params
         self.skip_fs_separation_gate = skip_fs_separation_gate
         self.keep_data = keep_data
@@ -168,6 +184,7 @@ def _build_commands(
         if item.get("phase") == "prepare" and not prepare:
             continue
         argv = [values.get(a, a) for a in item["argv"] if a != "<COMMAND>"]
+        # dataset.num_files_train lives inside --params KEY=VALUE tokens
         if overrides.num_files_train is not None:
             argv = [
                 f"dataset.num_files_train={overrides.num_files_train}"
@@ -175,6 +192,24 @@ def _build_commands(
                 else a
                 for a in argv
             ]
+        if overrides.vdb_config is not None and any(a == "vectordb" for a in argv):
+            argv.extend(["--config", str(overrides.vdb_config)])
+        if overrides.milvus_uri and "--host" in argv:
+            host_i = argv.index("--host")
+            argv = argv[:host_i] + argv[host_i + 2 :]
+            argv.append("--milvus-uri")
+            argv.append(overrides.milvus_uri)
+        # generic flag -> value overrides (shrink dev runs)
+        for flag, value in (
+            ("--num-processes", overrides.num_processes),
+            ("--num-checkpoints-write", overrides.num_checkpoints_write),
+            ("--num-checkpoints-read", overrides.num_checkpoints_read),
+            ("--num-vectors", overrides.num_vectors),
+            ("--trials", overrides.trials),
+            ("--inter-option-delay", overrides.inter_option_delay),
+        ):
+            if value is not None and flag in argv:
+                argv[argv.index(flag) + 1] = str(value)
         if overrides.skip_fs_separation_gate:
             argv.append("--skip-fs-separation-gate")
         if overrides.allow_invalid_params:
@@ -264,6 +299,14 @@ def main() -> int:
     parser.add_argument("--data-dir", type=Path, help="Override data directory (must be a different filesystem than results)")
     parser.add_argument("--results-dir", type=Path, help="Override results directory (must be a different filesystem than data)")
     parser.add_argument("--num-files-train", type=int, help="Dev: override dataset.num_files_train (training cases)")
+    parser.add_argument("--num-processes", type=int, help="Dev: override --num-processes (checkpoint ranks / datagen workers)")
+    parser.add_argument("--num-checkpoints-write", type=int, help="Dev: override --num-checkpoints-write")
+    parser.add_argument("--num-checkpoints-read", type=int, help="Dev: override --num-checkpoints-read")
+    parser.add_argument("--num-vectors", type=int, help="Dev: override --num-vectors (vectordb datagen)")
+    parser.add_argument("--trials", type=int, help="Dev: override --trials (kvcache)")
+    parser.add_argument("--inter-option-delay", type=int, help="Dev: override --inter-option-delay (kvcache)")
+    parser.add_argument("--milvus-uri", help="Dev: use a local Milvus Lite .db path instead of --host/--port (vectordb)")
+    parser.add_argument("--vdb-config", type=Path, help="Dev: use a shrunk vdbbench config YAML for vectordb cases")
     parser.add_argument("--allow-invalid-params", "-aip", action="store_true", help="Dev: let mlpstorage run with invalid (e.g. shrunk) params")
     parser.add_argument("--skip-fs-separation-gate", action="store_true", help="Dev: bypass CAP-03 same-filesystem gate")
     parser.add_argument("--keep-data", action="store_true")
@@ -322,6 +365,14 @@ def main() -> int:
         data_dir=args.data_dir,
         results_dir=args.results_dir,
         num_files_train=args.num_files_train,
+        num_processes=args.num_processes,
+        num_checkpoints_write=args.num_checkpoints_write,
+        num_checkpoints_read=args.num_checkpoints_read,
+        num_vectors=args.num_vectors,
+        trials=args.trials,
+        inter_option_delay=args.inter_option_delay,
+        milvus_uri=args.milvus_uri,
+        vdb_config=args.vdb_config,
         allow_invalid_params=args.allow_invalid_params,
         skip_fs_separation_gate=args.skip_fs_separation_gate,
         keep_data=args.keep_data,
