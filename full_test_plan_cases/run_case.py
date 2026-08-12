@@ -23,6 +23,40 @@ from full_test_plan_cases.catalog import get_case, load_catalog
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = Path(__file__).with_name("site_config.json")
+CAPACITY_CONFIG = Path(__file__).with_name("capacity_catalog.json")
+
+_CAPACITY: dict | None = None
+
+
+def _capacity_catalog() -> dict:
+    """Load the 1TB/2TB capacity case catalog (lazy)."""
+    global _CAPACITY
+    if _CAPACITY is None:
+        _CAPACITY = json.loads(CAPACITY_CONFIG.read_text(encoding="utf-8"))
+    return _CAPACITY
+
+
+def resolve_case(case_id: str) -> tuple[dict, list[str], bool]:
+    """Return (case, capacity_overrides, single_drive) for any case id.
+
+    Plain ids resolve from case_catalog.json.  Ids ending in ``-1TB`` /
+    ``-2TB`` resolve from capacity_catalog.json against their base case;
+    those always run single-drive (CAP-03 bypassed) by design.
+    """
+    case_id_upper = case_id.upper()
+    try:
+        return get_case(case_id_upper), [], False
+    except KeyError:
+        pass
+    for capacity, entries in _capacity_catalog().items():
+        if str(capacity).startswith("_"):
+            continue
+        spec = entries.get(case_id_upper)
+        if spec is None:
+            continue
+        base = get_case(spec["base"])
+        return base, list(spec.get("overrides", [])), True
+    raise KeyError(case_id_upper)
 
 
 class SiteConfigError(ValueError):
@@ -268,6 +302,29 @@ def build_case_command(
     return [str(python), "-m", "mlpstorage_py.main", *commands[0]]
 
 
+def _apply_capacity_overrides(overrides: Overrides, duration_sec: int, capacity_overrides: list[str]) -> int:
+    """Apply capacity-catalog overrides (CLI-style flag/value pairs)."""
+    for i in range(0, len(capacity_overrides) - 1, 2):
+        flag, value = capacity_overrides[i], capacity_overrides[i + 1]
+        if flag == "--duration-sec":
+            duration_sec = int(value)
+        elif flag == "--num-files-train":
+            overrides.num_files_train = int(value)
+        elif flag == "--num-processes":
+            overrides.num_processes = int(value)
+        elif flag == "--num-checkpoints-write":
+            overrides.num_checkpoints_write = int(value)
+        elif flag == "--num-checkpoints-read":
+            overrides.num_checkpoints_read = int(value)
+        elif flag == "--num-vectors":
+            overrides.num_vectors = int(value)
+        elif flag == "--trials":
+            overrides.trials = int(value)
+        elif flag == "--inter-option-delay":
+            overrides.inter_option_delay = int(value)
+    return duration_sec
+
+
 def _run_mlpstorage(cli: Path, argv: list[str]) -> int:
     command = [str(cli), *argv]
     print(f"mlpstorage {' '.join(argv[:6])} ... (see phase output)", flush=True)
@@ -331,7 +388,7 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
-        case = get_case(args.case_id)
+        case, capacity_overrides, single_drive = resolve_case(args.case_id)
     except KeyError as error:
         print(f"Unknown case ID: {args.case_id}", file=sys.stderr)
         return 2
@@ -353,6 +410,9 @@ def main() -> int:
     mode = args.mode or str(config.get("mode", "execute"))
     mpi_bin = args.mpi_bin or str(config.get("mpi_bin", "mpiexec"))
     prepare = args.prepare if args.prepare is not None else bool(config.get("prepare", True))
+    if single_drive:
+        # 1TB/2TB capacity cases are designed to run on a single drive.
+        args.skip_fs_separation_gate = True
     cleanup_data = (
         args.cleanup_data if args.cleanup_data is not None else bool(config.get("cleanup_data", True))
     ) and not args.keep_data
@@ -360,6 +420,7 @@ def main() -> int:
     init_results = args.init_results if args.init_results is not None else bool(config.get("init_results", True))
     confirm_dut = args.confirm_dut if args.confirm_dut is not None else bool(config.get("confirm_dut", True))
 
+    duration_sec = args.duration_sec or int(config.get("duration_sec", 60))
     overrides = Overrides(
         mode=mode,
         data_dir=args.data_dir,
@@ -388,11 +449,23 @@ def main() -> int:
         client_memory_gb=args.client_memory_gb or int(config.get("client_memory_gb", 64)),
         accelerators=args.accelerators or int(config.get("accelerators", 1)),
         query_processes=args.query_processes or int(config.get("query_processes", 1)),
-        duration_sec=args.duration_sec or int(config.get("duration_sec", 60)),
+        duration_sec=duration_sec,
         loops=args.loops or int(config.get("loops", 1)),
         prepare=prepare,
         overrides=overrides,
     )
+    if capacity_overrides:
+        duration_sec = _apply_capacity_overrides(overrides, duration_sec, capacity_overrides)
+        commands = _build_commands(
+            case, data_dir=data_dir, results_dir=results_dir, systemname=systemname,
+            mpi_bin=mpi_bin,
+            client_memory_gb=args.client_memory_gb or int(config.get("client_memory_gb", 64)),
+            accelerators=args.accelerators or int(config.get("accelerators", 1)),
+            query_processes=args.query_processes or int(config.get("query_processes", 1)),
+            duration_sec=duration_sec,
+            loops=args.loops or int(config.get("loops", 1)),
+            prepare=prepare, overrides=overrides,
+        )
     if args.o_direct:
         for argv in commands:
             if not any(a == "--o-direct" for a in argv):

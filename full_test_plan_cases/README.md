@@ -115,6 +115,25 @@ KV 10s × 1 trial；VDB 需 Milvus server（标注 BLOCKED）。
 `run_all` 逐个调用 `run_case`；execute/dry-run/preflight 模式下第一个非零退出码触发
 套件级 fast-fail。
 
+## 1TB / 2TB 容量适配压力 case
+
+针对单块 1TB / 2TB SSD 设计，case_id 带 `-1TB` / `-2TB` 后缀（定义见
+[`capacity_catalog.json`](capacity_catalog.json)），**默认单盘运行**（run_case
+自动加 `--skip-fs-separation-gate`），Training 按盘容量调整数据集：
+
+| Case | 盘 | 数据量 | 填盘 |
+|---|---|---|---|
+| `AI-TRN-003-1TB`（unet3d 3500 文件） | 1TB | 478 GiB | 51% |
+| `AI-TRN-004-1TB`（retinanet） | 1TB | 352 GiB | 38% |
+| `AI-CKP-001-1TB`（8B 10 写 10 读） | 1TB | 120 GB×2 流量 | 13% |
+| `AI-VDB-002-1TB`（1M 全量 + 查询） | 1TB | ~15 GiB | — |
+| `AI-TRN-003-2TB`（unet3d 正式 7200） | 2TB | 983 GiB | 53% |
+| `AI-CKP-002-2TB`（70B 8 ranks 10 写） | 2TB | 1.04 TB | 56% |
+| `AI-VDB-006-2TB`（10M 向量） | 2TB | ~150 GiB | 8% |
+
+运行方式与普通 case 相同（`run_case.cmd AI-TRN-003-1TB` 或
+`scripts\cases\AI-TRN-003-1TB.cmd`）；一键脚本默认 data/results 都在 `G:`。
+
 ## 环境前提
 
 | 依赖 | 说明 |

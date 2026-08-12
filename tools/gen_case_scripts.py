@@ -1,17 +1,17 @@
-"""Generate one simple .cmd script per native case.
+"""Generate one simple .cmd script per native case (+ 1TB/2TB capacity variants).
 
 Each script is self-contained: run it directly (``AI-TRN-003.cmd``) and it
-invokes the corresponding case entrypoint with sane defaults.  The only
-per-machine edits are the DATA_DIR / RESULT_DIR variables at the top
-(they must live on different filesystems - CAP-03).
+invokes the unified executor with sane defaults.  The only per-machine edits
+are the DATA_DIR / RESULT_DIR variables at the top.
 
-Regenerate after changing ``case_catalog.json`` or the case set:
+Regenerate after changing the catalogs:
     python tools/gen_case_scripts.py
 """
 
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +25,7 @@ TEMPLATE = """@echo off
 REM ============================================================
 REM  {case_id}  {model}  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
+REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================
 setlocal
 
@@ -77,20 +78,48 @@ def _model_label(case_file: Path) -> str:
     return ""
 
 
+def _label_for(base_id: str) -> str:
+    try:
+        return _model_label(CASES_DIR / f"test_{base_id.lower().replace('-', '_')}.py")
+    except Exception:
+        return ""
+
+
 def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     generated = 0
+
+    # capacity variants (1TB / 2TB) default to a single drive (G: for both)
+    capacity_path = REPO_ROOT / "full_test_plan_cases" / "capacity_catalog.json"
+    capacity = json.loads(capacity_path.read_text(encoding="utf-8"))
+    for tier in ("1TB", "2TB"):
+        for cid, spec in capacity.get(tier, {}).items():
+            if str(cid).startswith("_"):
+                continue
+            # capacity variants: single drive (data + results on G:); swap the
+            # RESULT_DIR default BEFORE format so {case_id} is still literal
+            tpl = TEMPLATE.replace(
+                'set "RESULT_DIR=D:\\MLPerfStorageTest',
+                'set "RESULT_DIR=G:\\MLPerfStorageTest',
+            )
+            body = tpl.format(
+                case_id=cid,
+                case_id_lower=cid.lower(),
+                model=_label_for(spec["base"]) or "capacity",
+            )
+            (OUT_DIR / f"{cid}.cmd").write_text(body, encoding="utf-8", newline="\r\n")
+            generated += 1
+
+    # native cases
     for py in sorted(CASES_DIR.glob("test_ai_*.py")):
         case_id = py.stem.replace("test_", "").replace("_", "-").upper()
         label = _model_label(py)
         content = TEMPLATE.format(
             case_id=case_id,
             case_id_lower=case_id.lower(),
-            case_file=py.name,
             model=label or "native",
         )
-        out = OUT_DIR / f"{case_id}.cmd"
-        out.write_text(content, encoding="utf-8", newline="\r\n")
+        (OUT_DIR / f"{case_id}.cmd").write_text(content, encoding="utf-8", newline="\r\n")
         generated += 1
     print(f"generated {generated} scripts in {OUT_DIR}")
     return 0
