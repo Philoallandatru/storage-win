@@ -14,7 +14,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def test_full_plan_contains_only_executable_native_cases() -> None:
     cases = load_catalog()
 
-    assert len(cases) == 33
+    assert len(cases) == 34
     assert [case["case_id"] for case in cases[:5]] == [
         "AI-TRN-003",
         "AI-TRN-004",
@@ -22,9 +22,9 @@ def test_full_plan_contains_only_executable_native_cases() -> None:
         "AI-CKP-001",
         "AI-CKP-002",
     ]
-    assert cases[-1]["case_id"] == "AI-VDB-016"
+    assert cases[-1]["case_id"] == "AI-TRN-DLRM"
     assert Counter(case["family"] for case in cases) == {
-        "Training": 3,
+        "Training": 4,
         "Checkpoint": 7,
         "KV Cache": 8,
         "VectorDB": 15,

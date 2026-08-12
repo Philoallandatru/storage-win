@@ -92,7 +92,7 @@ def main() -> int:
     # capacity variants (1TB / 2TB) default to a single drive (G: for both)
     capacity_path = REPO_ROOT / "full_test_plan_cases" / "capacity_catalog.json"
     capacity = json.loads(capacity_path.read_text(encoding="utf-8"))
-    for tier in ("1TB", "2TB"):
+    for tier in ("1TB", "2TB", "4TB"):
         for cid, spec in capacity.get(tier, {}).items():
             if str(cid).startswith("_"):
                 continue

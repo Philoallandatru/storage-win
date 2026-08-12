@@ -2741,5 +2741,90 @@
       }
     ],
     "standard": "Pass：Recall unchanged；P99<=1.5x solo；零错误；结果、监控、版本和 manifest 完整。\nFail：未达到上述门槛，且问题可复现或存在性能回归。\nInvalid：Recall/query 集不一致、对象缺失、Milvus 未 healthy 或未命中 DUT。"
+  },
+  {
+    "case_no": 100,
+    "case_id": "AI-TRN-DLRM",
+    "family": "Training",
+    "profile": "Q1",
+    "priority": "P0",
+    "requirements": [
+      "TR-AI-TRAIN-001",
+      "TR-AI-TRAIN-003"
+    ],
+    "model_config": "DLRM/B200",
+    "test_purpose": "DLRM Parquet embedding random-read IOPS stress (open)",
+    "primary_variables": "num_files_train;accelerators;read_threads",
+    "primary_metrics": "AU;samples/s;IOPS",
+    "windows_status": "OK (0.75 GiB dataset)",
+    "tool": "mlpstorage",
+    "purpose": "DLRM/B200 embedding 随机小读 IOPS 压力（open；数据集仅 0.75 GiB）",
+    "steps": [
+      "准备 DLRM/B200 数据集（1024 文件）",
+      "按 accelerators 1/4/8 扫描并发与 read_threads",
+      "采集 AU、samples/s、IOPS"
+    ],
+    "duration": "数据 0.75 GiB；时长由 epochs 2 × 1024 × 0.000375s 推演（约 1 min）+ I/O 并发扫描",
+    "source_command": "mlpstorage open training dlrm datagen file --num-processes 8 --data-dir <DATA_DIR> --results-dir <RESULTS_DIR> --systemname <SYSTEMNAME> --exec-type mpi --mpi-bin <MPI_BIN> --params dataset.num_files_train=1024",
+    "workbook_command": "",
+    "native_status": "SUPPORTED",
+    "native_block_reason": null,
+    "native_commands": [
+      {
+        "phase": "prepare",
+        "argv": [
+          "open",
+          "training",
+          "dlrm",
+          "datagen",
+          "file",
+          "--num-processes",
+          "8",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1024"
+        ]
+      },
+      {
+        "phase": "run",
+        "argv": [
+          "open",
+          "training",
+          "dlrm",
+          "run",
+          "file",
+          "--num-accelerators",
+          "<ACCELERATORS>",
+          "--accelerator-type",
+          "b200",
+          "--client-host-memory-in-gb",
+          "<CLIENT_MEMORY_GB>",
+          "--loops",
+          "<LOOPS>",
+          "--data-dir",
+          "<DATA_DIR>",
+          "--results-dir",
+          "<RESULTS_DIR>",
+          "--systemname",
+          "<SYSTEMNAME>",
+          "--exec-type",
+          "mpi",
+          "--mpi-bin",
+          "<MPI_BIN>",
+          "--params",
+          "dataset.num_files_train=1024"
+        ]
+      }
+    ],
+    "standard": "open"
   }
 ]

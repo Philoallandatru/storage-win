@@ -125,11 +125,19 @@ KV 10s × 1 trial；VDB 需 Milvus server（标注 BLOCKED）。
 |---|---|---|---|
 | `AI-TRN-003-1TB`（unet3d 3500 文件） | 1TB | 478 GiB | 51% |
 | `AI-TRN-004-1TB`（retinanet） | 1TB | 352 GiB | 38% |
-| `AI-CKP-001-1TB`（8B 10 写 10 读） | 1TB | 120 GB×2 流量 | 13% |
+| `AI-TRN-DLRM-1TB`（400 文件 + 4 加速器） | 1TB | 467 GiB | 50% |
+| `AI-CKP-001-1TB`（8B 1 写 1 读） | 1TB | 120 GB | 13% |
 | `AI-VDB-002-1TB`（1M 全量 + 查询） | 1TB | ~15 GiB | — |
 | `AI-TRN-003-2TB`（unet3d 正式 7200） | 2TB | 983 GiB | 53% |
-| `AI-CKP-002-2TB`（70B 8 ranks 10 写） | 2TB | 1.04 TB | 56% |
+| `AI-TRN-DLRM-2TB`（正式 1024 + 8 加速器） | 2TB | 1.11 TB | 60% |
+| `AI-CKP-002-2TB`（70B 8 ranks 1 写） | 2TB | 1.04 TB | 56% |
 | `AI-VDB-006-2TB`（10M 向量） | 2TB | ~150 GiB | 8% |
+| `AI-TRN-003-4TB`（unet3d 正式） | 4TB | 983 GiB | 26% |
+| `AI-TRN-DLRM-4TB`（正式 + 16 加速器） | 4TB | 1.11 TB | 30% |
+| `AI-CKP-002-4TB`（70B 3 写 3 读） | 4TB | 3.1 TB | 84% |
+
+训练三模型 × 三档：unet3d（大文件顺序读）、retinanet（小文件随机读）、
+DLRM（Parquet 极小小文件高 IOPS，数据集 ~1.11 TB 按 `num_files_train` 缩放）。
 
 运行方式与普通 case 相同（`run_case.cmd AI-TRN-003-1TB` 或
 `scripts\cases\AI-TRN-003-1TB.cmd`）；一键脚本默认 data/results 都在 `G:`。

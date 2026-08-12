@@ -155,6 +155,7 @@ class Overrides:
         num_checkpoints_write: int | None = None,
         num_checkpoints_read: int | None = None,
         num_vectors: int | None = None,
+        num_accelerators: int | None = None,
         trials: int | None = None,
         inter_option_delay: int | None = None,
         milvus_uri: str | None = None,
@@ -173,6 +174,7 @@ class Overrides:
         self.num_checkpoints_write = num_checkpoints_write
         self.num_checkpoints_read = num_checkpoints_read
         self.num_vectors = num_vectors
+        self.num_accelerators = num_accelerators
         self.trials = trials
         self.inter_option_delay = inter_option_delay
         self.milvus_uri = milvus_uri
@@ -207,7 +209,7 @@ def _build_commands(
         "<STORAGE_ROOT>": str(data_dir.resolve() / "milvus" / case["case_id"]),
         "<SYSTEMNAME>": systemname,
         "<CLIENT_MEMORY_GB>": str(client_memory_gb),
-        "<ACCELERATORS>": str(accelerators),
+        "<ACCELERATORS>": str(overrides.num_accelerators if overrides.num_accelerators is not None else accelerators),
         "<QUERY_PROCESSES>": str(query_processes),
         "<DURATION_SEC>": str(duration_sec),
         "<LOOPS>": str(loops),
@@ -312,6 +314,8 @@ def _apply_capacity_overrides(overrides: Overrides, duration_sec: int, capacity_
             overrides.num_files_train = int(value)
         elif flag == "--num-processes":
             overrides.num_processes = int(value)
+        elif flag == "--num-accelerators":
+            overrides.num_accelerators = int(value)
         elif flag == "--num-checkpoints-write":
             overrides.num_checkpoints_write = int(value)
         elif flag == "--num-checkpoints-read":

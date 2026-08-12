@@ -36,7 +36,7 @@ def _plan(case_id: str) -> subprocess.CompletedProcess[str]:
 
 def test_every_catalog_case_plans_from_the_unified_executor() -> None:
     cases = load_catalog()
-    assert len(cases) == 33
+    assert len(cases) == 34
     failed = []
     for case in cases:
         completed = _plan(case["case_id"])
