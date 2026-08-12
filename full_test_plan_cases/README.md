@@ -1,164 +1,130 @@
-# FULL_TEST_PLAN：33 个直接 Native Case
+# FULL_TEST_PLAN：33 个 Native Case 执行手册
 
-当前 Case 数量、ID 和参数以
-[`case_catalog.json`](case_catalog.json) 为准；文档状态和旧方案迁移说明见
-[`docs/AI_SSD_DOCUMENT_STATUS.md`](../docs/AI_SSD_DOCUMENT_STATUS.md)。旧的 72 Case
-规划矩阵不再是本目录的执行来源。
+当前 Case 数量、ID、命令与参数以
+[`case_catalog.json`](case_catalog.json) 为唯一数据源；文档状态与旧方案迁移见
+[`docs/AI_SSD_DOCUMENT_STATUS.md`](../docs/AI_SSD_DOCUMENT_STATUS.md)。
 
-`cases/` 中的每个文件都是独立入口，文件内直接写出并调用仓库的 `mlpstorage` 命令；不依赖第二层 workload runner，也不执行标准库模拟 probe。
+## 架构（2026-08 简化后）
 
-## 单个 Case：日常唯一入口
+```
+case_catalog.json   ← 唯一数据源：33 个 case 的 native_commands（占位符命令）
+run_case.py         ← 唯一执行器：占位符替换 → init → 逐阶段 mlpstorage 执行 → cleanup
+run_case.cmd        ← Windows 入口：调用 run_case 模块
+scripts/cases/*.cmd ← 每个 case 一个一键脚本（直接运行）
+scripts/smoke_all_cases.py ← 批量缩小版验证
+site_config.json    ← 站点配置（每台机器改一次）
+```
 
-Windows 下只传 Case ID：
+## 单个 Case：一条命令运行
 
 ```powershell
 .\run_case.cmd AI-KV-005
 ```
 
-临时指定另一块测试盘时只增加一个盘符参数：
+自动完成：按 Case ID 从 catalog 取命令 → 派生 `data/<CASE_ID>`、`results/<CASE_ID>` →
+`mlpstorage init` → CAP 门禁 → prepare（datagen）→ run → 退出码原样返回 → 清理数据目录。
+
+诊断参数：
 
 ```powershell
-.\run_case.cmd AI-KV-005 --test-drive D
+.\run_case.cmd AI-KV-005 --print-command     # 只打印最终 mlpstorage 命令
+.\run_case.cmd AI-KV-005 --mode plan         # 打印命令不执行
+.\run_case.cmd AI-KV-005 --mode preflight    # 检查环境不执行
+.\run_case.cmd AI-KV-005 --keep-data         # 保留数据目录
+.\run_case.cmd AI-TRN-003 --test-drive D     # 临时换盘（单盘模式）
 ```
 
-运行参数不应由测试人员每次重新输入。机器相关配置集中在
-[`site_config.json`](site_config.json)，安装或迁移机器后只修改一次：
+### 站点配置（`site_config.json`）
 
-```json
-{
-  "test_drive": "C",
-  "test_root": "MLPerfStorageTest",
-  "data_subdir": "data",
-  "results_subdir": "results",
-  "mpi_bin": "mpiexec",
-  "duration_sec": 60,
-  "loops": 1,
-  "prepare": true,
-  "cleanup_data": true
-}
+每台机器只改一次。两种模式：
+
+```jsonc
+// 模式 A：单盘（默认；data 与 results 同盘，会被 CAP-03 拦截，仅适合 preflight）
+{ "test_drive": "C", "test_root": "MLPerfStorageTest" }
+
+// 模式 B：分盘（正式运行必需；data 与 results 必须不同文件系统）
+{ "data_root": "G:\\MLPerfStorageTest\\data", "results_root": "D:\\MLPerfStorageTest\\results" }
 ```
 
-默认盘符是 `C`。`test_drive` 只控制本次测试使用的盘；也可以使用命令行的
-`--test-drive D` 临时覆盖，不需要修改每个 Case 脚本。正式多盘部署如需把
-results 放到独立文件系统，可使用兼容配置中的 `data_root/results_root` 高级字段。
+⚠️ 分盘模式下**不要**再加 `--test-drive`（会覆盖盘符、又变同盘）。
 
-入口会自动完成以下工作：
+## Dev 模式：缩小数据集 / 本机验证
 
-1. 根据 Case ID 找到唯一的 native case 文件；
-2. 派生 `<data_root>/<CASE_ID>` 和 `<results_root>/<CASE_ID>`；
-3. 初始化结果目录、确认 DUT、配置 MPI 和 venv PATH；
-4. Training/VectorDB 自动执行准备阶段，再执行正式 run；
-5. workload 非零退出码原样返回；
-6. 成功或失败后只清理该 Case 的数据目录，保留 results。
-
-只在诊断时使用以下可选参数：
-
-```powershell
-# 查看最终命令，不启动 workload
-.\run_case.cmd AI-KV-005 --print-command
-
-# 本次保留 workload 数据
-.\run_case.cmd AI-KV-005 --keep-data
-
-# 临时覆盖配置中的运行模式
-.\run_case.cmd AI-KV-005 --mode preflight
-```
-
-`AI-VDB-015` 是独立的 trace capture/replay case，不在这 33 个 Native Case 中。
-
-## 独立 Case 文件：高级调试入口
-
-只有开发或排查参数映射时，才直接调用 `cases/test_*.py` 并逐项覆盖配置。
-
-## 模式
-
-- `--mode plan`：只打印该 Case 的 native 命令，不执行。
-- `--mode preflight`：打印命令并检查 `mlpstorage` 可执行文件，不执行 workload。
-- `--mode dry-run`：直接把 `--dry-run` 传给 `mlpstorage`，结果只能视为命令验证。
-- `--mode execute --confirm-dut`：执行真实 native workload；命令失败立即停止当前 Case。
-
-例如 Windows Training Case 的高级调试命令：
-
-```powershell
-.\.venv\Scripts\python.exe full_test_plan_cases\cases\test_ai_trn_003.py `
-  --mode execute --confirm-dut --prepare --init-results `
-  --cleanup-data --cleanup-root C:\MLPerfStorageTest\data `
-  --launcher single --data-dir C:\MLPerfStorageTest\data\AI-TRN-003\run-001 `
-  --results-dir C:\MLPerfStorageTest\results\AI-TRN-003\run-001
-```
-
-`--init-results` 调用项目原生 `mlpstorage init`；`--cleanup-data` 只删除
-`--cleanup-root` 下本次 case 的 data/cache/checkpoint 目录，不删除 results 或源 trace。
-
-## Dev 模式：直接从 case 文件运行（缩小数据集 / 本机验证）
-
-正式 `run_case.cmd` 链路使用完整数据集（unet3d 7200 文件 ≈ 983 GiB、retinanet
-1,170,301 文件 ≈ 352 GiB），受 CAP-01 容量门禁和 CAP-03 同盘门禁约束。本机开发
-验证时可以直接调用 case 文件，用以下参数缩小规模或绕过提交级门禁：
+正式数据集很大（unet3d 7200 文件 ≈ 983 GiB、retinanet 1,170,301 文件 ≈ 352 GiB），
+受 CAP-01 容量与 CAP-03 同盘门禁约束。`run_case` 支持缩小覆盖参数：
 
 | 参数 | 作用 |
 |---|---|
-| `--num-files-train N` | 覆盖 datagen/run 的 `dataset.num_files_train`（默认写死在 case 命令里） |
-| `--allow-invalid-params` / `-aip` | dev 用：放行 MLPerf"训练数据 ≥ 5× 客户端内存"规则校验（正式提交不可用） |
-| `--skip-fs-separation-gate` | dev 用：绕过 CAP-03 同盘门禁（分盘后可省略） |
+| `--num-files-train N` | 覆盖 `dataset.num_files_train`（Training） |
+| `--num-processes N` | 覆盖 `--num-processes`（Checkpoint ranks / datagen） |
+| `--num-checkpoints-write/read N` | 覆盖 checkpoint 写/读次数（0 = 零 I/O 冒烟） |
+| `--num-vectors N` | 覆盖 vectordb datagen 向量数 |
+| `--trials N` / `--inter-option-delay N` | 覆盖 KV cache trials / 间隔 |
+| `--duration-sec N` | 覆盖 KV/VDB 运行时长（秒） |
+| `--milvus-uri <path.db>` | VDB 用本地 Milvus Lite 库替代远程 server |
+| `--vdb-config <yaml>` | VDB 用缩小版 vdbbench config（如 `full_test_plan_cases/configs/vdb_smoke.yaml`） |
+| `--allow-invalid-params` / `-aip` | dev：放行 MLPerf 规则校验（正式提交不可用） |
+| `--skip-fs-separation-gate` | dev：绕过 CAP-03 同盘门禁 |
 
-示例（分盘 D 数据 / E 结果，8 文件冒烟，不绕过 CAP 门禁）：
+示例（分盘 D 数据 / E 结果，TRN-003 8 文件冒烟）：
 
 ```powershell
-.\.venv\Scripts\python.exe full_test_plan_cases\cases\test_ai_trn_003.py `
-  --mode execute --confirm-dut --prepare --init-results `
+.\.venv\Scripts\python.exe -m full_test_plan_cases.run_case AI-TRN-003 `
   --data-dir D:\mlps_dev_data --results-dir E:\mlps_dev_res `
-  --systemname devdemo --num-files-train 8 --allow-invalid-params `
-  --launcher mpi --mpi-bin mpiexec --client-memory-gb 64 --accelerators 1
+  --num-files-train 8 --allow-invalid-params
 ```
 
-注意：
-- `--num-files-train` 只对 Training case（TRN-003/004/005）生效，其余家族忽略该参数；
-- dev 缩小跑的结果带 `--allow-invalid-params`，**不算正式 MLPerf PASS**；正式提交必须用完整数据集且不放行该参数；
-- `data-dir` 与 `results-dir` 必须在不同文件系统（CAP-03），否则需 `--skip-fs-separation-gate`。
-
-生成的命令形态是：
-
-```text
-mlpstorage open training unet3d datagen file ...
-mlpstorage open training unet3d run file ...
-```
-
-模型是 Training CLI 的位置参数，不使用错误的 `--model unet3d` 形式。
-
-Windows 的 `--launcher single` 也使用项目原生 MPI 执行路径，但只配置单进程；它不启动 Docker Engine。需要真实 MPI rank 时使用：
+示例（VDB 用 Milvus Lite 本地库）：
 
 ```powershell
---launcher mpi --mpi-bin mpiexec
+.\.venv\Scripts\python.exe -m full_test_plan_cases.run_case AI-VDB-001 `
+  --data-dir D:\mlps_dev_data --results-dir E:\mlps_dev_res `
+  --vdb-config full_test_plan_cases\configs\vdb_smoke.yaml `
+  --milvus-uri D:\mlps_dev_data\lite.db --duration-sec 10
 ```
 
-## Native 入口边界
+注意：dev 缩小跑带 `-aip`，**不算正式 MLPerf PASS**；正式提交必须完整数据集。
 
-目录只保留当前版本可以直接调用 `mlpstorage open ...` 的 33 个 workload Case。
-没有 native 命令的规划项、`whatif` 估算项、扩展 KV、TP/prefill/decode
-和混合编排项不在这个目录生成 Case 脚本。VectorDB 的正式 Trace capture/replay
-已经实现，但它属于独立的 `trace_test_cases/` 集合，不能与 Native 成绩混报。
+## 一键脚本（每 case 一个）
 
-VectorDB Case 不负责启动 Milvus；执行前必须确认 `127.0.0.1:19530` 已有可访问服务。Checkpoint cold-cache、SSD 填充和混合编排等外部动作必须由 DUT 管理者提供，不能由脚本臆造。
+`scripts/cases/AI-TRN-003.cmd` 等 33 个脚本：编辑头部 `DATA_DIR`/`RESULT_DIR`
+盘符后直接运行。dev 缩小：取消注释 `NUM_FILES_TRAIN=8` / `ALLOW_INVALID=1` 两行。
+重新生成：`python tools/gen_case_scripts.py`。
 
-## 全量入口
+## 批量缩小版验证
 
-只查看全部 Case 的 native 命令：
+```powershell
+.\.venv\Scripts\python.exe scripts\smoke_all_cases.py            # 全部 33 个
+.\.venv\Scripts\python.exe scripts\smoke_all_cases.py --only AI-TRN-003,AI-KV-001
+```
+
+按家族自动套缩小参数：Training 8 文件 + `-aip`；Checkpoint 8 ranks + 零 I/O；
+KV 10s × 1 trial；VDB 需 Milvus server（标注 BLOCKED）。
+
+## 全量入口（`run_all`）
 
 ```powershell
 .\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
   --mode plan --data-dir C:\MLPerfStorageTest\data --results-dir C:\MLPerfStorageTest\results
-```
 
-正式执行：
-
-```powershell
+# 正式执行（需分盘配置）
 .\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
-  --mode execute --confirm-dut --init-results --cleanup-data `
-  --cleanup-root C:\MLPerfStorageTest\data --launcher single --prepare `
-  --data-dir C:\MLPerfStorageTest\data --results-dir C:\MLPerfStorageTest\results
+  --mode execute --confirm-dut --init-results --cleanup-data --prepare
 ```
 
-`run_all` 直接启动每个 `cases/test_*.py` 文件；在 `execute`、`dry-run` 或 `preflight` 模式下第一个非零返回码会触发套件级 fast-fail。
+`run_all` 逐个调用 `run_case`；execute/dry-run/preflight 模式下第一个非零退出码触发
+套件级 fast-fail。
 
-正式 `PASS` 只能来自真实 native workload 的返回结果和输出文件；`DRY_RUN` 不算通过。
+## 环境前提
+
+| 依赖 | 说明 |
+|---|---|
+| Python venv | `uv sync`（或 `setup_env.cmd`）；缺 `kv_cache`/`vdbbench` 时：`uv pip install -e kv_cache_benchmark -e vdb_benchmark` |
+| MPI | `mpiexec`（MS-MPI）；checkpointing 需 8 的倍数 ranks |
+| 分盘 | data 与 results 必须不同文件系统（CAP-03），否则 `-aip` 也不放行，需 `--skip-fs-separation-gate` |
+| 容量 | TRN-003 983 GiB / TRN-004/005 352 GiB；CKP 大模型 checkpoint ≥1 TB |
+| Milvus | VDB 需 `127.0.0.1:19530` server（docker），或用 `--milvus-uri` 本地 Milvus Lite |
+
+`AI-VDB-015` 是独立的 trace case（`trace_test_cases/`），不在 33 Native 内。
+
+正式 `PASS` 只能来自真实 native workload 的输出与退出码；`DRY_RUN` 不算通过。
