@@ -1,0 +1,30 @@
+{
+  "_comment": "AI SSD case 变种矩阵：容量档 x 内存档。capacity 决定 case 集（512GB = 34 基础 case；1TB/2TB/4TB = capacity_catalog.json 对应档）；memory 决定内存覆盖参数。每个变种以缩小参数运行，单 case 实测 <= 10 分钟，远低于 1.5h 预算。",
+  "memory_tiers": {
+    "32GB": 32,
+    "64GB": 64,
+    "128GB": 128
+  },
+  "capacity_tiers": ["512GB", "1TB", "2TB", "4TB"],
+  "memory_params": {
+    "Training": ["--client-memory-gb"],
+    "Checkpoint": ["--client-memory-gb"],
+    "KV Cache": ["--cpu-mem-gb"],
+    "VectorDB": []
+  },
+  "time_budget_min": 90,
+  "scenarios": [
+    {"capacity": "512GB", "memory": "32GB"},
+    {"capacity": "512GB", "memory": "64GB"},
+    {"capacity": "512GB", "memory": "128GB"},
+    {"capacity": "1TB", "memory": "32GB"},
+    {"capacity": "1TB", "memory": "64GB"},
+    {"capacity": "1TB", "memory": "128GB"},
+    {"capacity": "2TB", "memory": "32GB"},
+    {"capacity": "2TB", "memory": "64GB"},
+    {"capacity": "2TB", "memory": "128GB"},
+    {"capacity": "4TB", "memory": "32GB"},
+    {"capacity": "4TB", "memory": "64GB"},
+    {"capacity": "4TB", "memory": "128GB"}
+  ]
+}

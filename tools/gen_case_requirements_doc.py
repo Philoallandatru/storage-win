@@ -28,7 +28,7 @@ OUT = REPO / "docs" / "AI_SSD_CASE_REQUIREMENTS.md"
 
 SHRINK = {
     "Training": "8 files + `--allow-invalid-params`（真实 datagen + 训练）",
-    "Checkpoint": "8 ranks + 0 写 / 0 读 + `--allow-invalid-params`（零 I/O）",
+    "Checkpoint": "8 ranks + 1 写 / 1 读 + `--allow-invalid-params`（真实 I/O 冒烟；容量档保留 capacity_catalog 的 I/O 量）",
     "KV Cache": "10 users + 10 s + 1 trial + `--generation-mode fast`",
     "VectorDB": "100 vectors + 10 s + `vdb_smoke.yaml` + Milvus Lite",
 }

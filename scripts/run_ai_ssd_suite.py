@@ -54,6 +54,28 @@ DATA_SPACE_FLOOR = 40 * 1024**3
 RESULT_SPACE_FLOOR = 2 * 1024**3
 
 SUPPORTED_TIERS = ("512GB", "1TB", "2TB", "4TB")
+SUPPORTED_MEMORY = ("32GB", "64GB", "128GB")
+MATRIX = REPO / "full_test_plan_cases" / "matrix_catalog.json"
+
+
+def memory_gb(memory: str) -> int:
+    """'64GB' -> 64."""
+    return int(memory.removesuffix("GB"))
+
+
+def memory_override_args(family: str, memory: str) -> list[str]:
+    """Return the run_case dev flags that set the memory tier for a family.
+
+    Training/Checkpoint use --client-host-memory-in-gb (via run_case
+    --client-memory-gb); KV Cache uses its own --cpu-mem-gb tier; VectorDB
+    has no client-memory parameter (data lives in the DB engine).
+    """
+    mb = memory_gb(memory)
+    if family in ("Training", "Checkpoint"):
+        return ["--client-memory-gb", str(mb)]
+    if family == "KV Cache":
+        return ["--cpu-mem-gb", str(mb)]
+    return []
 
 
 def load_catalog() -> list[dict]:
@@ -106,7 +128,7 @@ SKIP_REASONS = {
 }
 
 
-def shrink_args(case_id: str, data_dir: Path, results_dir: Path) -> list[str]:
+def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "64GB") -> list[str]:
     """Build the dev-shrink flags for a case (smallest practical workload)."""
     family = case_family(case_id)
     args: list[str] = []
@@ -117,8 +139,13 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path) -> list[str]:
             # (data read + metrics already produced); single exec avoids it.
             args += ["--exec-type", "single"]
     elif family == "Checkpoint":
-        args += ["--num-processes", "8", "--num-checkpoints-write", "0",
-                 "--num-checkpoints-read", "0", "--allow-invalid-params"]
+        args += ["--num-processes", "8", "--allow-invalid-params"]
+        if base_case_id(case_id) == case_id:
+            # Base (512GB) cases: 1 write + 1 read is a real-I/O smoke
+            # (~10-16 GB per model shard, minutes on SSD) that still yields
+            # genuine save/load throughput metrics. Capacity-tier cases keep
+            # the write/read counts from capacity_catalog.json instead.
+            args += ["--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]
     elif family == "KV Cache":
         args += ["--num-users", "10", "--duration-sec", "10",
                  "--trials", "1", "--inter-option-delay", "0",
@@ -127,6 +154,7 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path) -> list[str]:
         args += ["--num-vectors", "100", "--duration-sec", "10",
                  "--vdb-config", str(VDB_SMOKE),
                  "--milvus-uri", str(data_dir / "milvus_lite.db")]
+    args += memory_override_args(family, memory)
     return args
 
 
@@ -175,10 +203,10 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[t
 # Case runner + cleanup
 # ---------------------------------------------------------------------------
 
-def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int) -> tuple[int, str]:
+def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB") -> tuple[int, str]:
     argv = [*RUN_CASE, case_id, "--mode", "execute",
             "--data-dir", str(data_dir), "--results-dir", str(results_dir),
-            *shrink_args(case_id, data_dir, results_dir)]
+            *shrink_args(case_id, data_dir, results_dir, memory)]
     print(f"\n===== {case_id}  ({case_family(case_id)}) =====", flush=True)
     started = time.monotonic()
     try:
@@ -215,6 +243,8 @@ def main() -> int:
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--capacity", choices=SUPPORTED_TIERS, default="512GB",
                         help="capacity tier to run (default 512GB = all 34 base cases)")
+    parser.add_argument("--memory", choices=SUPPORTED_MEMORY, default="64GB",
+                        help="client-memory tier for this run: 32GB/64GB/128GB (default 64GB)")
     parser.add_argument("--data-drive", default="D:", help="drive for test data, e.g. D:")
     parser.add_argument("--results-drive", default=None, help="drive for results (default: same as data-drive)")
     parser.add_argument("--only", help="comma-separated case ids to run instead of the full tier set")
@@ -232,7 +262,7 @@ def main() -> int:
 
     data_root = Path(f"{args.data_drive}\\MLPerfStorageTest\\data")
     results_root = Path(f"{results_drive}\\MLPerfStorageTest\\results")
-    print(f"capacity={args.capacity}  data={args.data_drive}  results={results_drive}  "
+    print(f"capacity={args.capacity}  memory={args.memory}  data={args.data_drive}  results={results_drive}  "
           f"cases={len(tier_cases)}", flush=True)
 
     # ---- environment check -------------------------------------------------
@@ -261,7 +291,7 @@ def main() -> int:
         if not args.keep_results:
             cleanup_dir(results_dir, case_id)
         cleanup_dir(data_dir, case_id)
-        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout)
+        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
         result = "PASS" if rc == 0 else ("FAIL" if rc != -1 else "TIMEOUT")
@@ -271,14 +301,14 @@ def main() -> int:
     # ---- summary -------------------------------------------------------------
     ok_count = sum(1 for s in summary if s["result"] == "PASS")
     print("\n" + "=" * 60, flush=True)
-    print(f"SUITE SUMMARY  capacity={args.capacity}  {ok_count}/{len(summary)} passed", flush=True)
+    print(f"SUITE SUMMARY  capacity={args.capacity}  memory={args.memory}  {ok_count}/{len(summary)} passed", flush=True)
     print("=" * 60, flush=True)
     for s in summary:
         print(f"  {s['case_id']:<18} {s['family']:<12} {s['result']:<8} rc={s['rc']:<4} {s['duration']}s", flush=True)
 
-    out = results_root.parent / f"suite_summary_{args.capacity}.json"
+    out = results_root.parent / f"suite_summary_{args.capacity}_{args.memory}.json"
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps({"capacity": args.capacity, "results": summary,
+    out.write_text(json.dumps({"capacity": args.capacity, "memory": args.memory, "results": summary,
                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")},
                               indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nsummary written: {out}", flush=True)

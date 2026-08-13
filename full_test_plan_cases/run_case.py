@@ -159,6 +159,7 @@ class Overrides:
         num_users: int | None = None,
         generation_mode: str | None = None,
         exec_type: str | None = None,
+        cpu_mem_gb: int | None = None,
         trials: int | None = None,
         inter_option_delay: int | None = None,
         milvus_uri: str | None = None,
@@ -181,6 +182,7 @@ class Overrides:
         self.num_users = num_users
         self.generation_mode = generation_mode
         self.exec_type = exec_type
+        self.cpu_mem_gb = cpu_mem_gb
         self.trials = trials
         self.inter_option_delay = inter_option_delay
         self.milvus_uri = milvus_uri
@@ -250,6 +252,7 @@ def _build_commands(
             ("--num-users", overrides.num_users),
             ("--generation-mode", overrides.generation_mode),
             ("--exec-type", overrides.exec_type),
+            ("--cpu-mem-gb", overrides.cpu_mem_gb),
             ("--trials", overrides.trials),
             ("--inter-option-delay", overrides.inter_option_delay),
         ):
@@ -398,6 +401,8 @@ def main() -> int:
                         help="Dev: override --generation-mode (kvcache; fast = 15x quicker smoke)")
     parser.add_argument("--exec-type", choices=("mpi", "single"), default=None,
                         help="Dev: override --exec-type (training/checkpoint; single avoids Windows DLIO MPI finalize abort)")
+    parser.add_argument("--cpu-mem-gb", type=int, default=None,
+                        help="Dev: override --cpu-mem-gb (kvcache CPU-memory tier size)")
     parser.add_argument("--trials", type=int, help="Dev: override --trials (kvcache)")
     parser.add_argument("--inter-option-delay", type=int, help="Dev: override --inter-option-delay (kvcache)")
     parser.add_argument("--milvus-uri", help="Dev: use a local Milvus Lite .db path instead of --host/--port (vectordb)")
@@ -471,6 +476,7 @@ def main() -> int:
         num_users=args.num_users,
         generation_mode=args.generation_mode,
         exec_type=args.exec_type,
+        cpu_mem_gb=args.cpu_mem_gb,
         trials=args.trials,
         inter_option_delay=args.inter_option_delay,
         milvus_uri=args.milvus_uri,
