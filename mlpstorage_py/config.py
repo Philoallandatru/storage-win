@@ -203,6 +203,7 @@ class EXIT_CODE(enum.IntEnum):
 class EXEC_TYPE(enum.Enum):
     MPI = "mpi"
     DOCKER = "docker"
+    SINGLE = "single"
     def __str__(self):
         return self.value
 

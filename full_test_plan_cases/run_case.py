@@ -156,6 +156,9 @@ class Overrides:
         num_checkpoints_read: int | None = None,
         num_vectors: int | None = None,
         num_accelerators: int | None = None,
+        num_users: int | None = None,
+        generation_mode: str | None = None,
+        exec_type: str | None = None,
         trials: int | None = None,
         inter_option_delay: int | None = None,
         milvus_uri: str | None = None,
@@ -175,6 +178,9 @@ class Overrides:
         self.num_checkpoints_read = num_checkpoints_read
         self.num_vectors = num_vectors
         self.num_accelerators = num_accelerators
+        self.num_users = num_users
+        self.generation_mode = generation_mode
+        self.exec_type = exec_type
         self.trials = trials
         self.inter_option_delay = inter_option_delay
         self.milvus_uri = milvus_uri
@@ -241,6 +247,9 @@ def _build_commands(
             ("--num-checkpoints-write", overrides.num_checkpoints_write),
             ("--num-checkpoints-read", overrides.num_checkpoints_read),
             ("--num-vectors", overrides.num_vectors),
+            ("--num-users", overrides.num_users),
+            ("--generation-mode", overrides.generation_mode),
+            ("--exec-type", overrides.exec_type),
             ("--trials", overrides.trials),
             ("--inter-option-delay", overrides.inter_option_delay),
         ):
@@ -304,35 +313,55 @@ def build_case_command(
     return [str(python), "-m", "mlpstorage_py.main", *commands[0]]
 
 
-def _apply_capacity_overrides(overrides: Overrides, duration_sec: int, capacity_overrides: list[str]) -> int:
-    """Apply capacity-catalog overrides (CLI-style flag/value pairs)."""
+def _apply_capacity_overrides(overrides: Overrides, duration_sec: int, capacity_overrides: list[str], cli_duration_sec: int | None = None) -> int:
+    """Apply capacity-catalog overrides (CLI-style flag/value pairs).
+
+    Dev (CLI) overrides take precedence: a flag already set on the command
+    line is never overwritten by the capacity tier, so ``--num-files-train 8``
+    still shrinks a ``-1TB`` capacity case on a small disk.
+    """
     for i in range(0, len(capacity_overrides) - 1, 2):
         flag, value = capacity_overrides[i], capacity_overrides[i + 1]
         if flag == "--duration-sec":
-            duration_sec = int(value)
-        elif flag == "--num-files-train":
+            if cli_duration_sec is None:
+                duration_sec = int(value)
+        elif flag == "--num-files-train" and overrides.num_files_train is None:
             overrides.num_files_train = int(value)
-        elif flag == "--num-processes":
+        elif flag == "--num-processes" and overrides.num_processes is None:
             overrides.num_processes = int(value)
-        elif flag == "--num-accelerators":
+        elif flag == "--num-accelerators" and overrides.num_accelerators is None:
             overrides.num_accelerators = int(value)
-        elif flag == "--num-checkpoints-write":
+        elif flag == "--num-checkpoints-write" and overrides.num_checkpoints_write is None:
             overrides.num_checkpoints_write = int(value)
-        elif flag == "--num-checkpoints-read":
+        elif flag == "--num-checkpoints-read" and overrides.num_checkpoints_read is None:
             overrides.num_checkpoints_read = int(value)
-        elif flag == "--num-vectors":
+        elif flag == "--num-vectors" and overrides.num_vectors is None:
             overrides.num_vectors = int(value)
-        elif flag == "--trials":
+        elif flag == "--trials" and overrides.trials is None:
             overrides.trials = int(value)
-        elif flag == "--inter-option-delay":
+        elif flag == "--inter-option-delay" and overrides.inter_option_delay is None:
             overrides.inter_option_delay = int(value)
     return duration_sec
+
+
+def _venv_path_env() -> dict:
+    """Copy os.environ with ``.venv/Scripts`` prepended to PATH.
+
+    Mirrors the PATH injection ``run_case.cmd`` / ``scripts/cases/*.cmd``
+    do, so mlpstorage child processes (and via them ``dlio_benchmark``,
+    ``load-vdb``, …) resolve console scripts no matter which entry point
+    launched this module (cmd, PowerShell, bash, or python -m directly).
+    """
+    env = os.environ.copy()
+    scripts = str(REPO_ROOT / ".venv" / "Scripts")
+    env["PATH"] = scripts + os.pathsep + env.get("PATH", "")
+    return env
 
 
 def _run_mlpstorage(cli: Path, argv: list[str]) -> int:
     command = [str(cli), *argv]
     print(f"mlpstorage {' '.join(argv[:6])} ... (see phase output)", flush=True)
-    completed = subprocess.run(command, cwd=REPO_ROOT, check=False)
+    completed = subprocess.run(command, cwd=REPO_ROOT, check=False, env=_venv_path_env())
     return completed.returncode
 
 
@@ -364,6 +393,11 @@ def main() -> int:
     parser.add_argument("--num-checkpoints-write", type=int, help="Dev: override --num-checkpoints-write")
     parser.add_argument("--num-checkpoints-read", type=int, help="Dev: override --num-checkpoints-read")
     parser.add_argument("--num-vectors", type=int, help="Dev: override --num-vectors (vectordb datagen)")
+    parser.add_argument("--num-users", type=int, help="Dev: override --num-users (kvcache; shrinks the CAP-01 disk-space floor)")
+    parser.add_argument("--generation-mode", choices=("none", "fast", "realistic"), default=None,
+                        help="Dev: override --generation-mode (kvcache; fast = 15x quicker smoke)")
+    parser.add_argument("--exec-type", choices=("mpi", "single"), default=None,
+                        help="Dev: override --exec-type (training/checkpoint; single avoids Windows DLIO MPI finalize abort)")
     parser.add_argument("--trials", type=int, help="Dev: override --trials (kvcache)")
     parser.add_argument("--inter-option-delay", type=int, help="Dev: override --inter-option-delay (kvcache)")
     parser.add_argument("--milvus-uri", help="Dev: use a local Milvus Lite .db path instead of --host/--port (vectordb)")
@@ -434,6 +468,9 @@ def main() -> int:
         num_checkpoints_write=args.num_checkpoints_write,
         num_checkpoints_read=args.num_checkpoints_read,
         num_vectors=args.num_vectors,
+        num_users=args.num_users,
+        generation_mode=args.generation_mode,
+        exec_type=args.exec_type,
         trials=args.trials,
         inter_option_delay=args.inter_option_delay,
         milvus_uri=args.milvus_uri,
@@ -459,7 +496,7 @@ def main() -> int:
         overrides=overrides,
     )
     if capacity_overrides:
-        duration_sec = _apply_capacity_overrides(overrides, duration_sec, capacity_overrides)
+        duration_sec = _apply_capacity_overrides(overrides, duration_sec, capacity_overrides, cli_duration_sec=args.duration_sec)
         commands = _build_commands(
             case, data_dir=data_dir, results_dir=results_dir, systemname=systemname,
             mpi_bin=mpi_bin,
@@ -499,10 +536,15 @@ def main() -> int:
         print(f"{args.case_id.upper()} BLOCKED: confirm_dut is disabled in site config")
         return 2
     results_dir.parent.mkdir(parents=True, exist_ok=True)
+    data_dir.mkdir(parents=True, exist_ok=True)  # E401: training/checkpoint need the data root to exist
+    # Pre-create per-case subdirs so CAP-01/CAP-03/E401 probes find their parents
+    # (checkpoint-folder / kvcache cache-dir / vectordb storage-root).
+    for sub in ("checkpoint", "kvcache", "milvus"):
+        (data_dir / sub / case["case_id"]).mkdir(parents=True, exist_ok=True)
     if init_results:
         init_command = [str(cli), "init", systemname, str(results_dir)]
         print(f"{args.case_id} init: {subprocess.list2cmdline(init_command)}")
-        initialized = subprocess.run(init_command, check=False)
+        initialized = subprocess.run(init_command, check=False, env=_venv_path_env())
         if initialized.returncode != 0:
             return initialized.returncode
 

@@ -1,5 +1,5 @@
 # ---------------------------------------------------------------
-# VDB smoke config — shrink every case to a tiny local dataset
+# VDB smoke config - shrink every case to a tiny local dataset
 # Used by run_case --vdb-config (dev verification only)
 # ---------------------------------------------------------------
 backend: milvus

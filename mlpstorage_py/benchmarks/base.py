@@ -1141,6 +1141,18 @@ class Benchmark(BenchmarkInterface, abc.ABC):
             return
 
         path_a, path_b = fs_paths
+        # The probe creates its sentinel inside path_a, so the directory
+        # must exist first (fixes E402 when the workload itself would be
+        # the one creating it, e.g. checkpoint_folder on a fresh run).
+        try:
+            os.makedirs(path_a, exist_ok=True)
+        except OSError as exc:
+            raise FileSystemError(
+                f"CAP-03: cannot prepare probe directory {path_a}: {exc}",
+                path=path_a,
+                operation="cap03-probe-mkdir",
+                code=ErrorCode.FS_PERMISSION_DENIED,
+            ) from exc
         result = probe_fs_separation(
             path_a=path_a,
             path_b=path_b,
