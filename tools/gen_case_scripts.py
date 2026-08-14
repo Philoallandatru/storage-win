@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from full_test_plan_cases.shrink import shrink_args  # noqa: E402
+from full_test_plan_cases.shrink import SKIP_REASONS, shrink_args  # noqa: E402
 
 CASES_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 OUT_DIR = REPO_ROOT / "scripts" / "cases"
@@ -43,12 +43,19 @@ set "PY=%REPO_ROOT%\\.venv\\Scripts\\python.exe"
 if not exist "%PY%" set "PY=python"
 set "PATH=%REPO_ROOT%\\.venv\\Scripts;%PATH%"
 
-REM ---------- edit these two per machine (must be different drives) ----------
-set "DATA_DIR=G:\\MLPerfStorageTest\\data\\{case_id}"
-set "RESULT_DIR=D:\\MLPerfStorageTest\\results\\{case_id}"
+REM ---------- data/results location (default: C: drive; edit for other drives) ----------
+REM   Data and results are on the SAME drive by default (SINGLE_DRIVE=1 below).
+REM   To use two drives, edit both paths AND set SINGLE_DRIVE=0.
+set "DATA_DIR=C:\\MLPerfStorageTest\\data\\{case_id}"
+set "RESULT_DIR=C:\\MLPerfStorageTest\\results\\{case_id}"
+
+REM ---------- 1 = data and results share one drive (C:-only machine) ----------
+set "SINGLE_DRIVE=1"
+set "GATE="
+if "%SINGLE_DRIVE%"=="1" set "GATE=--skip-fs-separation-gate"
 
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case {case_id} --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname {case_id_lower} {shrink_flags}
+"%PY%" -m full_test_plan_cases.run_case {case_id} --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname {case_id_lower} {shrink_flags} %GATE%
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------
@@ -99,6 +106,20 @@ def _label_for(base_id: str) -> str:
         return ""
 
 
+# Template for cases that cannot run on this machine (e.g. AI-VDB-005 AISAQ):
+# a .cmd that explains WHY instead of failing with a cryptic benchmark error.
+SKIP_TEMPLATE = """@echo off
+REM ============================================================
+REM  {case_id}  - cannot run on this machine
+REM ============================================================
+setlocal
+echo [%~n0] SKIPPED: {reason}
+echo To run this case, satisfy the requirement above and use the suite
+echo script or run_case directly (see docs/AI_SSD_CASE_MATRIX.md).
+exit /b 1
+"""
+
+
 def _shrink_flags(case_id: str) -> str:
     """Family dev-shrink flags as a cmd-line string.
 
@@ -121,6 +142,11 @@ def main() -> int:
     catalog = json.loads((REPO_ROOT / "full_test_plan_cases" / "case_catalog.json").read_text(encoding="utf-8"))
     for case in catalog:
         case_id = case["case_id"]
+        if case_id in SKIP_REASONS:
+            body = SKIP_TEMPLATE.format(case_id=case_id, reason=SKIP_REASONS[case_id])
+            (OUT_DIR / f"{case_id}.cmd").write_text(body, encoding="utf-8", newline="\r\n")
+            generated += 1
+            continue
         content = TEMPLATE.format(
             case_id=case_id,
             case_id_lower=case_id.lower(),
@@ -130,20 +156,14 @@ def main() -> int:
         (OUT_DIR / f"{case_id}.cmd").write_text(content, encoding="utf-8", newline="\r\n")
         generated += 1
 
-    # capacity variants (1TB / 2TB / 4TB) default to a single drive (G: for both)
+    # capacity variants (1TB / 2TB / 4TB) share the same single-drive C: default
     capacity_path = REPO_ROOT / "full_test_plan_cases" / "capacity_catalog.json"
     capacity = json.loads(capacity_path.read_text(encoding="utf-8"))
     for tier in ("1TB", "2TB", "4TB"):
         for cid, spec in capacity.get(tier, {}).items():
             if str(cid).startswith("_"):
                 continue
-            # capacity variants: single drive (data + results on G:); swap the
-            # RESULT_DIR default BEFORE format so {case_id} is still literal
-            tpl = TEMPLATE.replace(
-                'set "RESULT_DIR=D:\\MLPerfStorageTest',
-                'set "RESULT_DIR=G:\\MLPerfStorageTest',
-            )
-            body = tpl.format(
+            body = TEMPLATE.format(
                 case_id=cid,
                 case_id_lower=cid.lower(),
                 model=_label_for(spec["base"]) or "capacity",

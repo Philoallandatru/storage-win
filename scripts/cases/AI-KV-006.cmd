@@ -12,12 +12,19 @@ set "PY=%REPO_ROOT%\.venv\Scripts\python.exe"
 if not exist "%PY%" set "PY=python"
 set "PATH=%REPO_ROOT%\.venv\Scripts;%PATH%"
 
-REM ---------- edit these two per machine (must be different drives) ----------
-set "DATA_DIR=G:\MLPerfStorageTest\data\AI-KV-006"
-set "RESULT_DIR=D:\MLPerfStorageTest\results\AI-KV-006"
+REM ---------- data/results location (default: C: drive; edit for other drives) ----------
+REM   Data and results are on the SAME drive by default (SINGLE_DRIVE=1 below).
+REM   To use two drives, edit both paths AND set SINGLE_DRIVE=0.
+set "DATA_DIR=C:\MLPerfStorageTest\data\AI-KV-006"
+set "RESULT_DIR=C:\MLPerfStorageTest\results\AI-KV-006"
+
+REM ---------- 1 = data and results share one drive (C:-only machine) ----------
+set "SINGLE_DRIVE=1"
+set "GATE="
+if "%SINGLE_DRIVE%"=="1" set "GATE=--skip-fs-separation-gate"
 
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-KV-006 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-kv-006 --num-users 10 --duration-sec 10 --trials 1 --inter-option-delay 0 --generation-mode fast --cpu-mem-gb 64
+"%PY%" -m full_test_plan_cases.run_case AI-KV-006 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-kv-006 --num-users 10 --duration-sec 10 --trials 1 --inter-option-delay 0 --generation-mode fast --cpu-mem-gb 64 %GATE%
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

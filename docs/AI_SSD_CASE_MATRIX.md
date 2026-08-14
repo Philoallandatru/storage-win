@@ -51,6 +51,10 @@
 python scripts/run_ai_ssd_suite.py --capacity 1TB --memory 128GB \
     --data-drive D: --results-drive E:
 
+# 单盘机器（只有 C:）—— 自动加 --skip-fs-separation-gate
+python scripts/run_ai_ssd_suite.py --capacity 512GB --memory 64GB \
+    --data-drive C: --results-drive C:
+
 # 512GB 档 × 三种内存
 python scripts/run_ai_ssd_suite.py --capacity 512GB --memory 32GB --data-drive D: --results-drive E:
 python scripts/run_ai_ssd_suite.py --capacity 512GB --memory 64GB --data-drive D: --results-drive E:
@@ -61,6 +65,8 @@ python -m full_test_plan_cases.run_case AI-KV-001-1TB --mode execute \
     --cpu-mem-gb 128 --data-dir D:\MLPerfStorageTest\data --results-dir E:\MLPerfStorageTest\results
 ```
 
+- **盘符不写死**：`--data-drive` / `--results-drive` 支持任意盘符（含同盘/单盘）；`scripts/cases/*.cmd` 顶部 `DATA_DIR`/`RESULT_DIR` 可改任意盘符，单盘时设 `SINGLE_DRIVE=1`（自动加 `--skip-fs-separation-gate`）。
+- **磁盘空间是硬约束（CAP-01）**：Checkpoint 真实 I/O 的所需空间 = 模型 checkpoint 全量 × 写次数（llama3-8b 1 写 ≈ 113 GB，更大模型更多）；KV 按 users 计（10 users ≈ 10-25 GB）。空间不足时 case 会被门禁正确拦截。
 - 汇总输出：`suite_summary_<容量>_<内存>.json`（如 `suite_summary_1TB_128GB.json`）
 - 环境检查、跑后清理、SKIP 机制与基础档一致
 

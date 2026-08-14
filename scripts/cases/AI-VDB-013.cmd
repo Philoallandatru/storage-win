@@ -12,12 +12,19 @@ set "PY=%REPO_ROOT%\.venv\Scripts\python.exe"
 if not exist "%PY%" set "PY=python"
 set "PATH=%REPO_ROOT%\.venv\Scripts;%PATH%"
 
-REM ---------- edit these two per machine (must be different drives) ----------
-set "DATA_DIR=G:\MLPerfStorageTest\data\AI-VDB-013"
-set "RESULT_DIR=D:\MLPerfStorageTest\results\AI-VDB-013"
+REM ---------- data/results location (default: C: drive; edit for other drives) ----------
+REM   Data and results are on the SAME drive by default (SINGLE_DRIVE=1 below).
+REM   To use two drives, edit both paths AND set SINGLE_DRIVE=0.
+set "DATA_DIR=C:\MLPerfStorageTest\data\AI-VDB-013"
+set "RESULT_DIR=C:\MLPerfStorageTest\results\AI-VDB-013"
+
+REM ---------- 1 = data and results share one drive (C:-only machine) ----------
+set "SINGLE_DRIVE=1"
+set "GATE="
+if "%SINGLE_DRIVE%"=="1" set "GATE=--skip-fs-separation-gate"
 
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-VDB-013 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-vdb-013 --num-vectors 100 --duration-sec 10 --vdb-config C:\Users\Administrator\Documents\Code\repos\storage\full_test_plan_cases\configs\vdb_smoke.yaml --milvus-uri %DATA_DIR%\milvus_lite.db
+"%PY%" -m full_test_plan_cases.run_case AI-VDB-013 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-vdb-013 --num-vectors 100 --duration-sec 10 --vdb-config C:\Users\Administrator\Documents\Code\repos\storage\full_test_plan_cases\configs\vdb_smoke.yaml --milvus-uri %DATA_DIR%\milvus_lite.db %GATE%
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

@@ -135,10 +135,15 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[t
 # Case runner + cleanup
 # ---------------------------------------------------------------------------
 
-def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB") -> tuple[int, str]:
+def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB",
+             single_drive: bool = False) -> tuple[int, str]:
     argv = [*RUN_CASE, case_id, "--mode", "execute",
             "--data-dir", str(data_dir), "--results-dir", str(results_dir),
             *shrink_args(case_id, data_dir, results_dir, memory)]
+    if single_drive:
+        # Only one drive exists (e.g. a C:-only laptop): CAP-03 would flag
+        # data/results as same filesystem, so bypass the gate.
+        argv.append("--skip-fs-separation-gate")
     print(f"\n===== {case_id}  ({case_family(case_id)}) =====", flush=True)
     started = time.monotonic()
     try:
@@ -187,6 +192,7 @@ def main() -> int:
     args = parser.parse_args()
 
     results_drive = args.results_drive or args.data_drive
+    single_drive = args.data_drive.upper().rstrip(":\\") == results_drive.upper().rstrip(":\\")
     tier_cases = cases_for_tier(args.capacity)
     if args.only:
         wanted = {c.strip().upper() for c in args.only.split(",")}
@@ -223,7 +229,7 @@ def main() -> int:
         if not args.keep_results:
             cleanup_dir(results_dir, case_id)
         cleanup_dir(data_dir, case_id)
-        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory)
+        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
         result = "PASS" if rc == 0 else ("FAIL" if rc != -1 else "TIMEOUT")
