@@ -124,11 +124,14 @@ def _shrink_flags(case_id: str) -> str:
     """Family dev-shrink flags as a cmd-line string.
 
     VDB's ``--milvus-uri`` points at ``%DATA_DIR%\\milvus_lite.db`` so each
-    run uses its own Lite db next to the case data.
+    run uses its own Lite db next to the case data, and ``--vdb-config`` is
+    rewritten to ``%REPO_ROOT%\\...`` so it works on any machine/path.
     """
     flags = shrink_args(case_id, Path("<DATA_DIR>"), Path("<RESULTS_DIR>"), "64GB")
     text = " ".join(flags)
-    return text.replace("<DATA_DIR>", "%DATA_DIR%").replace("<RESULTS_DIR>", "%RESULT_DIR%")
+    text = text.replace("<DATA_DIR>", "%DATA_DIR%").replace("<RESULTS_DIR>", "%RESULT_DIR%")
+    return text.replace("full_test_plan_cases/configs/vdb_smoke.yaml",
+                        "%REPO_ROOT%\\full_test_plan_cases\\configs\\vdb_smoke.yaml")
 
 
 def main() -> int:

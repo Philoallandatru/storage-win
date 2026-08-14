@@ -16,7 +16,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 CATALOG = REPO / "full_test_plan_cases" / "case_catalog.json"
-VDB_SMOKE = REPO / "full_test_plan_cases" / "configs" / "vdb_smoke.yaml"
+# Repository-root-relative path (NOT absolute): the suite runs with cwd=REPO
+# and the .cmd generator rewrites it to %REPO_ROOT%\, so the config resolves
+# on any machine regardless of where the repo was cloned.
+VDB_SMOKE_REL = "full_test_plan_cases/configs/vdb_smoke.yaml"
 
 CAPACITY_SUFFIXES = ("-1TB", "-2TB", "-4TB")
 MEMORY_TIERS = ("32GB", "64GB", "128GB")
@@ -88,7 +91,7 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
                  "--generation-mode", "fast"]
     elif family == "VectorDB":
         args += ["--num-vectors", "100", "--duration-sec", "10",
-                 "--vdb-config", str(VDB_SMOKE),
+                 "--vdb-config", VDB_SMOKE_REL,
                  "--milvus-uri", str(data_dir / "milvus_lite.db")]
     args += memory_override_args(family, memory)
     return args
