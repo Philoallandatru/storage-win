@@ -46,7 +46,13 @@ def _env_with_venv_path() -> dict:
     return env
 CATALOG = REPO / "full_test_plan_cases" / "case_catalog.json"
 CAPACITY = REPO / "full_test_plan_cases" / "capacity_catalog.json"
-VDB_SMOKE = REPO / "full_test_plan_cases" / "configs" / "vdb_smoke.yaml"
+
+from full_test_plan_cases.shrink import (  # noqa: E402
+    SKIP_REASONS,
+    base_case_id,
+    case_family,
+    shrink_args,
+)
 
 # Minimal free-space floors the environment check enforces (bytes).
 # KV with llama3.1-70b + 10 users needs ~26.8 GB (CAP-01) — keep headroom.
@@ -56,26 +62,6 @@ RESULT_SPACE_FLOOR = 2 * 1024**3
 SUPPORTED_TIERS = ("512GB", "1TB", "2TB", "4TB")
 SUPPORTED_MEMORY = ("32GB", "64GB", "128GB")
 MATRIX = REPO / "full_test_plan_cases" / "matrix_catalog.json"
-
-
-def memory_gb(memory: str) -> int:
-    """'64GB' -> 64."""
-    return int(memory.removesuffix("GB"))
-
-
-def memory_override_args(family: str, memory: str) -> list[str]:
-    """Return the run_case dev flags that set the memory tier for a family.
-
-    Training/Checkpoint use --client-host-memory-in-gb (via run_case
-    --client-memory-gb); KV Cache uses its own --cpu-mem-gb tier; VectorDB
-    has no client-memory parameter (data lives in the DB engine).
-    """
-    mb = memory_gb(memory)
-    if family in ("Training", "Checkpoint"):
-        return ["--client-memory-gb", str(mb)]
-    if family == "KV Cache":
-        return ["--cpu-mem-gb", str(mb)]
-    return []
 
 
 def load_catalog() -> list[dict]:
@@ -102,60 +88,6 @@ def cases_for_tier(tier: str) -> list[str]:
     if isinstance(entries, dict):
         entries = {k: v for k, v in entries.items() if not k.startswith("_")}
     return [c["case_id"] for c in entries] if isinstance(entries, list) else list(entries.keys())
-
-
-_CAPACITY_SUFFIXES = ("-1TB", "-2TB", "-4TB")
-
-
-def base_case_id(case_id: str) -> str:
-    """Strip the capacity-tier suffix so family lookup works for -1TB/-2TB/-4TB ids."""
-    for suffix in _CAPACITY_SUFFIXES:
-        if case_id.endswith(suffix):
-            return case_id[: -len(suffix)]
-    return case_id
-
-
-def case_family(case_id: str) -> str:
-    for c in load_catalog():
-        if c["case_id"] == base_case_id(case_id):
-            return c.get("family", "")
-    return ""
-
-
-# Cases that cannot run on this Windows + Milvus-Lite machine by design.
-SKIP_REASONS = {
-    "AI-VDB-005": "AISAQ index requires a full Milvus server (Milvus Lite: unknown index_type 'AISAQ')",
-}
-
-
-def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "64GB") -> list[str]:
-    """Build the dev-shrink flags for a case (smallest practical workload)."""
-    family = case_family(case_id)
-    args: list[str] = []
-    if family == "Training":
-        args += ["--num-files-train", "8", "--allow-invalid-params"]
-        if "DLRM" in case_id:
-            # Windows + DLIO/parquet: MPI finalize aborts after the run body
-            # (data read + metrics already produced); single exec avoids it.
-            args += ["--exec-type", "single"]
-    elif family == "Checkpoint":
-        args += ["--num-processes", "8", "--allow-invalid-params"]
-        if base_case_id(case_id) == case_id:
-            # Base (512GB) cases: 1 write + 1 read is a real-I/O smoke
-            # (~10-16 GB per model shard, minutes on SSD) that still yields
-            # genuine save/load throughput metrics. Capacity-tier cases keep
-            # the write/read counts from capacity_catalog.json instead.
-            args += ["--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]
-    elif family == "KV Cache":
-        args += ["--num-users", "10", "--duration-sec", "10",
-                 "--trials", "1", "--inter-option-delay", "0",
-                 "--generation-mode", "fast"]
-    elif family == "VectorDB":
-        args += ["--num-vectors", "100", "--duration-sec", "10",
-                 "--vdb-config", str(VDB_SMOKE),
-                 "--milvus-uri", str(data_dir / "milvus_lite.db")]
-    args += memory_override_args(family, memory)
-    return args
 
 
 # ---------------------------------------------------------------------------

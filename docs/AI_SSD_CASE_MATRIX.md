@@ -10,15 +10,17 @@
 | S01 | 512GB | 32GB | 34 基础 case | `--client-memory-gb 32` / `--cpu-mem-gb 32` |
 | S02 | 512GB | 64GB | 34 基础 case | `--client-memory-gb 64` / `--cpu-mem-gb 64` |
 | S03 | 512GB | 128GB | 34 基础 case | `--client-memory-gb 128` / `--cpu-mem-gb 128` |
-| S04 | 1TB | 32GB | 6 case（AI-TRN-003/004/DLRM-1TB、AI-CKP-001-1TB、AI-KV-007-1TB、AI-VDB-002-1TB） | 同上（按家族） |
+| S04 | 1TB | 32GB | 12 case（每家族 3：Training unet3d/retinanet/DLRM、Checkpoint 8b/70b/405b、KV ×3、VDB ×3） | 同上（按家族） |
 | S05 | 1TB | 64GB | 同上 | 同上 |
 | S06 | 1TB | 128GB | 同上 | 同上 |
-| S07 | 2TB | 32GB | 6 case（AI-TRN-003/004/DLRM-2TB、AI-CKP-002-2TB、AI-KV-008-2TB、AI-VDB-006-2TB） | 同上（按家族） |
+| S07 | 2TB | 32GB | 12 case（每家族 3） | 同上（按家族） |
 | S08 | 2TB | 64GB | 同上 | 同上 |
 | S09 | 2TB | 128GB | 同上 | 同上 |
-| S10 | 4TB | 32GB | 6 case（AI-TRN-003/004/DLRM-4TB、AI-CKP-002/001-4TB、AI-VDB-006-4TB） | 同上（按家族） |
+| S10 | 4TB | 32GB | 12 case（每家族 3） | 同上（按家族） |
 | S11 | 4TB | 64GB | 同上 | 同上 |
 | S12 | 4TB | 128GB | 同上 | 同上 |
+
+> **覆盖保证**：每个容量档 × 每个测试类型（Training/Checkpoint/KV Cache/VectorDB）**至少 3 个 case**（见 `capacity_catalog.json`）。
 
 ## 二、各家族的内存参数映射
 
@@ -67,12 +69,12 @@ python -m full_test_plan_cases.run_case AI-KV-001-1TB --mode execute \
 | 容量档 | case 数/场景 | 场景数 | 预计耗时/场景 | 小计 |
 |---|---|---|---|---|
 | 512GB | 34 | 3（内存） | ~1h42m | ~5h06m |
-| 1TB | 6 | 3 | ~23m | ~1h09m |
-| 2TB | 6 | 3 | ~24m | ~1h12m |
-| 4TB | 6 | 3 | ~14m | ~42m |
-| **合计** | 52 × 3 | 12 | — | **~8h10m** |
+| 1TB | 12 | 3 | ~45m | ~2h15m |
+| 2TB | 12 | 3 | ~46m | ~2h18m |
+| 4TB | 12 | 3 | ~45m | ~2h15m |
+| **合计** | 70 × 3 | 12 | — | **~11h54m** |
 
-> 全矩阵 12 场景可在 ~8 小时内分批跑完（套件支持 `--only` 按家族/单 case 筛选）。KV 家族占绝大部分时长。
+> 全矩阵 12 场景共 **70 case × 3 内存档 = 210 次运行**，可在 ~12 小时内分批跑完（套件支持 `--only` 按家族/单 case 筛选）。KV 家族占绝大部分时长。
 
 ## 六、配置来源
 

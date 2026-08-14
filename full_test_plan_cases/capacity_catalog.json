@@ -1,30 +1,45 @@
 {
-  "_comment": "1TB/2TB/4TB 容量适配压力 case。case_id 形如 AI-TRN-003-1TB：base 是 case_catalog.json 中的原始 case，overrides 是 run_case 参数（Training 按盘容量调 dataset.num_files_train / 并发）。默认单盘运行（run_case 自动加 --skip-fs-separation-gate）。训练三模型：unet3d / retinanet / DLRM。",
+  "_comment": "1TB/2TB/4TB 容量压力 case。每个容量档覆盖 4 个测试类型，每类型至少 3 个 case（Training: unet3d/retinanet/DLRM；Checkpoint: 8b/70b/405b；KV: 不同模型与并发；VDB: 不同 index 与规模）。case_id 后缀 -1TB/-2TB/-4TB，base 指向 case_catalog.json 原始 case，overrides 为该档容量参数；run_case 对容量 case 自动加 --skip-fs-separation-gate（单盘）。512GB 盘约束下套件以缩小参数运行（CLI 优先覆盖 overrides）。",
   "1TB": {
-    "_comment": "1TB SSD ≈ 931 GiB；unet3d 缩 3500 文件 478 GiB（合法，无 -aip）；retinanet 352 GiB；DLRM 0.75 GiB 高并发",
-    "AI-TRN-003-1TB":   { "base": "AI-TRN-003", "overrides": ["--num-files-train", "3500"] },
-    "AI-TRN-004-1TB":   { "base": "AI-TRN-004", "overrides": [] },
-    "AI-TRN-DLRM-1TB":  { "base": "AI-TRN-DLRM", "overrides": ["--num-files-train", "400", "--num-accelerators", "4"] },
-    "AI-CKP-001-1TB":   { "base": "AI-CKP-001", "overrides": ["--num-checkpoints-write", "1", "--num-checkpoints-read", "1"] },
-    "AI-KV-007-1TB":    { "base": "AI-KV-007",  "overrides": ["--duration-sec", "300", "--trials", "3"] },
-    "AI-VDB-002-1TB":   { "base": "AI-VDB-002", "overrides": ["--duration-sec", "120"] }
+    "AI-TRN-003-1TB": {"base": "AI-TRN-003", "overrides": ["--num-files-train", "3500"]},
+    "AI-TRN-004-1TB": {"base": "AI-TRN-004", "overrides": []},
+    "AI-TRN-DLRM-1TB": {"base": "AI-TRN-DLRM", "overrides": ["--num-files-train", "400", "--num-accelerators", "4"]},
+    "AI-CKP-001-1TB": {"base": "AI-CKP-001", "overrides": ["--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]},
+    "AI-CKP-002-1TB": {"base": "AI-CKP-002", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]},
+    "AI-CKP-004-1TB": {"base": "AI-CKP-004", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]},
+    "AI-KV-001-1TB": {"base": "AI-KV-001", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-KV-004-1TB": {"base": "AI-KV-004", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-KV-007-1TB": {"base": "AI-KV-007", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-VDB-001-1TB": {"base": "AI-VDB-001", "overrides": ["--duration-sec", "120"]},
+    "AI-VDB-002-1TB": {"base": "AI-VDB-002", "overrides": ["--duration-sec", "120"]},
+    "AI-VDB-004-1TB": {"base": "AI-VDB-004", "overrides": ["--duration-sec", "120"]}
   },
   "2TB": {
-    "_comment": "2TB SSD ≈ 1862 GiB；unet3d 正式 7200 文件 983 GiB；retinanet 352 GiB；DLRM 高并发",
-    "AI-TRN-003-2TB":   { "base": "AI-TRN-003", "overrides": ["--num-files-train", "7200"] },
-    "AI-TRN-004-2TB":   { "base": "AI-TRN-004", "overrides": [] },
-    "AI-TRN-DLRM-2TB":  { "base": "AI-TRN-DLRM", "overrides": ["--num-accelerators", "8"] },
-    "AI-CKP-002-2TB":   { "base": "AI-CKP-002", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "1", "--num-checkpoints-read", "1"] },
-    "AI-KV-008-2TB":    { "base": "AI-KV-008",  "overrides": ["--duration-sec", "300", "--trials", "3"] },
-    "AI-VDB-006-2TB":   { "base": "AI-VDB-006", "overrides": ["--duration-sec", "120"] }
+    "AI-TRN-003-2TB": {"base": "AI-TRN-003", "overrides": ["--num-files-train", "7200"]},
+    "AI-TRN-004-2TB": {"base": "AI-TRN-004", "overrides": []},
+    "AI-TRN-DLRM-2TB": {"base": "AI-TRN-DLRM", "overrides": ["--num-accelerators", "8"]},
+    "AI-CKP-001-2TB": {"base": "AI-CKP-001", "overrides": ["--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]},
+    "AI-CKP-002-2TB": {"base": "AI-CKP-002", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]},
+    "AI-CKP-004-2TB": {"base": "AI-CKP-004", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]},
+    "AI-KV-001-2TB": {"base": "AI-KV-001", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-KV-004-2TB": {"base": "AI-KV-004", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-KV-008-2TB": {"base": "AI-KV-008", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-VDB-001-2TB": {"base": "AI-VDB-001", "overrides": ["--duration-sec", "120"]},
+    "AI-VDB-002-2TB": {"base": "AI-VDB-002", "overrides": ["--duration-sec", "120"]},
+    "AI-VDB-006-2TB": {"base": "AI-VDB-006", "overrides": ["--duration-sec", "120"]}
   },
   "4TB": {
-    "_comment": "4TB SSD ≈ 3725 GiB；unet3d 正式 + retinanet 正式 + DLRM 并发 + 70B checkpoint 多份",
-    "AI-TRN-003-4TB":   { "base": "AI-TRN-003", "overrides": ["--num-files-train", "7200"] },
-    "AI-TRN-004-4TB":   { "base": "AI-TRN-004", "overrides": [] },
-    "AI-TRN-DLRM-4TB":  { "base": "AI-TRN-DLRM", "overrides": ["--num-accelerators", "16"] },
-    "AI-CKP-002-4TB":   { "base": "AI-CKP-002", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "3", "--num-checkpoints-read", "3"] },
-    "AI-CKP-001-4TB":   { "base": "AI-CKP-001", "overrides": ["--num-checkpoints-write", "10", "--num-checkpoints-read", "10"] },
-    "AI-VDB-006-4TB":   { "base": "AI-VDB-006", "overrides": ["--duration-sec", "120"] }
+    "AI-TRN-003-4TB": {"base": "AI-TRN-003", "overrides": ["--num-files-train", "7200"]},
+    "AI-TRN-004-4TB": {"base": "AI-TRN-004", "overrides": []},
+    "AI-TRN-DLRM-4TB": {"base": "AI-TRN-DLRM", "overrides": ["--num-accelerators", "16"]},
+    "AI-CKP-001-4TB": {"base": "AI-CKP-001", "overrides": ["--num-checkpoints-write", "10", "--num-checkpoints-read", "10"]},
+    "AI-CKP-002-4TB": {"base": "AI-CKP-002", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "3", "--num-checkpoints-read", "3"]},
+    "AI-CKP-004-4TB": {"base": "AI-CKP-004", "overrides": ["--num-processes", "8", "--num-checkpoints-write", "3", "--num-checkpoints-read", "3"]},
+    "AI-KV-001-4TB": {"base": "AI-KV-001", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-KV-004-4TB": {"base": "AI-KV-004", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-KV-008-4TB": {"base": "AI-KV-008", "overrides": ["--duration-sec", "300", "--trials", "3"]},
+    "AI-VDB-001-4TB": {"base": "AI-VDB-001", "overrides": ["--duration-sec", "120"]},
+    "AI-VDB-002-4TB": {"base": "AI-VDB-002", "overrides": ["--duration-sec", "120"]},
+    "AI-VDB-006-4TB": {"base": "AI-VDB-006", "overrides": ["--duration-sec", "120"]}
   }
 }

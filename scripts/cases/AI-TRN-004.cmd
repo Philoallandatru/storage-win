@@ -16,16 +16,8 @@ REM ---------- edit these two per machine (must be different drives) ----------
 set "DATA_DIR=G:\MLPerfStorageTest\data\AI-TRN-004"
 set "RESULT_DIR=D:\MLPerfStorageTest\results\AI-TRN-004"
 
-REM ---------- dev: uncomment the two lines below to shrink the dataset ----------
-REM set "NUM_FILES_TRAIN=8"
-REM set "ALLOW_INVALID=1"
-
-set "EXTRA="
-if defined NUM_FILES_TRAIN set "EXTRA=%EXTRA% --num-files-train %NUM_FILES_TRAIN%"
-if "%ALLOW_INVALID%"=="1" set "EXTRA=%EXTRA% --allow-invalid-params"
-
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-TRN-004 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-trn-004 %EXTRA%
+"%PY%" -m full_test_plan_cases.run_case AI-TRN-004 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-trn-004 --num-files-train 8 --allow-invalid-params --client-memory-gb 64
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

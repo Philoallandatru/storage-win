@@ -19,7 +19,7 @@
 | AI-TRN-004 | Training | P0 | TR-AI-TRAIN-001、TR-AI-TRAIN-003 | Million-JPEG small-file pressure | accelerators 1/4/8/16 | AU;files/s;P99;CPU | 待跑 |
 | AI-TRN-005 | Training | P0 | TR-AI-TRAIN-001、TR-AI-TRAIN-003 | Different batch/compute small-file pressure | accelerators 1/4/8/16 | AU;files/s;P99 | 待跑 |
 | AI-TRN-DLRM | Training | P0 | TR-AI-TRAIN-001、TR-AI-TRAIN-003 | DLRM Parquet embedding random-read IOPS stress (open) | num_files_train;accelerators;read_threads | AU;samples/s;IOPS | 待跑 |
-| AI-CKP-001 | Checkpoint | P0 | TR-AI-CKPT-001、TR-AI-CKPT-002 | Single-node save/restore baseline | 105 GB;10 save;10 load | slowest duration;min throughput;hash | PASS |
+| AI-CKP-001 | Checkpoint | P0 | TR-AI-CKPT-001、TR-AI-CKPT-002 | Single-node save/restore baseline | 105 GB;10 save;10 load | slowest duration;min throughput;hash | 待跑 |
 | AI-CKP-002 | Checkpoint | P0 | TR-AI-CKPT-001、TR-AI-CKPT-002 | Simulate node-local 70B shard | 114 GB;8 ranks | slowest rank;min throughput;skew | 待跑 |
 | AI-CKP-003 | Checkpoint | P0 | TR-AI-CKPT-001、TR-AI-CKPT-002、TR-AI-CKPT-003 | Multi-node concurrent save/restore | 912 GB;64 ranks | global duration;skew;bandwidth | 待跑 |
 | AI-CKP-004 | Checkpoint | P1 | TR-AI-CKPT-001、TR-AI-CKPT-002 | 405B node-local SSD load | 94 GB;8 ranks | save/load GiB/s;cold bytes | 待跑 |
@@ -126,8 +126,14 @@
 | AI-TRN-004-1TB | AI-TRN-004 | `` | 待跑 |
 | AI-TRN-DLRM-1TB | AI-TRN-DLRM | `--num-files-train 400 --num-accelerators 4` | 待跑 |
 | AI-CKP-001-1TB | AI-CKP-001 | `--num-checkpoints-write 1 --num-checkpoints-read 1` | 待跑 |
+| AI-CKP-002-1TB | AI-CKP-002 | `--num-processes 8 --num-checkpoints-write 1 --num-checkpoints-read 1` | 待跑 |
+| AI-CKP-004-1TB | AI-CKP-004 | `--num-processes 8 --num-checkpoints-write 1 --num-checkpoints-read 1` | 待跑 |
+| AI-KV-001-1TB | AI-KV-001 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-KV-004-1TB | AI-KV-004 | `--duration-sec 300 --trials 3` | 待跑 |
 | AI-KV-007-1TB | AI-KV-007 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-VDB-001-1TB | AI-VDB-001 | `--duration-sec 120` | PASS |
 | AI-VDB-002-1TB | AI-VDB-002 | `--duration-sec 120` | 待跑 |
+| AI-VDB-004-1TB | AI-VDB-004 | `--duration-sec 120` | 待跑 |
 
 ### 2TB
 
@@ -136,8 +142,14 @@
 | AI-TRN-003-2TB | AI-TRN-003 | `--num-files-train 7200` | 待跑 |
 | AI-TRN-004-2TB | AI-TRN-004 | `` | 待跑 |
 | AI-TRN-DLRM-2TB | AI-TRN-DLRM | `--num-accelerators 8` | 待跑 |
+| AI-CKP-001-2TB | AI-CKP-001 | `--num-checkpoints-write 1 --num-checkpoints-read 1` | 待跑 |
 | AI-CKP-002-2TB | AI-CKP-002 | `--num-processes 8 --num-checkpoints-write 1 --num-checkpoints-read 1` | 待跑 |
+| AI-CKP-004-2TB | AI-CKP-004 | `--num-processes 8 --num-checkpoints-write 1 --num-checkpoints-read 1` | 待跑 |
+| AI-KV-001-2TB | AI-KV-001 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-KV-004-2TB | AI-KV-004 | `--duration-sec 300 --trials 3` | 待跑 |
 | AI-KV-008-2TB | AI-KV-008 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-VDB-001-2TB | AI-VDB-001 | `--duration-sec 120` | 待跑 |
+| AI-VDB-002-2TB | AI-VDB-002 | `--duration-sec 120` | 待跑 |
 | AI-VDB-006-2TB | AI-VDB-006 | `--duration-sec 120` | 待跑 |
 
 ### 4TB
@@ -147,8 +159,14 @@
 | AI-TRN-003-4TB | AI-TRN-003 | `--num-files-train 7200` | 待跑 |
 | AI-TRN-004-4TB | AI-TRN-004 | `` | 待跑 |
 | AI-TRN-DLRM-4TB | AI-TRN-DLRM | `--num-accelerators 16` | 待跑 |
-| AI-CKP-002-4TB | AI-CKP-002 | `--num-processes 8 --num-checkpoints-write 3 --num-checkpoints-read 3` | 待跑 |
 | AI-CKP-001-4TB | AI-CKP-001 | `--num-checkpoints-write 10 --num-checkpoints-read 10` | 待跑 |
+| AI-CKP-002-4TB | AI-CKP-002 | `--num-processes 8 --num-checkpoints-write 3 --num-checkpoints-read 3` | 待跑 |
+| AI-CKP-004-4TB | AI-CKP-004 | `--num-processes 8 --num-checkpoints-write 3 --num-checkpoints-read 3` | 待跑 |
+| AI-KV-001-4TB | AI-KV-001 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-KV-004-4TB | AI-KV-004 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-KV-008-4TB | AI-KV-008 | `--duration-sec 300 --trials 3` | 待跑 |
+| AI-VDB-001-4TB | AI-VDB-001 | `--duration-sec 120` | 待跑 |
+| AI-VDB-002-4TB | AI-VDB-002 | `--duration-sec 120` | 待跑 |
 | AI-VDB-006-4TB | AI-VDB-006 | `--duration-sec 120` | 待跑 |
 
 ## 五、判定标准（Pass / Fail / Invalid）

@@ -16,16 +16,8 @@ REM ---------- edit these two per machine (must be different drives) ----------
 set "DATA_DIR=G:\MLPerfStorageTest\data\AI-VDB-010"
 set "RESULT_DIR=D:\MLPerfStorageTest\results\AI-VDB-010"
 
-REM ---------- dev: uncomment the two lines below to shrink the dataset ----------
-REM set "NUM_FILES_TRAIN=8"
-REM set "ALLOW_INVALID=1"
-
-set "EXTRA="
-if defined NUM_FILES_TRAIN set "EXTRA=%EXTRA% --num-files-train %NUM_FILES_TRAIN%"
-if "%ALLOW_INVALID%"=="1" set "EXTRA=%EXTRA% --allow-invalid-params"
-
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-VDB-010 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-vdb-010 %EXTRA%
+"%PY%" -m full_test_plan_cases.run_case AI-VDB-010 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-vdb-010 --num-vectors 100 --duration-sec 10 --vdb-config C:\Users\Administrator\Documents\Code\repos\storage\full_test_plan_cases\configs\vdb_smoke.yaml --milvus-uri %DATA_DIR%\milvus_lite.db
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

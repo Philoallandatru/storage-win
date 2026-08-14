@@ -1,8 +1,10 @@
-"""Generate one simple .cmd script per native case (+ 1TB/2TB capacity variants).
+"""Generate one simple .cmd script per native case (+ 1TB/2TB/4TB capacity variants).
 
 Each script is self-contained: run it directly (``AI-TRN-003.cmd``) and it
-invokes the unified executor with sane defaults.  The only per-machine edits
-are the DATA_DIR / RESULT_DIR variables at the top.
+invokes the unified executor with the family dev-shrink flags baked in
+(small datagen / real-I/O checkpoint smoke / short KV / Milvus-Lite VDB),
+so it runs on a 512 GB disk inside the 1.5 h per-case budget.  The only
+per-machine edits are the DATA_DIR / RESULT_DIR variables at the top.
 
 Regenerate after changing the catalogs:
     python tools/gen_case_scripts.py
@@ -12,9 +14,15 @@ from __future__ import annotations
 
 import ast
 import json
+import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from full_test_plan_cases.shrink import shrink_args  # noqa: E402
+
 CASES_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 OUT_DIR = REPO_ROOT / "scripts" / "cases"
 
@@ -39,16 +47,8 @@ REM ---------- edit these two per machine (must be different drives) ----------
 set "DATA_DIR=G:\\MLPerfStorageTest\\data\\{case_id}"
 set "RESULT_DIR=D:\\MLPerfStorageTest\\results\\{case_id}"
 
-REM ---------- dev: uncomment the two lines below to shrink the dataset ----------
-REM set "NUM_FILES_TRAIN=8"
-REM set "ALLOW_INVALID=1"
-
-set "EXTRA="
-if defined NUM_FILES_TRAIN set "EXTRA=%EXTRA% --num-files-train %NUM_FILES_TRAIN%"
-if "%ALLOW_INVALID%"=="1" set "EXTRA=%EXTRA% --allow-invalid-params"
-
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case {case_id} --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname {case_id_lower} %EXTRA%
+"%PY%" -m full_test_plan_cases.run_case {case_id} --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname {case_id_lower} {shrink_flags}
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------
@@ -99,6 +99,17 @@ def _label_for(base_id: str) -> str:
         return ""
 
 
+def _shrink_flags(case_id: str) -> str:
+    """Family dev-shrink flags as a cmd-line string.
+
+    VDB's ``--milvus-uri`` points at ``%DATA_DIR%\\milvus_lite.db`` so each
+    run uses its own Lite db next to the case data.
+    """
+    flags = shrink_args(case_id, Path("<DATA_DIR>"), Path("<RESULTS_DIR>"), "64GB")
+    text = " ".join(flags)
+    return text.replace("<DATA_DIR>", "%DATA_DIR%").replace("<RESULTS_DIR>", "%RESULT_DIR%")
+
+
 def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     # clear stale scripts so every .cmd is regenerated from the current catalogs
@@ -114,6 +125,7 @@ def main() -> int:
             case_id=case_id,
             case_id_lower=case_id.lower(),
             model=case.get("model_config") or "native",
+            shrink_flags=_shrink_flags(case_id),
         )
         (OUT_DIR / f"{case_id}.cmd").write_text(content, encoding="utf-8", newline="\r\n")
         generated += 1
@@ -135,6 +147,7 @@ def main() -> int:
                 case_id=cid,
                 case_id_lower=cid.lower(),
                 model=_label_for(spec["base"]) or "capacity",
+                shrink_flags=_shrink_flags(cid),
             )
             (OUT_DIR / f"{cid}.cmd").write_text(body, encoding="utf-8", newline="\r\n")
             generated += 1
