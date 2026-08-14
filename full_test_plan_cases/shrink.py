@@ -67,30 +67,49 @@ def memory_override_args(family: str, memory: str) -> list[str]:
     return []
 
 
-def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "64GB") -> list[str]:
-    """Build the dev-shrink run_case flags for a case (smallest practical workload)."""
+def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "64GB",
+                pressure: bool = False) -> list[str]:
+    """Build the dev-shrink run_case flags for a case.
+
+    ``pressure=False`` (default): smallest practical workload — pure link
+    verification on any disk.  ``pressure=True``: ~10-50x the I/O so the
+    SSD is actually exercised (steady-state writes, small-file IOPS,
+    sustained KV spill) while still fitting a 512 GB disk inside the
+    1.5 h per-case budget.
+    """
     family = case_family(case_id)
+    base = base_case_id(case_id)
     args: list[str] = []
     if family == "Training":
-        args += ["--num-files-train", "8", "--allow-invalid-params"]
+        if pressure:
+            # Per-model file counts sized for ~40-120 GB writes on a 512 GB disk.
+            n = {"AI-TRN-003": 300, "AI-TRN-004": 2000, "AI-TRN-005": 2000,
+                 "AI-TRN-DLRM": 100}.get(base, 200)
+            args += ["--num-files-train", str(n), "--allow-invalid-params"]
+        else:
+            args += ["--num-files-train", "8", "--allow-invalid-params"]
         if "DLRM" in case_id:
             # Windows + DLIO/parquet: MPI finalize aborts after the run body
             # (data read + metrics already produced); single exec avoids it.
             args += ["--exec-type", "single"]
     elif family == "Checkpoint":
         args += ["--num-processes", "8", "--allow-invalid-params"]
-        if base_case_id(case_id) == case_id:
-            # Base (512GB) cases: 1 write + 1 read is a real-I/O smoke
-            # (~10-16 GB per model shard, minutes on SSD) that still yields
-            # genuine save/load throughput metrics. Capacity-tier cases keep
-            # the write/read counts from capacity_catalog.json instead.
-            args += ["--num-checkpoints-write", "1", "--num-checkpoints-read", "1"]
+        if base == case_id:
+            # Base (512GB) cases: real-I/O smoke. Pressure mode triples the
+            # checkpoint count (~340 GB write + read for 70b-class shards).
+            w = 3 if pressure else 1
+            args += ["--num-checkpoints-write", str(w), "--num-checkpoints-read", str(w)]
     elif family == "KV Cache":
-        args += ["--num-users", "10", "--duration-sec", "10",
-                 "--trials", "1", "--inter-option-delay", "0",
-                 "--generation-mode", "fast"]
+        if pressure:
+            args += ["--num-users", "50", "--duration-sec", "60", "--trials", "2",
+                     "--inter-option-delay", "5", "--generation-mode", "fast"]
+        else:
+            args += ["--num-users", "10", "--duration-sec", "10",
+                     "--trials", "1", "--inter-option-delay", "0",
+                     "--generation-mode", "fast"]
     elif family == "VectorDB":
-        args += ["--num-vectors", "100", "--duration-sec", "10",
+        args += ["--num-vectors", "10000" if pressure else "100",
+                 "--duration-sec", "60" if pressure else "10",
                  "--vdb-config", VDB_SMOKE_REL,
                  "--milvus-uri", str(data_dir / "milvus_lite.db")]
     args += memory_override_args(family, memory)

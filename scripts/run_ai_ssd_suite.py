@@ -136,10 +136,10 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[t
 # ---------------------------------------------------------------------------
 
 def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB",
-             single_drive: bool = False) -> tuple[int, str]:
+             single_drive: bool = False, pressure: bool = False) -> tuple[int, str]:
     argv = [*RUN_CASE, case_id, "--mode", "execute",
             "--data-dir", str(data_dir), "--results-dir", str(results_dir),
-            *shrink_args(case_id, data_dir, results_dir, memory)]
+            *shrink_args(case_id, data_dir, results_dir, memory, pressure)]
     if single_drive:
         # Only one drive exists (e.g. a C:-only laptop): CAP-03 would flag
         # data/results as same filesystem, so bypass the gate.
@@ -182,6 +182,8 @@ def main() -> int:
                         help="capacity tier to run (default 512GB = all 34 base cases)")
     parser.add_argument("--memory", choices=SUPPORTED_MEMORY, default="64GB",
                         help="client-memory tier for this run: 32GB/64GB/128GB (default 64GB)")
+    parser.add_argument("--pressure", action="store_true",
+                        help="pressure mode: ~10-50x I/O (steady-state SSD test) instead of link verification")
     parser.add_argument("--data-drive", default="D:", help="drive for test data, e.g. D:")
     parser.add_argument("--results-drive", default=None, help="drive for results (default: same as data-drive)")
     parser.add_argument("--only", help="comma-separated case ids to run instead of the full tier set")
@@ -200,8 +202,8 @@ def main() -> int:
 
     data_root = Path(f"{args.data_drive}\\MLPerfStorageTest\\data")
     results_root = Path(f"{results_drive}\\MLPerfStorageTest\\results")
-    print(f"capacity={args.capacity}  memory={args.memory}  data={args.data_drive}  results={results_drive}  "
-          f"cases={len(tier_cases)}", flush=True)
+    print(f"capacity={args.capacity}  memory={args.memory}  mode={'pressure' if args.pressure else 'link-check'}  "
+          f"data={args.data_drive}  results={results_drive}  cases={len(tier_cases)}", flush=True)
 
     # ---- environment check -------------------------------------------------
     if not args.skip_env_check:
@@ -229,7 +231,7 @@ def main() -> int:
         if not args.keep_results:
             cleanup_dir(results_dir, case_id)
         cleanup_dir(data_dir, case_id)
-        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive)
+        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive, args.pressure)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
         result = "PASS" if rc == 0 else ("FAIL" if rc != -1 else "TIMEOUT")
