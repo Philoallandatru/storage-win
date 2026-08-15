@@ -136,10 +136,18 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[t
 # ---------------------------------------------------------------------------
 
 def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB",
-             single_drive: bool = False, pressure: bool = False) -> tuple[int, str]:
+             single_drive: bool = False, pressure: bool = False,
+             vdb_drive: str = "E:") -> tuple[int, str]:
+    is_mix = case_family(case_id) == "MIX"
+    # VectorDB stream of the MIX case runs on the secondary drive (E: by
+    # default); run_case substitutes <MIX_VDB_STORAGE_ROOT> from it.
+    mix_vdb_dir = Path(f"{vdb_drive}\\") / "MLPerfStorageTest" / "data" if is_mix else None
     argv = [*RUN_CASE, case_id, "--mode", "execute",
             "--data-dir", str(data_dir), "--results-dir", str(results_dir),
-            *shrink_args(case_id, data_dir, results_dir, memory, pressure)]
+            *shrink_args(case_id, data_dir, results_dir, memory, pressure,
+                         vdb_data_dir=mix_vdb_dir)]
+    if is_mix:
+        argv += ["--mix-vdb-data-dir", str(mix_vdb_dir)]
     if single_drive:
         # Only one drive exists (e.g. a C:-only laptop): CAP-03 would flag
         # data/results as same filesystem, so bypass the gate.
@@ -185,9 +193,12 @@ def main() -> int:
     parser.add_argument("--pressure", action="store_true",
                         help="pressure mode: ~10-50x I/O (steady-state SSD test) instead of link verification")
     parser.add_argument("--report", action="store_true",
-                        help="generate docs/AI_SSD_TEST_REPORT.md after the run (data-driven report)")
+                        help="also write a copy of the report under docs/ (HTML report "
+                             "is always generated next to the suite summary)")
     parser.add_argument("--data-drive", default="D:", help="drive for test data, e.g. D:")
     parser.add_argument("--results-drive", default=None, help="drive for results (default: same as data-drive)")
+    parser.add_argument("--vdb-drive", default="E:",
+                        help="drive for the MIX VectorDB stream data (default E:)")
     parser.add_argument("--only", help="comma-separated case ids to run instead of the full tier set")
     parser.add_argument("--case-timeout", type=int, default=900, help="per-case timeout in seconds (default 900)")
     parser.add_argument("--keep-data", action="store_true", help="do not delete data after each case")
@@ -210,7 +221,7 @@ def main() -> int:
     # ---- environment check -------------------------------------------------
     if not args.skip_env_check:
         print("\n--- environment check ---", flush=True)
-        include_vdb = any(case_family(c) == "VectorDB" for c in tier_cases)
+        include_vdb = any(case_family(c) in ("VectorDB", "MIX") for c in tier_cases)
         failed = False
         for name, ok, detail in env_checks(args.data_drive, results_drive, include_vdb):
             print(f"  [{'OK ' if ok else 'FAIL'}] {name}: {detail}", flush=True)
@@ -233,7 +244,7 @@ def main() -> int:
         if not args.keep_results:
             cleanup_dir(results_dir, case_id)
         cleanup_dir(data_dir, case_id)
-        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive, args.pressure)
+        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive, args.pressure, args.vdb_drive)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
         result = "PASS" if rc == 0 else ("FAIL" if rc != -1 else "TIMEOUT")
@@ -254,11 +265,24 @@ def main() -> int:
                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")},
                               indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nsummary written: {out}", flush=True)
+
+    # Always render a styled HTML report next to the summary (data-driven,
+    # harvested from suite_summary_*.json + per-case results dirs).
+    gen = REPO / "tools" / "gen_test_report.py"
+    html_out = out.with_name(f"AI_SSD_TEST_REPORT_{args.capacity}_{args.memory}.html")
+    _sp = subprocess.run(
+        [str(PY), str(gen), "--results-root", str(results_root.parent),
+         "--format", "html", "--out", str(html_out)],
+        cwd=REPO, check=False, env=_env_with_venv_path(),
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+    )
+    print(f"report written: {html_out}" if _sp.returncode == 0
+          else f"report generation FAILED (rc={_sp.returncode}): {(_sp.stderr or '')[-400:]}",
+          flush=True)
     if args.report:
-        import subprocess as _sp
         gen = REPO / "tools" / "gen_test_report.py"
-        _sp.run([str(PY), str(gen), "--results-root", str(results_root.parent)],
-                cwd=REPO, check=False)
+        _sp = subprocess.run([str(PY), str(gen), "--results-root", str(results_root.parent)],
+                             cwd=REPO, check=False)
     return 0 if all(s["result"] in ("PASS", "SKIP") for s in summary) else 1
 
 

@@ -68,7 +68,7 @@ def memory_override_args(family: str, memory: str) -> list[str]:
 
 
 def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "64GB",
-                pressure: bool = False) -> list[str]:
+                pressure: bool = False, vdb_data_dir: Path | None = None) -> list[str]:
     """Build the dev-shrink run_case flags for a case.
 
     ``pressure=False`` (default): smallest practical workload — pure link
@@ -76,6 +76,10 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
     SSD is actually exercised (steady-state writes, small-file IOPS,
     sustained KV spill) while still fitting a 512 GB disk inside the
     1.5 h per-case budget.
+
+    ``vdb_data_dir`` is used only by MIX cases: the VectorDB stream's data
+    (Milvus Lite db + storage root) lives on the secondary drive (E:) while
+    KV Cache runs on the primary ``data_dir`` (C:).
     """
     family = case_family(case_id)
     base = base_case_id(case_id)
@@ -124,5 +128,15 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
             args += ["--num-vectors", "100", "--duration-sec", "10",
                      "--vdb-config", VDB_SMOKE_REL,
                      "--milvus-uri", str(data_dir / "milvus_lite.db")]
+    elif family == "MIX":
+        # Mixed concurrency smoke: KV Cache on the primary data drive (C:) and
+        # VectorDB on the secondary drive (E:) run concurrently.  Deliberately
+        # low pressure — the goal is validating cross-drive concurrency, not
+        # steady-state throughput (see AI-MIX-001 in case_catalog.json).
+        vdb_root = vdb_data_dir or data_dir
+        args += ["--num-users", "10", "--num-vectors", "1000",
+                 "--duration-sec", "10", "--generation-mode", "fast",
+                 "--vdb-config", VDB_SMOKE_REL,
+                 "--milvus-uri", str(vdb_root / "milvus_lite.db")]
     args += memory_override_args(family, memory)
     return args

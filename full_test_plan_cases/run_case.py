@@ -207,14 +207,26 @@ def _build_commands(
     loops: int,
     prepare: bool,
     overrides: Overrides,
+    vdb_data_dir: Path | None = None,
 ) -> list[list[str]]:
-    """Resolve the case's native_commands into concrete mlpstorage argv lists."""
+    """Resolve the case's native_commands into concrete mlpstorage argv lists.
+
+    ``vdb_data_dir`` is used only by MIX cases: the VectorDB stream runs on a
+    separate data drive (default E:) while the KV Cache stream runs on the
+    primary ``data_dir`` (default C:).  Non-MIX cases ignore it.
+    """
     values = {
         "<DATA_DIR>": str(data_dir.resolve()),
         "<RESULTS_DIR>": str(results_dir.resolve()),
         "<CHECKPOINT_DIR>": str(data_dir.resolve() / "checkpoint" / case["case_id"]),
         "<CACHE_DIR>": str(data_dir.resolve() / "kvcache" / case["case_id"]),
         "<STORAGE_ROOT>": str(data_dir.resolve() / "milvus" / case["case_id"]),
+        # MIX dual-drive placeholders: KV stream on the primary data drive,
+        # VDB stream on the secondary drive (default E:).
+        "<MIX_KV_CACHE_DIR>": str(data_dir.resolve() / "kvcache" / case["case_id"]),
+        "<MIX_VDB_STORAGE_ROOT>": str(
+            (vdb_data_dir or data_dir).resolve() / "milvus" / case["case_id"]
+        ),
         "<SYSTEMNAME>": systemname,
         "<CLIENT_MEMORY_GB>": str(client_memory_gb),
         "<ACCELERATORS>": str(overrides.num_accelerators if overrides.num_accelerators is not None else accelerators),
@@ -224,9 +236,11 @@ def _build_commands(
         "<MPI_BIN>": mpi_bin,
     }
     commands: list[list[str]] = []
+    streams: list[str | None] = []
     for item in case.get("native_commands") or []:
         if item.get("phase") == "prepare" and not prepare:
             continue
+        streams.append(item.get("stream"))
         argv = [values.get(a, a) for a in item["argv"] if a != "<COMMAND>"]
         # dataset.num_files_train lives inside --params KEY=VALUE tokens
         if overrides.num_files_train is not None:
@@ -263,7 +277,7 @@ def _build_commands(
         if overrides.allow_invalid_params:
             argv.append("--allow-invalid-params")
         commands.append(argv)
-    return commands
+    return commands, streams
 
 
 def build_case_command(
@@ -296,7 +310,7 @@ def build_case_command(
         skip_fs_separation_gate=skip_fs_separation_gate,
         keep_data=keep_data,
     )
-    commands = _build_commands(
+    commands, _streams = _build_commands(
         case,
         data_dir=data_dir,
         results_dir=results_dir,
@@ -407,6 +421,8 @@ def main() -> int:
     parser.add_argument("--inter-option-delay", type=int, help="Dev: override --inter-option-delay (kvcache)")
     parser.add_argument("--milvus-uri", help="Dev: use a local Milvus Lite .db path instead of --host/--port (vectordb)")
     parser.add_argument("--vdb-config", type=Path, help="Dev: use a shrunk vdbbench config YAML for vectordb cases")
+    parser.add_argument("--mix-vdb-data-dir", type=Path, default=None,
+                        help="Dev (MIX only): data dir for the VectorDB stream (default: E: drive)")
     parser.add_argument("--allow-invalid-params", "-aip", action="store_true", help="Dev: let mlpstorage run with invalid (e.g. shrunk) params")
     parser.add_argument("--skip-fs-separation-gate", action="store_true", help="Dev: bypass CAP-03 same-filesystem gate")
     parser.add_argument("--keep-data", action="store_true")
@@ -487,7 +503,16 @@ def main() -> int:
         mlpstorage=args.mlpstorage or (Path(str(config["mlpstorage"])) if config.get("mlpstorage") else None),
     )
 
-    commands = _build_commands(
+    # MIX cases run the VectorDB stream on a separate data drive (default E:).
+    if case.get("family") == "MIX":
+        mix_vdb_dir = args.mix_vdb_data_dir
+        if mix_vdb_dir is None:
+            mix_vdb_dir = Path("E:") / str(config.get("test_root", "MLPerfStorageTest")) / "data"
+        vdb_data_dir = mix_vdb_dir
+    else:
+        vdb_data_dir = None
+
+    commands, streams = _build_commands(
         case,
         data_dir=data_dir,
         results_dir=results_dir,
@@ -500,10 +525,11 @@ def main() -> int:
         loops=args.loops or int(config.get("loops", 1)),
         prepare=prepare,
         overrides=overrides,
+        vdb_data_dir=vdb_data_dir,
     )
     if capacity_overrides:
         duration_sec = _apply_capacity_overrides(overrides, duration_sec, capacity_overrides, cli_duration_sec=args.duration_sec)
-        commands = _build_commands(
+        commands, streams = _build_commands(
             case, data_dir=data_dir, results_dir=results_dir, systemname=systemname,
             mpi_bin=mpi_bin,
             client_memory_gb=args.client_memory_gb or int(config.get("client_memory_gb", 64)),
@@ -512,6 +538,7 @@ def main() -> int:
             duration_sec=duration_sec,
             loops=args.loops or int(config.get("loops", 1)),
             prepare=prepare, overrides=overrides,
+            vdb_data_dir=vdb_data_dir,
         )
     if args.o_direct:
         for argv in commands:
@@ -547,6 +574,10 @@ def main() -> int:
     # (checkpoint-folder / kvcache cache-dir / vectordb storage-root).
     for sub in ("checkpoint", "kvcache", "milvus"):
         (data_dir / sub / case["case_id"]).mkdir(parents=True, exist_ok=True)
+    if vdb_data_dir is not None:
+        # MIX: VectorDB stream lives on the secondary drive (E:) — pre-create
+        # its storage root too so E401/CAP-01 probes have a parent.
+        (vdb_data_dir / "milvus" / case["case_id"]).mkdir(parents=True, exist_ok=True)
     if init_results:
         init_command = [str(cli), "init", systemname, str(results_dir)]
         print(f"{args.case_id} init: {subprocess.list2cmdline(init_command)}")
@@ -554,14 +585,50 @@ def main() -> int:
         if initialized.returncode != 0:
             return initialized.returncode
 
-    for phase_index, argv in enumerate(commands, start=1):
-        print(f"{args.case_id} phase {phase_index}/{len(commands)}: mlpstorage {' '.join(argv[:8])} ...")
-        rc = _run_mlpstorage(cli, argv)
+    # MIX cases run the KV Cache stream (C:) and VectorDB stream (E:)
+    # concurrently; each stream's phases still run in order.
+    if any(streams):
+        stream_groups: dict[str, list[list[str]]] = {}
+        for stream, argv in zip(streams, commands):
+            stream_groups.setdefault(stream or "main", []).append(argv)
+        import concurrent.futures
+
+        def _run_stream(stream_name: str, stream_cmds: list[list[str]]) -> int:
+            for si, argv in enumerate(stream_cmds, start=1):
+                print(f"{args.case_id} [{stream_name}] phase {si}/{len(stream_cmds)}: "
+                      f"mlpstorage {' '.join(argv[:8])} ...")
+                rc = _run_mlpstorage(cli, argv)
+                if rc != 0:
+                    print(f"{args.case_id} [{stream_name}] FAIL phase={si} rc={rc}")
+                    return rc
+            return 0
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(stream_groups)) as pool:
+            futures = {pool.submit(_run_stream, name, cmds): name
+                       for name, cmds in stream_groups.items()}
+            rc = 0
+            for fut in concurrent.futures.as_completed(futures):
+                name = futures[fut]
+                try:
+                    stream_rc = fut.result()
+                except Exception as exc:  # pragma: no cover - defensive
+                    print(f"{args.case_id} [{name}] EXCEPTION: {exc}")
+                    stream_rc = 1
+                if stream_rc != 0:
+                    rc = stream_rc
         if rc != 0:
-            print(f"{args.case_id} FAIL phase={phase_index} rc={rc}")
             if cleanup_data:
                 _cleanup(data_dir, cleanup_root)
             return rc
+    else:
+        for phase_index, argv in enumerate(commands, start=1):
+            print(f"{args.case_id} phase {phase_index}/{len(commands)}: mlpstorage {' '.join(argv[:8])} ...")
+            rc = _run_mlpstorage(cli, argv)
+            if rc != 0:
+                print(f"{args.case_id} FAIL phase={phase_index} rc={rc}")
+                if cleanup_data:
+                    _cleanup(data_dir, cleanup_root)
+                return rc
 
     if cleanup_data:
         _cleanup(data_dir, cleanup_root)
