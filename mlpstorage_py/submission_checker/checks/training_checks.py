@@ -636,7 +636,7 @@ class TrainingCheck(BaseCheck):
         """
         self.log.info(
             "[3.3.5 trainingDistributedDataAccessibility] %s: "
-            "satisfied by construction — CAP-02 shared-FS probe "
+            "satisfied by construction - CAP-02 shared-FS probe "
             "(cluster_collector.run_shared_fs_probe) verifies data_dir is "
             "reachable from every participating rank at pre-execution",
             self.path,
@@ -729,7 +729,7 @@ class TrainingCheck(BaseCheck):
         """
         self.log.info(
             "[3.3.7 trainingNodeCapabilityConsistency] %s: "
-            "satisfied by construction — cluster collector captures "
+            "satisfied by construction - cluster collector captures "
             "start/end cluster snapshots (Benchmark._collect_cluster_start / "
             "_collect_cluster_end); component drift is surfaced at runtime",
             self.path,

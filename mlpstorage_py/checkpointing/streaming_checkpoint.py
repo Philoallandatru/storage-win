@@ -408,7 +408,7 @@ class StreamingCheckpointing:
         print(f"Backend:     {self.backend or 'auto-detect'}")
         print(f"Total size:  {total_size_bytes / (1024**3):.2f} GB")
         print(f"Buffer size: {self.chunk_size / (1024**2):.0f} MB")
-        print(f"Buffer pool: {self.num_buffers} × {self.chunk_size / (1024**2):.0f} MB = {(self.num_buffers * self.chunk_size) / (1024**3):.2f} GB")
+        print(f"Buffer pool: {self.num_buffers} x {self.chunk_size / (1024**2):.0f} MB = {(self.num_buffers * self.chunk_size) / (1024**3):.2f} GB")
         print(f"Direct I/O:  {self.use_direct_io}")
         print(f"Use dgen-py: {self.use_dgen}")
         print("=" * 80)
@@ -424,7 +424,7 @@ class StreamingCheckpointing:
         # Disable O_DIRECT for shared_memory (not page-aligned)
         actual_direct_io = False
         if self.use_direct_io:
-            print(f"[Main] ⚠ Disabling O_DIRECT (shared_memory buffers not page-aligned)")
+            print(f"[Main] ! Disabling O_DIRECT (shared_memory buffers not page-aligned)")
         
         # Writer subprocess context — see the module-scope helpers for the
         # backend-aware default: 'fork' on the POSIX file backend (fast, #682),
@@ -858,8 +858,8 @@ class StreamingCheckpointing:
         # HTTP overhead: fewer, larger range-GETs are more efficient than many small ones.
         n_workers = self.num_parallel_readers
         effective_chunk = self.read_chunk_size
-        print(f"Read chunks: {effective_chunk // (1024**2)} MB × {n_workers} workers  "
-              f"(peak RAM ≤ {effective_chunk * n_workers // (1024**2)} MB)")
+        print(f"Read chunks: {effective_chunk // (1024**2)} MB x {n_workers} workers  "
+              f"(peak RAM <= {effective_chunk * n_workers // (1024**2)} MB)")
         print("=" * 80)
 
         total_read = 0

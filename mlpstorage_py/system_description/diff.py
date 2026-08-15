@@ -455,7 +455,7 @@ def _emit_leaf_diffs(
             # cost is paid only when the handler accepts INFO.
             logger.info(
                 "collector resolved %s=%r (was \"\" on disk; "
-                "on-disk file unchanged per LIFE-04 — manually update the "
+                "on-disk file unchanged per LIFE-04 - manually update the "
                 "YAML if you want to lock this value)",
                 path, mem_v,
             )

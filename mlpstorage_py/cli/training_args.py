@@ -313,7 +313,7 @@ def validate_training_arguments(args):
             print(
                 "ERROR: --o-direct is incompatible with the 'object' data-access protocol.\n"
                 "  --o-direct routes I/O through s3dlio's direct:// URI scheme on the\n"
-                "  local filesystem — it cannot be combined with S3 object storage.\n"
+                "  local filesystem - it cannot be combined with S3 object storage.\n"
                 "  Use the 'file' positional with --o-direct for O_DIRECT local I/O,\n"
                 "  e.g. `mlpstorage <mode> training <model> run file --o-direct`.",
                 file=sys.stderr,

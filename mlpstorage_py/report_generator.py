@@ -1792,7 +1792,7 @@ class ReportGenerator:
                 # Warmup runs are excluded from the aggregate — render with
                 # a WARMUP label + disk basename (which is unique, unlike
                 # the mis-stamped run_id shared with the first real run).
-                print(f"      - {run.run_id} [WARMUP, not aggregated — dir: {base}]")
+                print(f"      - {run.run_id} [WARMUP, not aggregated - dir: {base}]")
             else:
                 result_key = (self._system_scope_key(run), run.run_id)
                 run_category = self.run_results[result_key].category

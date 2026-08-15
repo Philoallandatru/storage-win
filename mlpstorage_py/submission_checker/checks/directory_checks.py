@@ -72,7 +72,7 @@ class DirectoryCheck(BaseCheck):
             # these modes yet; emit nothing and let the per-mode Check class
             # own its directory rules when they land.
             self.log.debug(
-                "DirectoryCheck: no §2 checks registered for mode=%r", mode
+                "DirectoryCheck: no section-2 checks registered for mode=%r", mode
             )
     
     

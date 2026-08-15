@@ -632,7 +632,7 @@ def _write_pointer_atomic(run_leaf: Path, full_hash: str, log) -> None:
         os.replace(str(tmp), str(dst))
     else:
         os.rename(str(tmp), str(dst))
-    log.debug("wrote pointer file %s → %s:%s", dst, _ALGORITHM, full_hash)
+    log.debug("wrote pointer file %s -> %s:%s", dst, _ALGORITHM, full_hash)
 
 
 def _read_pointer(run_leaf: Path, log) -> tuple[str, str]:

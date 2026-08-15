@@ -384,7 +384,7 @@ class CheckpointingCheck(BaseCheck):
         if config_ref_file is None:
             self.log.info(
                 "[4.6.3 checkpointClosedCheckpointParameters] %s: "
-                "skipping reference-config cross-check — workload %r is "
+                "skipping reference-config cross-check - workload %r is "
                 "not in known LLM models; see 2.1.21 violation for the "
                 "structural complaint",
                 self.path, self.benchmark,
@@ -1019,7 +1019,7 @@ class CheckpointingCheck(BaseCheck):
             return valid
         self.log.info(
             "[4.7.4 checkpointSimultaneousRwSupport] %s: "
-            "satisfied by construction — CAP-02 shared-FS probe "
+            "satisfied by construction - CAP-02 shared-FS probe "
             "(cluster_collector.run_shared_fs_probe) proves rank-0's write "
             "is immediately visible on every other rank via the shared "
             "namespace (simultaneous_write=%s, simultaneous_read=%s)",

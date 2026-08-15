@@ -180,7 +180,7 @@ def _collect_check_method_coverage() -> dict:
             source = "{}.{}".format(cls.__name__, method_name)
             if rule_id in coverage:
                 log.warning(
-                    "rule_id %s is decorated on both %s and %s — the second "
+                    "rule_id %s is decorated on both %s and %s - the second "
                     "binding wins in the coverage report but this is almost "
                     "certainly a copy-paste regression.",
                     rule_id, coverage[rule_id], source,
