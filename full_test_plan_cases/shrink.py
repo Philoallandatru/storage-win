@@ -82,9 +82,12 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
     args: list[str] = []
     if family == "Training":
         if pressure:
-            # Per-model file counts sized for ~40-120 GB writes on a 512 GB disk.
-            n = {"AI-TRN-003": 300, "AI-TRN-004": 2000, "AI-TRN-005": 2000,
-                 "AI-TRN-DLRM": 100}.get(base, 200)
+            # Per-model file counts sized for sustained multi-epoch reads on a
+            # 512 GB disk: unet3d 1200 (~163 GB), retinanet 20k small files
+            # (IOPS pressure), DLRM 200 (~234 GB).  Duration comes from the
+            # official epochs (5/8/2 in the workload yamls) x dataset size.
+            n = {"AI-TRN-003": 1200, "AI-TRN-004": 20000, "AI-TRN-005": 20000,
+                 "AI-TRN-DLRM": 200}.get(base, 200)
             args += ["--num-files-train", str(n), "--allow-invalid-params"]
         else:
             args += ["--num-files-train", "8", "--allow-invalid-params"]
@@ -96,7 +99,8 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
         args += ["--num-processes", "8", "--allow-invalid-params"]
         if base == case_id:
             # Base (512GB) cases: real-I/O smoke. Pressure mode triples the
-            # checkpoint count (~340 GB write + read for 70b-class shards).
+            # checkpoint count (~340 GB write + read for 8b/70b-class shards)
+            # -- the safe max on a 512 GB disk (official 10/10 needs >1 TB).
             w = 3 if pressure else 1
             args += ["--num-checkpoints-write", str(w), "--num-checkpoints-read", str(w)]
     elif family == "KV Cache":
@@ -108,9 +112,17 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
                      "--trials", "1", "--inter-option-delay", "0",
                      "--generation-mode", "fast"]
     elif family == "VectorDB":
-        args += ["--num-vectors", "10000" if pressure else "100",
-                 "--duration-sec", "60" if pressure else "10",
-                 "--vdb-config", VDB_SMOKE_REL,
-                 "--milvus-uri", str(data_dir / "milvus_lite.db")]
+        if pressure:
+            # Official-scale collection (1M vectors, dimension per case) with a
+            # 300 s query phase; Milvus Lite builds it in ~18 min (VDB-004
+            # measured). Recall degrades at 1M on Lite -- SSD pressure goal
+            # unaffected; compliance runs need a real Milvus server.
+            args += ["--num-vectors", "1000000", "--duration-sec", "300",
+                     "--vdb-config", VDB_SMOKE_REL,
+                     "--milvus-uri", str(data_dir / "milvus_lite.db")]
+        else:
+            args += ["--num-vectors", "100", "--duration-sec", "10",
+                     "--vdb-config", VDB_SMOKE_REL,
+                     "--milvus-uri", str(data_dir / "milvus_lite.db")]
     args += memory_override_args(family, memory)
     return args

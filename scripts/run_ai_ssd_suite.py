@@ -184,6 +184,8 @@ def main() -> int:
                         help="client-memory tier for this run: 32GB/64GB/128GB (default 64GB)")
     parser.add_argument("--pressure", action="store_true",
                         help="pressure mode: ~10-50x I/O (steady-state SSD test) instead of link verification")
+    parser.add_argument("--report", action="store_true",
+                        help="generate docs/AI_SSD_TEST_REPORT.md after the run (data-driven report)")
     parser.add_argument("--data-drive", default="D:", help="drive for test data, e.g. D:")
     parser.add_argument("--results-drive", default=None, help="drive for results (default: same as data-drive)")
     parser.add_argument("--only", help="comma-separated case ids to run instead of the full tier set")
@@ -252,6 +254,11 @@ def main() -> int:
                                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")},
                               indent=2, ensure_ascii=False), encoding="utf-8")
     print(f"\nsummary written: {out}", flush=True)
+    if args.report:
+        import subprocess as _sp
+        gen = REPO / "tools" / "gen_test_report.py"
+        _sp.run([str(PY), str(gen), "--results-root", str(results_root.parent)],
+                cwd=REPO, check=False)
     return 0 if all(s["result"] in ("PASS", "SKIP") for s in summary) else 1
 
 
