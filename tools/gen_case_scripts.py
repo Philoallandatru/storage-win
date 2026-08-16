@@ -46,7 +46,7 @@ REM   Data and results are on the SAME drive by default (SINGLE_DRIVE=1 below).
 REM   To use two drives, edit both paths AND set SINGLE_DRIVE=0.
 set "DATA_DIR=C:\\MLPerfStorageTest\\data\\{case_id}"
 set "RESULT_DIR=C:\\MLPerfStorageTest\\results\\{case_id}"
-
+{vdb_block}
 REM ---------- 1 = data and results share one drive (C:-only machine) ----------
 set "SINGLE_DRIVE=1"
 set "GATE="
@@ -95,18 +95,38 @@ exit /b 1
 """
 
 
-def _shrink_flags(case_id: str) -> str:
+def _shrink_flags(case_id: str, is_mix: bool = False) -> str:
     """Family dev-shrink flags as a cmd-line string.
 
     VDB's ``--milvus-uri`` points at ``%DATA_DIR%\\milvus_lite.db`` so each
     run uses its own Lite db next to the case data, and ``--vdb-config`` is
     rewritten to ``%REPO_ROOT%\\...`` so it works on any machine/path.
+
+    MIX cases run VectorDB on a secondary drive: ``vdb_data_dir`` resolves
+    to ``%VDB_DATA_DIR%`` so the generated .cmd keeps the two streams on
+    separate drives (see the VDB_DATA_DIR block in TEMPLATE).
     """
-    flags = shrink_args(case_id, Path("<DATA_DIR>"), Path("<RESULTS_DIR>"), "64GB")
+    vdb_dir = Path("<VDB_DATA_DIR>") if is_mix else None
+    flags = shrink_args(case_id, Path("<DATA_DIR>"), Path("<RESULTS_DIR>"), "64GB",
+                        vdb_data_dir=vdb_dir)
+    if is_mix:
+        # Point the MIX .cmd at its own VDB_DATA_DIR so KV (DATA_DIR) and
+        # VectorDB (VDB_DATA_DIR) stay on separate drives.
+        flags += ["--mix-vdb-data-dir", "<VDB_DATA_DIR>"]
     text = " ".join(flags)
     text = text.replace("<DATA_DIR>", "%DATA_DIR%").replace("<RESULTS_DIR>", "%RESULT_DIR%")
+    if is_mix:
+        text = text.replace("<VDB_DATA_DIR>", "%VDB_DATA_DIR%")
     return text.replace("full_test_plan_cases/configs/vdb_smoke.yaml",
                         "%REPO_ROOT%\\full_test_plan_cases\\configs\\vdb_smoke.yaml")
+
+
+# MIX cases: define VDB_DATA_DIR (secondary drive) next to DATA_DIR/RESULT_DIR.
+# The .cmd runner passes it via --mix-vdb-data-dir so VectorDB data lands on a
+# separate drive from KV Cache (same default E: as run_ai_ssd_suite --vdb-drive).
+VDB_BLOCK = """
+set "VDB_DATA_DIR=E:\\MLPerfStorageTest\\data\\{case_id}"
+"""
 
 
 def main() -> int:
@@ -125,11 +145,13 @@ def main() -> int:
             (OUT_DIR / f"{case_id}.cmd").write_text(body, encoding="utf-8", newline="\r\n")
             generated += 1
             continue
+        is_mix = case.get("family") == "MIX"
         content = TEMPLATE.format(
             case_id=case_id,
             case_id_lower=case_id.lower(),
             model=case.get("model_config") or "native",
-            shrink_flags=_shrink_flags(case_id),
+            shrink_flags=_shrink_flags(case_id, is_mix=is_mix),
+            vdb_block=VDB_BLOCK.format(case_id=case_id) if is_mix else "",
         )
         (OUT_DIR / f"{case_id}.cmd").write_text(content, encoding="utf-8", newline="\r\n")
         generated += 1
@@ -146,6 +168,7 @@ def main() -> int:
                 case_id_lower=cid.lower(),
                 model=_model_from_catalog(catalog, spec["base"]) or "capacity",
                 shrink_flags=_shrink_flags(cid),
+                vdb_block="",
             )
             (OUT_DIR / f"{cid}.cmd").write_text(body, encoding="utf-8", newline="\r\n")
             generated += 1

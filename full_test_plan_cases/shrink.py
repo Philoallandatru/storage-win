@@ -24,6 +24,12 @@ VDB_SMOKE_REL = "full_test_plan_cases/configs/vdb_smoke.yaml"
 CAPACITY_SUFFIXES = ("-1TB", "-2TB", "-4TB")
 MEMORY_TIERS = ("32GB", "64GB", "128GB")
 
+# Default drive for the MIX family's VectorDB stream (KV Cache runs on the
+# primary data drive; VDB runs concurrently on a secondary drive).  Shared by
+# run_case.py (--mix-vdb-data-dir default) and run_ai_ssd_suite.py (--vdb-drive
+# default) so a drive change is a single edit.
+MIX_VDB_DRIVE = "E:"
+
 # Cases that cannot run on a Windows + Milvus-Lite machine by design.
 SKIP_REASONS = {
     "AI-VDB-005": "AISAQ index requires a full Milvus server (Milvus Lite: unknown index_type 'AISAQ')",

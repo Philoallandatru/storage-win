@@ -127,3 +127,26 @@ def test_catalog_json_valid():
     families = {c["family"] for c in data}
     assert "MIX" in families
     assert case_family("AI-MIX-001") == "MIX"
+
+
+def test_gen_case_scripts_mix_cmd_uses_vdb_data_dir(tmp_path):
+    """The generated AI-MIX-001.cmd must define VDB_DATA_DIR on the secondary
+    drive (E:) and point --milvus-uri / --mix-vdb-data-dir at it, so KV (C:)
+    and VectorDB (E:) stay on separate drives."""
+    import subprocess
+    import sys as _sys
+
+    out_dir = tmp_path / "cases"
+    # Regenerate into a temp dir by monkeypatching the module constant is
+    # invasive; instead run the generator and check the real output, which
+    # is deterministic from the catalog.
+    completed = subprocess.run(
+        [_sys.executable, str(REPO / "tools" / "gen_case_scripts.py")],
+        cwd=REPO, capture_output=True, text=True, check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    cmd_path = REPO / "scripts" / "cases" / "AI-MIX-001.cmd"
+    text = cmd_path.read_text(encoding="utf-8")
+    assert 'set "VDB_DATA_DIR=E:\MLPerfStorageTest\data\AI-MIX-001"' in text
+    assert "--milvus-uri %VDB_DATA_DIR%\milvus_lite.db" in text
+    assert "--mix-vdb-data-dir %VDB_DATA_DIR%" in text

@@ -87,15 +87,19 @@ site_config.json    ← 站点配置（每台机器改一次）
 
 ## 一键脚本（每 case 一个）
 
-`scripts/cases/AI-TRN-003.cmd` 等 33 个脚本：编辑头部 `DATA_DIR`/`RESULT_DIR`
-盘符后直接运行。dev 缩小：取消注释 `NUM_FILES_TRAIN=8` / `ALLOW_INVALID=1` 两行。
+`scripts/cases/AI-TRN-003.cmd` 等 71 个脚本（35 个基础 case + 36 个容量变体）：
+编辑头部 `DATA_DIR`/`RESULT_DIR` 盘符后直接运行。dev 缩小：取消注释
+`NUM_FILES_TRAIN=8` / `ALLOW_INVALID=1` 两行。
 重新生成：`python tools/gen_case_scripts.py`。
 
 ## 批量缩小版验证
 
 ```powershell
-.\.venv\Scripts\python.exe scripts\smoke_all_cases.py            # 全部 33 个
-.\.venv\Scripts\python.exe scripts\smoke_all_cases.py --only AI-TRN-003,AI-KV-001
+# 全量批量（低压力缩小参数）
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --data-drive C: --results-drive D:
+
+# 只跑指定 case
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --data-drive C: --results-drive D: --only AI-TRN-003,AI-KV-001
 ```
 
 按家族自动套缩小参数：Training 8 文件 + `-aip`；Checkpoint 8 ranks + 零 I/O；

@@ -507,6 +507,8 @@ def main() -> int:
     if case.get("family") == "MIX":
         mix_vdb_dir = args.mix_vdb_data_dir
         if mix_vdb_dir is None:
+            # Same default as run_ai_ssd_suite.py --vdb-drive; the suite
+            # normally passes an explicit dir, this is the bare-CLI fallback.
             mix_vdb_dir = Path("E:") / str(config.get("test_root", "MLPerfStorageTest")) / "data"
         vdb_data_dir = mix_vdb_dir
     else:
@@ -587,24 +589,25 @@ def main() -> int:
 
     # MIX cases run the KV Cache stream (C:) and VectorDB stream (E:)
     # concurrently; each stream's phases still run in order.
+    def _run_phases(stream_cmds: list[list[str]], stream_name: str | None = None) -> int:
+        prefix = f"[{stream_name}] " if stream_name else ""
+        for si, argv in enumerate(stream_cmds, start=1):
+            print(f"{args.case_id} {prefix}phase {si}/{len(stream_cmds)}: "
+                  f"mlpstorage {' '.join(argv[:8])} ...")
+            rc = _run_mlpstorage(cli, argv)
+            if rc != 0:
+                print(f"{args.case_id} {prefix}FAIL phase={si} rc={rc}")
+                return rc
+        return 0
+
     if any(streams):
         stream_groups: dict[str, list[list[str]]] = {}
         for stream, argv in zip(streams, commands):
             stream_groups.setdefault(stream or "main", []).append(argv)
         import concurrent.futures
 
-        def _run_stream(stream_name: str, stream_cmds: list[list[str]]) -> int:
-            for si, argv in enumerate(stream_cmds, start=1):
-                print(f"{args.case_id} [{stream_name}] phase {si}/{len(stream_cmds)}: "
-                      f"mlpstorage {' '.join(argv[:8])} ...")
-                rc = _run_mlpstorage(cli, argv)
-                if rc != 0:
-                    print(f"{args.case_id} [{stream_name}] FAIL phase={si} rc={rc}")
-                    return rc
-            return 0
-
         with concurrent.futures.ThreadPoolExecutor(max_workers=len(stream_groups)) as pool:
-            futures = {pool.submit(_run_stream, name, cmds): name
+            futures = {pool.submit(_run_phases, cmds, name): name
                        for name, cmds in stream_groups.items()}
             rc = 0
             for fut in concurrent.futures.as_completed(futures):
@@ -621,14 +624,11 @@ def main() -> int:
                 _cleanup(data_dir, cleanup_root)
             return rc
     else:
-        for phase_index, argv in enumerate(commands, start=1):
-            print(f"{args.case_id} phase {phase_index}/{len(commands)}: mlpstorage {' '.join(argv[:8])} ...")
-            rc = _run_mlpstorage(cli, argv)
-            if rc != 0:
-                print(f"{args.case_id} FAIL phase={phase_index} rc={rc}")
-                if cleanup_data:
-                    _cleanup(data_dir, cleanup_root)
-                return rc
+        rc = _run_phases(commands)
+        if rc != 0:
+            if cleanup_data:
+                _cleanup(data_dir, cleanup_root)
+            return rc
 
     if cleanup_data:
         _cleanup(data_dir, cleanup_root)

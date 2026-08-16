@@ -18,13 +18,15 @@ REM   To use two drives, edit both paths AND set SINGLE_DRIVE=0.
 set "DATA_DIR=C:\MLPerfStorageTest\data\AI-MIX-001"
 set "RESULT_DIR=C:\MLPerfStorageTest\results\AI-MIX-001"
 
+set "VDB_DATA_DIR=E:\MLPerfStorageTest\data\AI-MIX-001"
+
 REM ---------- 1 = data and results share one drive (C:-only machine) ----------
 set "SINGLE_DRIVE=1"
 set "GATE="
 if "%SINGLE_DRIVE%"=="1" set "GATE=--skip-fs-separation-gate"
 
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-MIX-001 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-mix-001 --num-users 10 --num-vectors 1000 --duration-sec 10 --generation-mode fast --vdb-config %REPO_ROOT%\full_test_plan_cases\configs\vdb_smoke.yaml --milvus-uri %DATA_DIR%\milvus_lite.db %GATE%
+"%PY%" -m full_test_plan_cases.run_case AI-MIX-001 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-mix-001 --num-users 10 --num-vectors 1000 --duration-sec 10 --generation-mode fast --vdb-config %REPO_ROOT%\full_test_plan_cases\configs\vdb_smoke.yaml --milvus-uri %VDB_DATA_DIR%\milvus_lite.db --mix-vdb-data-dir %VDB_DATA_DIR% %GATE%
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

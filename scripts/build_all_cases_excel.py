@@ -29,6 +29,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = REPO_ROOT / "full_test_plan_cases" / "case_catalog.json"
 DEFAULT_OUTPUT = REPO_ROOT / "docs" / "AI_SSD_NATIVE_CASES_MLPSTORAGE_COMMANDS.xlsx"
 
+from full_test_plan_cases.shrink import MIX_VDB_DRIVE  # noqa: E402
+
 # Default runtime knobs — same defaults as the unified executor (run_case.py).
 DEFAULTS = {
     "data_dir": "C:\\MLPerfStorageTest\\data\\<case_id>",
@@ -76,6 +78,8 @@ def build_argparser() -> argparse.ArgumentParser:
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     p.add_argument("--data-drive", default="C")
     p.add_argument("--results-drive", default="D")
+    p.add_argument("--vdb-drive", default=MIX_VDB_DRIVE.rstrip(":"),
+                   help="drive for the MIX VectorDB stream data (default E)")
     p.add_argument("--test-root", default="MLPerfStorageTest")
     p.add_argument("--include-status", action="append", default=["SUPPORTED"],
                    help="Native status values to include (default: SUPPORTED). "
@@ -89,17 +93,22 @@ def load_catalog() -> list[dict]:
 
 
 def resolve_command(entry: dict, cmd_entry: dict, model: str,
-                    args: argparse.Namespace) -> dict:
+                    args: argparse.Namespace,
+                    vdb_data_dir: Path | None = None) -> dict:
     """Resolve one native command's placeholders into a concrete row dict.
 
     The catalog is the single source of truth (the legacy ``test_ai_*.py``
     case entrypoints were merged away — see run_case.py), so substitution
     uses the same placeholders the catalog's ``native_commands`` reference.
+
+    ``vdb_data_dir`` is the secondary drive for MIX cases (same default E:
+    as run_ai_ssd_suite --vdb-drive); non-MIX cases ignore it.
     """
     case_id = entry["case_id"]
     case_id_lower = case_id.lower()
     data_dir = (Path(f"{args.data_drive}:\\{args.test_root}\\data") / case_id_lower).resolve()
     results_dir = (Path(f"{args.results_drive}:\\{args.test_root}\\results") / case_id_lower).resolve()
+    vdb_dir = vdb_data_dir or data_dir
     values = {
         "<DATA_DIR>": str(data_dir),
         "<RESULTS_DIR>": str(results_dir),
@@ -108,7 +117,7 @@ def resolve_command(entry: dict, cmd_entry: dict, model: str,
         "<STORAGE_ROOT>": str(data_dir / "milvus" / case_id),
         # MIX dual-drive placeholders (same keys run_case.py resolves).
         "<MIX_KV_CACHE_DIR>": str(data_dir / "kvcache" / case_id),
-        "<MIX_VDB_STORAGE_ROOT>": str(data_dir / "milvus" / case_id),
+        "<MIX_VDB_STORAGE_ROOT>": str(vdb_dir / "milvus" / case_id),
         "<SYSTEMNAME>": f"{case_id_lower}-{DEFAULTS['systemname_suffix']}",
         "<LOOPS>": str(DEFAULTS["loops"]),
         "<MPI_BIN>": DEFAULTS["mpi_bin"],
@@ -195,8 +204,12 @@ def build_rows(catalog: list[dict], args: argparse.Namespace) -> list[dict]:
             })
             continue
         model = detect_model(commands, case_id)
+        # MIX cases run VectorDB on the secondary drive (E: by default).
+        vdb_data_dir = None
+        if entry.get("family") == "MIX":
+            vdb_data_dir = (Path(f"{args.vdb_drive}:\\{args.test_root}\\data") / case_id.lower()).resolve()
         for cmd in commands:
-            resolved = resolve_command(entry, cmd, model, args)
+            resolved = resolve_command(entry, cmd, model, args, vdb_data_dir=vdb_data_dir)
             accelerator = ""
             argv = resolved["argv"]
             for i, tok in enumerate(argv):

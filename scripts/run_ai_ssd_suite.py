@@ -50,6 +50,7 @@ CATALOG = REPO / "full_test_plan_cases" / "case_catalog.json"
 CAPACITY = REPO / "full_test_plan_cases" / "capacity_catalog.json"
 
 from full_test_plan_cases.shrink import (  # noqa: E402
+    MIX_VDB_DRIVE,
     SKIP_REASONS,
     base_case_id,
     case_family,
@@ -118,7 +119,8 @@ def cases_for_tier(tier: str, family: str | None = None,
 # Environment checks (run before any case executes)
 # ---------------------------------------------------------------------------
 
-def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[tuple[str, bool, str]]:
+def env_checks(data_drive: str, results_drive: str, include_vdb: bool,
+               vdb_drive: str = MIX_VDB_DRIVE) -> list[tuple[str, bool, str]]:
     checks: list[tuple[str, bool, str]] = []
 
     def add(name: str, ok: bool, detail: str = "") -> None:
@@ -141,7 +143,7 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[t
     mpi = shutil.which("mpiexec") or shutil.which("mpirun")
     add("mpi", mpi is not None, mpi or "mpiexec not found (cluster-collect will fall back to local)")
 
-    for drive, label in ((data_drive, "data"), (results_drive, "results")):
+    for drive, label in ((data_drive, "data"), (results_drive, "results"), (vdb_drive, "vdb")):
         root = Path(f"{drive}\\")
         ok = root.exists()
         detail = "exists" if ok else "MISSING"
@@ -161,7 +163,7 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool) -> list[t
 
 def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB",
              single_drive: bool = False, pressure: bool = False,
-             vdb_drive: str = "E:") -> tuple[int, str]:
+             vdb_drive: str = MIX_VDB_DRIVE) -> tuple[int, str]:
     is_mix = case_family(case_id) == "MIX"
     # VectorDB stream of the MIX case runs on the secondary drive (E: by
     # default); run_case substitutes <MIX_VDB_STORAGE_ROOT> from it.
@@ -211,7 +213,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--capacity", choices=SUPPORTED_TIERS, default="512GB",
-                        help="capacity tier to run (default 512GB = all 34 base cases)")
+                        help="capacity tier to run (default 512GB = all base cases)")
     parser.add_argument("--memory", choices=SUPPORTED_MEMORY, default="64GB",
                         help="client-memory tier for this run: 32GB/64GB/128GB (default 64GB)")
     parser.add_argument("--pressure", action="store_true",
@@ -219,9 +221,9 @@ def main() -> int:
     parser.add_argument("--report", action="store_true",
                         help="also write a copy of the report under docs/ (HTML report "
                              "is always generated next to the suite summary)")
-    parser.add_argument("--data-drive", default="D:", help="drive for test data, e.g. D:")
+    parser.add_argument("--data-drive", default="C:", help="drive for test data, e.g. C:")
     parser.add_argument("--results-drive", default=None, help="drive for results (default: same as data-drive)")
-    parser.add_argument("--vdb-drive", default="E:",
+    parser.add_argument("--vdb-drive", default=MIX_VDB_DRIVE,
                         help="drive for the MIX VectorDB stream data (default E:)")
     parser.add_argument("--only", help="comma-separated case ids to run instead of the full tier set")
     parser.add_argument("--family", help="only run cases of this family (Training/Checkpoint/KV Cache/VectorDB/MIX)")
@@ -250,7 +252,7 @@ def main() -> int:
         print("\n--- environment check ---", flush=True)
         include_vdb = any(case_family(c) in ("VectorDB", "MIX") for c in tier_cases)
         failed = False
-        for name, ok, detail in env_checks(args.data_drive, results_drive, include_vdb):
+        for name, ok, detail in env_checks(args.data_drive, results_drive, include_vdb, args.vdb_drive):
             print(f"  [{'OK ' if ok else 'FAIL'}] {name}: {detail}", flush=True)
             failed = failed or not ok
         if failed:
@@ -268,12 +270,18 @@ def main() -> int:
             continue
         data_dir = data_root / case_id
         results_dir = results_root / case_id
+        vdb_data_dir = (Path(f"{args.vdb_drive}\\MLPerfStorageTest\\data") / case_id
+                        if case_family(case_id) == "MIX" else None)
         if not args.keep_results:
             cleanup_dir(results_dir, case_id)
         cleanup_dir(data_dir, case_id)
+        if vdb_data_dir is not None and not args.keep_data:
+            cleanup_dir(vdb_data_dir, case_id)
         rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive, args.pressure, args.vdb_drive)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
+            if vdb_data_dir is not None:
+                cleanup_dir(vdb_data_dir, case_id)
         result = "PASS" if rc == 0 else ("FAIL" if rc != -1 else "TIMEOUT")
         summary.append({"case_id": case_id, "family": case_family(case_id),
                         "result": result, "rc": rc, "duration": duration})
@@ -296,20 +304,22 @@ def main() -> int:
     # Always render a styled HTML report next to the summary (data-driven,
     # harvested from suite_summary_*.json + per-case results dirs).
     gen = REPO / "tools" / "gen_test_report.py"
-    html_out = out.with_name(f"AI_SSD_TEST_REPORT_{args.capacity}_{args.memory}.html")
-    _sp = subprocess.run(
-        [str(PY), str(gen), "--results-root", str(results_root.parent),
-         "--format", "html", "--out", str(html_out)],
-        cwd=REPO, check=False, env=_env_with_venv_path(),
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
-    )
-    print(f"report written: {html_out}" if _sp.returncode == 0
-          else f"report generation FAILED (rc={_sp.returncode}): {(_sp.stderr or '')[-400:]}",
-          flush=True)
+
+    def _render_report(out_path: Path) -> None:
+        _sp = subprocess.run(
+            [str(PY), str(gen), "--results-root", str(results_root.parent),
+             "--format", "html", "--out", str(out_path)],
+            cwd=REPO, check=False, env=_env_with_venv_path(),
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        print(f"report written: {out_path}" if _sp.returncode == 0
+              else f"report generation FAILED (rc={_sp.returncode}): {(_sp.stderr or '')[-400:]}",
+              flush=True)
+
+    _render_report(out.with_name(f"AI_SSD_TEST_REPORT_{args.capacity}_{args.memory}.html"))
     if args.report:
-        gen = REPO / "tools" / "gen_test_report.py"
-        _sp = subprocess.run([str(PY), str(gen), "--results-root", str(results_root.parent)],
-                             cwd=REPO, check=False)
+        # Also write a copy under docs/ (fixed name, always HTML).
+        _render_report(REPO / "docs" / f"AI_SSD_TEST_REPORT_{args.capacity}_{args.memory}.html")
     return 0 if all(s["result"] in ("PASS", "SKIP") for s in summary) else 1
 
 
