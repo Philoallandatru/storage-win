@@ -814,6 +814,41 @@ class TestExecuteRun:
     - CLOSED enforcement: hard-fails on illegal seed/trials/inter-option-delay/config overrides
     """
 
+
+
+    def test_missing_mlperf_wrapper_fails_fast_with_diagnostic(self, tmp_path):
+        """Regression: kvcache run with an unresolvable kvcache_bin_path (e.g. a
+        nested storage-win/storage-win checkout or stale install) must fail fast
+        with a clear diagnostic, NOT surface python's cryptic
+        'can't open file ...mlperf_wrapper.py: No such file or directory'."""
+        bm = _make_run_benchmark(tmp_path, what_if=False)
+        fake_dir = tmp_path / 'storage-win' / 'storage-win'
+        fake_dir.mkdir(parents=True)
+        fake_kv = fake_dir / 'kv-cache.py'
+        fake_kv.write_text('')
+        # kvcache_bin_path is snapshotted in __init__; set the instance
+        # attr directly so _execute_run derives wrapper_path from it.
+        bm.kvcache_bin_path = str(fake_kv)
+        bm.args.trials = 1
+        bm.args.inter_option_delay = 0
+        bm.args.cache_dir = str(tmp_path / 'cache')
+        bm.args.npernode = 1
+        bm.args.exec_type = 'single'
+
+        executed_cmds = []
+
+        def fake_execute(cmd, **kwargs):
+            executed_cmds.append(cmd)
+            return ('', '', 0)
+
+        with patch.object(bm, '_execute_command', side_effect=fake_execute),              patch.object(bm, '_interruptible_sleep'),              patch.object(bm, '_aggregate_option_results', return_value={}),              patch.object(bm, '_write_run_summary'),              patch.object(bm, 'write_metadata'):
+            rc = bm._execute_run()
+
+        assert rc == 1, f"expected fast-fail rc=1, got {rc}"
+        assert executed_cmds == [], (
+            "must NOT attempt to run python <missing mlperf_wrapper.py>"
+        )
+
     @pytest.fixture
     def bm(self, tmp_path):
         """Benchmark instance for validate command."""
@@ -1357,6 +1392,9 @@ class TestLoudFailureOnMissingResultFiles:
         assert trial_idx == 0
         assert rc == 42
         assert '.stderr.log' in stderr_path
+
+
+
 
 
 class TestWriteRunSummaryTrialFailures:

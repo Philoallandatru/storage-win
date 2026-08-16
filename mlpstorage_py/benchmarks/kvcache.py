@@ -287,6 +287,23 @@ class KVCacheBenchmark(Benchmark):
         )
 
         wrapper_path = Path(self.kvcache_bin_path).parent / 'mlperf_wrapper.py'
+        # Fail fast with a diagnostic instead of letting python emit the
+        # cryptic 'can't open file ... No such file or directory' after the
+        # mpirun prefix.  A missing wrapper almost always means the
+        # kv_cache_benchmark directory was not found next to the installed
+        # mlpstorage package (e.g. a nested/stale checkout or a non-editable
+        # install), so surface the resolved path and the fix.
+        if not wrapper_path.is_file():
+            self.logger.error(
+                f"mlperf_wrapper.py not found at: {wrapper_path}\n"
+                f"  (derived from kvcache_bin_path={self.kvcache_bin_path!r})\n"
+                f"  Expected under kv_cache_benchmark/ next to the mlpstorage "
+                f"package. If the repo is a nested checkout "
+                f"(storage-win/storage-win), reinstall editable "
+                f"(`uv pip install -e .`) from the INNER checkout or pass "
+                f"--kvcache-bin-path pointing at the real kv-cache.py."
+            )
+            return 1
         # Wrapper-adjacent config.yaml is the default; CLOSED forbids overriding.
         config_path = config or str(Path(self.kvcache_bin_path).parent / 'config.yaml')
 
