@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  AI-TRN-004-2TB  capacity  - run this script directly
+REM  AI-TRN-004-2TB  RetinaNet/B200  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
 REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================

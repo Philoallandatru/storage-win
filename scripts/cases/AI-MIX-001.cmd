@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  AI-KV-001-4TB  MLPerf option 1 Llama3.1-8B  - run this script directly
+REM  AI-MIX-001  KV Cache (C:) + VectorDB (E:) concurrent  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
 REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================
@@ -15,8 +15,8 @@ set "PATH=%REPO_ROOT%\.venv\Scripts;%PATH%"
 REM ---------- data/results location (default: C: drive; edit for other drives) ----------
 REM   Data and results are on the SAME drive by default (SINGLE_DRIVE=1 below).
 REM   To use two drives, edit both paths AND set SINGLE_DRIVE=0.
-set "DATA_DIR=C:\MLPerfStorageTest\data\AI-KV-001-4TB"
-set "RESULT_DIR=C:\MLPerfStorageTest\results\AI-KV-001-4TB"
+set "DATA_DIR=C:\MLPerfStorageTest\data\AI-MIX-001"
+set "RESULT_DIR=C:\MLPerfStorageTest\results\AI-MIX-001"
 
 REM ---------- 1 = data and results share one drive (C:-only machine) ----------
 set "SINGLE_DRIVE=1"
@@ -24,7 +24,7 @@ set "GATE="
 if "%SINGLE_DRIVE%"=="1" set "GATE=--skip-fs-separation-gate"
 
 echo [%~n0] data-dir=%DATA_DIR%  results-dir=%RESULT_DIR%
-"%PY%" -m full_test_plan_cases.run_case AI-KV-001-4TB --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-kv-001-4tb --num-users 10 --duration-sec 10 --trials 1 --inter-option-delay 0 --generation-mode fast --cpu-mem-gb 64 %GATE%
+"%PY%" -m full_test_plan_cases.run_case AI-MIX-001 --mode execute --data-dir "%DATA_DIR%" --results-dir "%RESULT_DIR%" --systemname ai-mix-001 --num-users 10 --num-vectors 1000 --duration-sec 10 --generation-mode fast --vdb-config %REPO_ROOT%\full_test_plan_cases\configs\vdb_smoke.yaml --milvus-uri %DATA_DIR%\milvus_lite.db %GATE%
 set "RC=%ERRORLEVEL%"
 
 REM ---------- generic data cleanup (set CLEANUP=0 to keep data) ----------

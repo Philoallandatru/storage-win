@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  AI-VDB-001-4TB  capacity  - run this script directly
+REM  AI-VDB-001-4TB  1Kx128 HNSW  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
 REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================

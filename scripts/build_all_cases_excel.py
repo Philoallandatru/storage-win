@@ -1,10 +1,10 @@
 """Build an Excel of resolved mlpstorage commands for all native FULL_TEST_PLAN cases.
 
-Walks the case catalog and every case entrypoint under
-``full_test_plan_cases/cases/``, calls the same placeholder-substitution
-logic that ``run_mlpstorage_case.ps1`` uses, and writes the resolved
-commands to a single Excel workbook with one sheet per family plus a
-summary sheet.
+Walks the case catalog's ``native_commands`` (the legacy per-case
+entrypoints under ``full_test_plan_cases/cases/`` were merged into the
+catalog — see run_case.py), applies the same placeholder substitution
+the unified executor uses, and writes the resolved commands to a single
+Excel workbook with one sheet per family plus a summary sheet.
 
 Output: docs/AI_SSD_NATIVE_CASES_MLPSTORAGE_COMMANDS.xlsx
 
@@ -16,7 +16,6 @@ or share with operators.
 from __future__ import annotations
 
 import argparse
-import importlib.util
 import json
 import sys
 from datetime import datetime, timezone
@@ -28,10 +27,9 @@ from openpyxl.utils import get_column_letter
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CATALOG_PATH = REPO_ROOT / "full_test_plan_cases" / "case_catalog.json"
-CASES_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 DEFAULT_OUTPUT = REPO_ROOT / "docs" / "AI_SSD_NATIVE_CASES_MLPSTORAGE_COMMANDS.xlsx"
 
-# Default runtime knobs — same defaults as run_mlpstorage_case.ps1.
+# Default runtime knobs — same defaults as the unified executor (run_case.py).
 DEFAULTS = {
     "data_dir": "C:\\MLPerfStorageTest\\data\\<case_id>",
     "results_dir": "D:\\MLPerfStorageTest\\results\\<case_id>",
@@ -90,59 +88,34 @@ def load_catalog() -> list[dict]:
     return json.loads(CATALOG_PATH.read_text(encoding="utf-8"))
 
 
-def case_file_for(case_id: str) -> Path:
-    """Map a canonical case id to its entrypoint path. Returns None if missing."""
-    fname = "test_" + case_id.lower().replace("-", "_") + ".py"
-    return CASES_DIR / fname
+def resolve_command(entry: dict, cmd_entry: dict, model: str,
+                    args: argparse.Namespace) -> dict:
+    """Resolve one native command's placeholders into a concrete row dict.
 
-
-def load_case_module(case_id: str):
-    """Import the case entrypoint as a module and return (spec, mod, case_file)."""
-    f = case_file_for(case_id)
-    if not f.is_file():
-        return None, None, f
-    spec = importlib.util.spec_from_file_location(f"case_{case_id.lower()}", f)
-    mod = importlib.util.module_from_spec(spec)
-    try:
-        spec.loader.exec_module(mod)
-    except Exception as exc:  # noqa: BLE001 — we want to surface the error
-        return None, exc, f
-    return spec, mod, f
-
-
-def resolve_command(case_id: str, cmd_entry: dict, family: str, model: str,
-                    args: argparse.Namespace) -> dict | None:
-    """Run the same placeholder substitution that the case file would do, return a row dict."""
-    spec, mod, _ = load_case_module(case_id)
-    if mod is None:
-        return None
-    case_id_canon = getattr(mod, "CASE_ID", case_id)
-    case_id_lower = case_id_canon.lower()
+    The catalog is the single source of truth (the legacy ``test_ai_*.py``
+    case entrypoints were merged away — see run_case.py), so substitution
+    uses the same placeholders the catalog's ``native_commands`` reference.
+    """
+    case_id = entry["case_id"]
+    case_id_lower = case_id.lower()
     data_dir = (Path(f"{args.data_drive}:\\{args.test_root}\\data") / case_id_lower).resolve()
     results_dir = (Path(f"{args.results_drive}:\\{args.test_root}\\results") / case_id_lower).resolve()
     values = {
         "<DATA_DIR>": str(data_dir),
         "<RESULTS_DIR>": str(results_dir),
-        "<CHECKPOINT_DIR>": str(data_dir / "checkpoint" / case_id_canon),
-        "<CACHE_DIR>": str(data_dir / "kvcache" / case_id_canon),
-        "<STORAGE_ROOT>": str(data_dir / "milvus" / case_id_canon),
-        "<DUT_DIR>": str(data_dir),
-        "<DUT_DATA>": str(data_dir),
+        "<CHECKPOINT_DIR>": str(data_dir / "checkpoint" / case_id),
+        "<CACHE_DIR>": str(data_dir / "kvcache" / case_id),
+        "<STORAGE_ROOT>": str(data_dir / "milvus" / case_id),
+        # MIX dual-drive placeholders (same keys run_case.py resolves).
+        "<MIX_KV_CACHE_DIR>": str(data_dir / "kvcache" / case_id),
+        "<MIX_VDB_STORAGE_ROOT>": str(data_dir / "milvus" / case_id),
         "<SYSTEMNAME>": f"{case_id_lower}-{DEFAULTS['systemname_suffix']}",
         "<LOOPS>": str(DEFAULTS["loops"]),
         "<MPI_BIN>": DEFAULTS["mpi_bin"],
         "<ACCELERATORS>": str(DEFAULTS["num_accelerators"]),
-        "<NUM_ACCELERATORS>": str(DEFAULTS["num_accelerators"]),
         "<CLIENT_MEMORY_GB>": str(DEFAULTS["client_memory_gb"]),
         "<DURATION_SEC>": str(DEFAULTS["duration_sec"]),
         "<QUERY_PROCESSES>": str(DEFAULTS["query_processes"]),
-        "<USERS>": str(DEFAULTS["num_users"]),
-        "<NUM_USERS>": str(DEFAULTS["num_users"]),
-        "<GPU_TIER_GB>": str(DEFAULTS["gpu_mem_gb"]),
-        "<GPU_MEM_GB>": str(DEFAULTS["gpu_mem_gb"]),
-        "<CPU_TIER_GB>": str(DEFAULTS["cpu_mem_gb"]),
-        "<CPU_MEM_GB>": str(DEFAULTS["cpu_mem_gb"]),
-        "<RESULT_DIR>": str(results_dir),
     }
     argv = []
     for tok in cmd_entry["argv"]:
@@ -157,14 +130,14 @@ def resolve_command(case_id: str, cmd_entry: dict, family: str, model: str,
         argv += ["--accelerator-type", DEFAULTS["accelerator_type"]]
 
     return {
-        "case_id": case_id_canon,
+        "case_id": case_id,
         "phase": cmd_entry["phase"],
         "argv": argv,
         "data_dir": str(data_dir),
         "results_dir": str(results_dir),
         "systemname": values["<SYSTEMNAME>"],
-        "native_status": getattr(mod, "NATIVE_STATUS", "UNKNOWN"),
-        "native_reason": getattr(mod, "NATIVE_REASON", None),
+        "native_status": entry.get("native_status", "UNKNOWN"),
+        "native_reason": entry.get("native_block_reason") or entry.get("native_reason"),
     }
 
 
@@ -201,27 +174,7 @@ def build_rows(catalog: list[dict], args: argparse.Namespace) -> list[dict]:
         status = entry.get("native_status", "UNKNOWN")
         if status not in args.include_status:
             continue
-        spec, mod, _ = load_case_module(case_id)
-        if mod is None:
-            rows.append({
-                "case_no": entry.get("case_no"),
-                "case_id": case_id,
-                "family": entry.get("family", ""),
-                "model": "",
-                "profile": entry.get("profile", ""),
-                "priority": entry.get("priority", ""),
-                "phase": "—",
-                "accelerator": "",
-                "data_dir": "",
-                "results_dir": "",
-                "systemname": "",
-                "native_status": status,
-                "native_reason": entry.get("native_block_reason") or entry.get("native_reason") or "case entrypoint missing",
-                "command": "",
-                "error": f"case module not loadable: {mod}",
-            })
-            continue
-        commands = getattr(mod, "COMMANDS", []) or []
+        commands = entry.get("native_commands") or []
         if not commands:
             rows.append({
                 "case_no": entry.get("case_no"),
@@ -236,16 +189,14 @@ def build_rows(catalog: list[dict], args: argparse.Namespace) -> list[dict]:
                 "results_dir": "",
                 "systemname": "",
                 "native_status": status,
-                "native_reason": "no COMMANDS in entrypoint",
+                "native_reason": entry.get("native_block_reason") or "no native_commands in catalog",
                 "command": "",
                 "error": "",
             })
             continue
         model = detect_model(commands, case_id)
         for cmd in commands:
-            resolved = resolve_command(case_id, cmd, entry.get("family", ""), model, args)
-            if resolved is None:
-                continue
+            resolved = resolve_command(entry, cmd, model, args)
             accelerator = ""
             argv = resolved["argv"]
             for i, tok in enumerate(argv):
@@ -319,7 +270,7 @@ def write_workbook(rows: list[dict], output: Path, args: argparse.Namespace) -> 
         ("Default accelerator", DEFAULTS["accelerator_type"]),
         ("Default loops", str(DEFAULTS["loops"])),
         ("CAP-03", "data and results intentionally on different drives (C: vs D:)"),
-        ("To re-run a case", ".\\scripts\\run_mlpstorage_case.ps1 -CaseId <AI-XXX-NNN> -DataDir <…> -ResultsDir <…>"),
+        ("To re-run a case", ".\\run_case.cmd <AI-XXX-NNN> --data-dir <…> --results-dir <…>"),
     ]
     for r_idx, (k, v) in enumerate(summary_rows, start=1):
         summary.cell(row=r_idx, column=1, value=k).font = Font(bold=True)

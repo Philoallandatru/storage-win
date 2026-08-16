@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  AI-TRN-DLRM-2TB  capacity  - run this script directly
+REM  AI-TRN-DLRM-2TB  DLRM/B200  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
 REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================

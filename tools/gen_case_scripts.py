@@ -12,7 +12,6 @@ Regenerate after changing the catalogs:
 
 from __future__ import annotations
 
-import ast
 import json
 import sys
 from pathlib import Path
@@ -23,7 +22,6 @@ if str(REPO_ROOT) not in sys.path:
 
 from full_test_plan_cases.shrink import SKIP_REASONS, shrink_args  # noqa: E402
 
-CASES_DIR = REPO_ROOT / "full_test_plan_cases" / "cases"
 OUT_DIR = REPO_ROOT / "scripts" / "cases"
 
 # NOTE: keep this template pure ASCII (cmd.exe parses .cmd with the system
@@ -75,35 +73,12 @@ endlocal & exit /b %RC%
 """
 
 
-def _model_label(case_file: Path) -> str:
-    """Best-effort short model label from the case file's COMMANDS."""
-    try:
-        tree = ast.parse(case_file.read_text(encoding="utf-8"))
-    except Exception:
-        return ""
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(getattr(t, "id", "") == "COMMANDS" for t in node.targets):
-            try:
-                commands = ast.literal_eval(node.value)
-            except Exception:
-                return ""
-            argv = commands[0]["argv"]
-            if "training" in argv:
-                idx = argv.index("training") + 1
-                if idx < len(argv) and not argv[idx].startswith("--"):
-                    return argv[idx]
-            if "--model" in argv:
-                return argv[argv.index("--model") + 1]
-            if "--vdb-index" in argv:
-                return argv[argv.index("--vdb-index") + 1]
+def _model_from_catalog(catalog: list[dict], base_id: str) -> str:
+    """Look up a base case's model_config from the catalog (capacity variants)."""
+    for case in catalog:
+        if case.get("case_id") == base_id:
+            return case.get("model_config") or ""
     return ""
-
-
-def _label_for(base_id: str) -> str:
-    try:
-        return _model_label(CASES_DIR / f"test_{base_id.lower().replace('-', '_')}.py")
-    except Exception:
-        return ""
 
 
 # Template for cases that cannot run on this machine (e.g. AI-VDB-005 AISAQ):
@@ -169,7 +144,7 @@ def main() -> int:
             body = TEMPLATE.format(
                 case_id=cid,
                 case_id_lower=cid.lower(),
-                model=_label_for(spec["base"]) or "capacity",
+                model=_model_from_catalog(catalog, spec["base"]) or "capacity",
                 shrink_flags=_shrink_flags(cid),
             )
             (OUT_DIR / f"{cid}.cmd").write_text(body, encoding="utf-8", newline="\r\n")

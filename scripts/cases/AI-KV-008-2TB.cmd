@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM  AI-KV-008-2TB  capacity  - run this script directly
+REM  AI-KV-008-2TB  Llama3.1-70B load curve  - run this script directly
 REM  DATA_DIR and RESULT_DIR must be on different filesystems (CAP-03)
 REM  (capacity variants default both to G: - run_case bypasses CAP-03)
 REM ============================================================
