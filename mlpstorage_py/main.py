@@ -338,6 +338,39 @@ def _apply_lay03_orgname_gate(args):
         )
 
 
+def _harden_output_streams():
+    """Make stdout/stderr resilient to non-ASCII content on charmap consoles.
+
+    On Windows with a cp1252 (or other charmap) console, printing a non-ASCII
+    character (e.g. a '->' U+2192 or CJK char surfaced from a subprocess
+    message, a file path, or an exception) raises UnicodeEncodeError, which
+    in an MPI job kills the whole run ('ended prematurely and may have
+    crashed').  Rebind the stream so encoding failures degrade to '?'.
+    """
+    for name in ('stdout', 'stderr'):
+        stream = getattr(sys, name)
+        if stream is None or not hasattr(stream, 'encoding'):
+            continue
+        enc = stream.encoding or 'ascii'
+        # Probe whether the codec can encode a representative non-ASCII char.
+        # A charmap codec (cp1252, cp936...) cannot encode '→' (U+2192);
+        # utf-8/ascii-family can.  (Checking the encoding *name* is wrong:
+        # 'cp1252'.encode('ascii') succeeds even though cp1252 can't encode
+        # every character.)
+        try:
+            '\u2192'.encode(enc)
+            continue  # codec handles non-ASCII natively
+        except (UnicodeEncodeError, LookupError, ValueError):
+            pass
+        # In-place reconfigure (Python 3.7+): encoding failures degrade to
+        # '?' instead of raising UnicodeEncodeError.  Replacing the wrapper
+        # would close the underlying buffer.
+        try:
+            stream.reconfigure(errors='replace')
+        except (AttributeError, ValueError):
+            pass
+
+
 def _main_impl():
     """
     Main implementation with error handling.
@@ -345,6 +378,7 @@ def _main_impl():
     This is the actual implementation of main(), separated out
     so that main() can wrap it with exception handling.
     """
+    _harden_output_streams()
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     global signal_received
