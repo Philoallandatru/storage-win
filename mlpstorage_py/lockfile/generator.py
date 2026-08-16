@@ -12,6 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from mlpstorage_py.cluster_collector import _ascii_safe
+
 
 class LockfileGenerationError(Exception):
     """Raised when lockfile generation fails."""
@@ -105,8 +107,8 @@ def generate_lockfile(
 
     if result.returncode != 0:
         raise LockfileGenerationError(
-            f"Lockfile generation failed: {result.stderr}",
-            stderr=result.stderr,
+            f"Lockfile generation failed: {_ascii_safe(result.stderr)}",
+            stderr=_ascii_safe(result.stderr),
             return_code=result.returncode,
         )
 

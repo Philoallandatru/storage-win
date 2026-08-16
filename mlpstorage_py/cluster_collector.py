@@ -36,6 +36,26 @@ from mlpstorage_py.storage_config import _mask_credential_id, _redact_secret
 LOCALHOST_IDENTIFIERS = ('localhost', '127.0.0.1', '::1')
 
 
+def _ascii_safe(text) -> str:
+    """Return *text* with every non-ASCII char replaced by '?'.
+
+    Captured subprocess stderr/stdout (mpiexec, ssh, scp, ...) may contain
+    non-ASCII characters (e.g. '->' as '\u2192') whose exact bytes depend on
+    the remote toolchain.  On Windows with a charmap stdout (cp1252), passing
+    such text to print()/logger crashes with UnicodeEncodeError and kills the
+    whole MPI job ('ended prematurely and may have crashed').  Sanitising at
+    the capture boundary keeps the diagnostic readable and the process alive.
+    """
+    if text is None:
+        return ""
+    s = str(text)
+    try:
+        s.encode('ascii')
+        return s
+    except UnicodeEncodeError:
+        return s.encode('ascii', errors='replace').decode('ascii')
+
+
 def _is_localhost(hostname: str) -> bool:
     """Check if hostname refers to local machine.
 
@@ -3327,7 +3347,7 @@ class MPIClusterCollector:
                     timeout=per_host_timeout,
                 )
                 if r.returncode != 0:
-                    return host, f"ssh mkdir failed: {r.stderr.strip() or r.stdout.strip()}"
+                    return host, f"ssh mkdir failed: {_ascii_safe(r.stderr.strip() or r.stdout.strip())}"
 
                 # Preserve the local script's basename on the remote so
                 # callers staging a non-default name (e.g. the CAP-02 probe
@@ -3342,7 +3362,7 @@ class MPIClusterCollector:
                     timeout=per_host_timeout,
                 )
                 if r.returncode != 0:
-                    return host, f"scp failed: {r.stderr.strip() or r.stdout.strip()}"
+                    return host, f"scp failed: {_ascii_safe(r.stderr.strip() or r.stdout.strip())}"
                 return host, None
             except subprocess.TimeoutExpired:
                 return host, f"timed out after {per_host_timeout}s"
@@ -3517,7 +3537,7 @@ class MPIClusterCollector:
             if result.returncode != 0:
                 self.logger.warning(
                     f"MPI collection returned non-zero exit code: "
-                    f"{result.returncode}\nstderr: {result.stderr}"
+                    f"{result.returncode}\nstderr: {_ascii_safe(result.stderr)}"
                 )
 
             self.logger.info(
@@ -3538,7 +3558,7 @@ class MPIClusterCollector:
             f"Return code: {result.returncode}. "
             f"Staged on: {staged_summary}. "
             f"Staged script (persisted for inspection): {script_path}. "
-            f"stderr: {result.stderr}"
+            f"stderr: {_ascii_safe(result.stderr)}"
         )
 
     def collect_local_only(self) -> Dict[str, Any]:
@@ -3849,7 +3869,7 @@ def run_shared_fs_probe(destination, hosts, run_uuid, logger,
         # host, mpirun crashed, etc.). Surface the ACTUAL cause (returncode +
         # stderr tail) — the old code raised a misleading "mpi4py not
         # installed" message even when the probe semantically succeeded.
-        _stderr_tail = (result.stderr or "").strip()
+        _stderr_tail = _ascii_safe((result.stderr or "").strip())
         msg = (
             "CAP-02: shared-FS probe produced no rank-0 result markers in "
             "stdout. mpirun returncode={0}, stderr={1}".format(
@@ -4095,7 +4115,7 @@ def run_results_dir_shared_probe(results_dir, hosts, run_uuid, logger,
         msg = (
             f"CAP-02b: --results-dir shared-FS probe launcher exited "
             f"with returncode={result.returncode}. "
-            f"stderr: {(result.stderr or '').strip()}"
+            f"stderr: {_ascii_safe((result.stderr or '').strip())}"
         )
         logger.error(msg)
         raise FileSystemError(
@@ -4445,7 +4465,7 @@ class SSHClusterCollector(ClusterCollectorInterface):
             )
 
             if result.returncode != 0:
-                error_msg = result.stderr.strip() or f'SSH failed with code {result.returncode}'
+                error_msg = _ascii_safe(result.stderr.strip()) or f'SSH failed with code {result.returncode}'
                 self.logger.warning(f'SSH collection from {hostname} failed: {error_msg}')
                 return {'hostname': hostname, 'error': error_msg}
 
@@ -4952,7 +4972,7 @@ class MultiHostTimeSeriesCollector:
             )
 
             if result.returncode != 0:
-                error_msg = result.stderr.strip() or f'SSH failed with code {result.returncode}'
+                error_msg = _ascii_safe(result.stderr.strip()) or f'SSH failed with code {result.returncode}'
                 return {
                     'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
                     'hostname': hostname,

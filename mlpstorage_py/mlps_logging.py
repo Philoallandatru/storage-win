@@ -123,6 +123,43 @@ class ColoredDebugFormatter(logging.Formatter):
                f"{record.getMessage()}{COLORS['normal'].value}"
 
 
+def _safe_stream(stream):
+    """Wrap *stream* so writes that can't be encoded by the stream's codec
+    (e.g. cp1252 stdout on Windows hitting a '->' or CJK char from a
+    subprocess message) degrade to '?' instead of raising UnicodeEncodeError.
+
+    Without this, any non-ASCII char in a log line kills the whole MPI job
+    with 'charmap codec can't encode character ... ended prematurely and
+    may have crashed'.  ANSI colour codes (\\033[...m) are ASCII and pass
+    through untouched.
+    """
+    if stream is None or not hasattr(stream, 'encoding'):
+        return stream
+    try:
+        stream.encoding.encode('ascii')
+        return stream  # already ASCII-safe (e.g. redirected to a file)
+    except (UnicodeEncodeError, AttributeError):
+        pass
+
+    class _SafeWriter:
+        def __init__(self, wrapped):
+            self._wrapped = wrapped
+
+        def write(self, msg):
+            try:
+                self._wrapped.write(msg)
+            except UnicodeEncodeError:
+                self._wrapped.write(msg.encode('ascii', errors='replace').decode('ascii'))
+
+        def flush(self):
+            self._wrapped.flush()
+
+        def __getattr__(self, name):
+            return getattr(self._wrapped, name)
+
+    return _SafeWriter(stream)
+
+
 def setup_logging(name=__name__, stream_log_level=DEFAULT_STREAM_LOG_LEVEL):
     if isinstance(stream_log_level, str):
         stream_log_level = logging.getLevelName(stream_log_level.upper())
@@ -131,7 +168,7 @@ def setup_logging(name=__name__, stream_log_level=DEFAULT_STREAM_LOG_LEVEL):
     _logger.setLevel(logging.DEBUG)
 
     if not _logger.handlers:
-        stream_handler = logging.StreamHandler()
+        stream_handler = logging.StreamHandler(_safe_stream(sys.stderr))
         stream_handler.setFormatter(ColoredStandardFormatter())
         stream_handler.setLevel(stream_log_level)
         _logger.addHandler(stream_handler)

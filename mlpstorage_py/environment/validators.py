@@ -15,6 +15,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from mlpstorage_py.cluster_collector import _ascii_safe
+
 
 @dataclass
 class ValidationIssue(Exception):
@@ -148,7 +150,7 @@ def validate_ssh_connectivity(
             if result.returncode == 0:
                 results.append((hostname, True, 'connected'))
             else:
-                error_msg = result.stderr.strip() or f'SSH failed with code {result.returncode}'
+                error_msg = _ascii_safe(result.stderr.strip()) or f'SSH failed with code {result.returncode}'
                 results.append((hostname, False, error_msg))
 
         except subprocess.TimeoutExpired:

@@ -56,6 +56,7 @@ from full_test_plan_cases.shrink import (  # noqa: E402
     case_family,
     shrink_args,
 )
+from mlpstorage_py.cluster_collector import _ascii_safe  # noqa: E402
 
 # Minimal free-space floors the environment check enforces (bytes).
 # KV with llama3.1-70b + 10 users needs ~26.8 GB (CAP-01) — keep headroom.
@@ -187,7 +188,7 @@ def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memo
         rc = proc.returncode
         tail = (proc.stdout or "")[-1500:]
         if proc.returncode != 0:
-            tail = (proc.stderr or "")[-800:] + tail
+            tail = _ascii_safe((proc.stderr or "")[-800:]) + tail
     except subprocess.TimeoutExpired:
         rc, tail = -1, f"TIMEOUT after {timeout}s"
     duration = time.monotonic() - started
@@ -313,7 +314,7 @@ def main() -> int:
             capture_output=True, text=True, encoding="utf-8", errors="replace",
         )
         print(f"report written: {out_path}" if _sp.returncode == 0
-              else f"report generation FAILED (rc={_sp.returncode}): {(_sp.stderr or '')[-400:]}",
+              else f"report generation FAILED (rc={_sp.returncode}): {_ascii_safe((_sp.stderr or '')[-400:])}",
               flush=True)
 
     _render_report(out.with_name(f"AI_SSD_TEST_REPORT_{args.capacity}_{args.memory}.html"))
