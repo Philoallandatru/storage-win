@@ -1181,7 +1181,7 @@ class ReportGenerator:
         if not options:
             self.logger.warning(
                 f"kvcache: summary.json at {run.result_dir!r} has no "
-                "'options' dict — per-option columns will be absent."
+                "'options' dict - per-option columns will be absent."
             )
         else:
             for option_name, option_dict in options.items():
@@ -1411,7 +1411,7 @@ class ReportGenerator:
                 self.logger.info(
                     f'Running submission verifiers for '
                     f'{runs[0].benchmark_type.value if runs[0].benchmark_type else "?"} '
-                    f'({ident1}, {ident2}) — {len(runs)} runs'
+                    f'({ident1}, {ident2}) - {len(runs)} runs'
                 )
                 verifier = BenchmarkVerifier(*runs, logger=self.logger)
                 verifier_category = verifier.verify()
@@ -1482,7 +1482,7 @@ class ReportGenerator:
                                 self.warmup_result_dirs.add(earliest_abs)
                                 self.logger.debug(
                                     f"Detected warmup run (earliest-timestamp "
-                                    f"fallback per Rules.md §2.1.17): "
+                                    f"fallback per Rules.md section 2.1.17): "
                                     f"{os.path.basename(earliest_abs)} "
                                     "(excluded from aggregate)"
                                 )

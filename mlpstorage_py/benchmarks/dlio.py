@@ -358,7 +358,7 @@ class DLIOBenchmark(Benchmark, abc.ABC):
             self.params_dict['dataset.listing_validation_interval'] = str(interval)
             checks = (num_files // interval) + 2 if interval > 0 and num_files > 0 else num_files
             self.logger.info(
-                f'skip_listing enabled: {num_files:,} train files → '
+                f'skip_listing enabled: {num_files:,} train files -> '
                 f'validation_interval={interval:,} '
                 f'(~{checks:,} HEAD checks at startup)'
             )
@@ -912,7 +912,7 @@ class TrainingBenchmark(DLIOBenchmark):
         else:
             self.logger.debug(
                 f'Object storage ({storage_type}): skipping local directory creation for '
-                f'{self.params_dict["dataset.data_folder"]} — path is an S3 key prefix, not a filesystem path.'
+                f'{self.params_dict["dataset.data_folder"]} - path is an S3 key prefix, not a filesystem path.'
             )
 
     def add_workflow_to_cmd(self, cmd) -> str:

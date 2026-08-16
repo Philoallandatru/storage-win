@@ -242,7 +242,7 @@ class CheckpointSubmissionRulesChecker(MultiRunRulesChecker):
                     message=(
                         "Two-invocation CLOSED submission is missing parseable "
                         "start/end timestamps for the write or read phase, so the "
-                        "inter-phase cache-flush gap (≤30s) cannot be verified."
+                        "inter-phase cache-flush gap (<=30s) cannot be verified."
                     ),
                     parameter="checkpoint.invocation_structure",
                     expected="parseable write-phase end and read-phase start",
@@ -276,7 +276,7 @@ class CheckpointSubmissionRulesChecker(MultiRunRulesChecker):
                         "maximum required by Rules.md §4.7.1."
                     ),
                     parameter="checkpoint.invocation_structure",
-                    expected=f"≤ {MAX_INTER_PHASE_GAP_SECONDS}s",
+                    expected=f"<= {MAX_INTER_PHASE_GAP_SECONDS}s",
                     actual=f"{gap_seconds:.1f}s",
                 ))
                 return issues

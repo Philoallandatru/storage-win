@@ -447,7 +447,7 @@ class KVCacheBenchmark(Benchmark):
                 self.logger.error(
                     f"kvcache run failed: option(s) {sorted(zero_data_options)} "
                     f"produced no result files. summary.json has been written "
-                    f"but its aggregates are meaningless — this run is NOT a "
+                    f"but its aggregates are meaningless - this run is NOT a "
                     f"valid MLPerf submission."
                 )
                 return 1

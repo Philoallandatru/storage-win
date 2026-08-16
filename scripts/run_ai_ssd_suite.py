@@ -201,7 +201,7 @@ def cleanup_dir(path: Path, case_id: str) -> None:
     if not path.exists():
         return
     if case_id.lower() not in str(path).lower():
-        print(f"CLEANUP_SKIPPED: {path} does not embed {case_id} — refusing to delete")
+        print(f"CLEANUP_SKIPPED: {path} does not embed {case_id} - refusing to delete")
         return
     shutil.rmtree(path, ignore_errors=True)
     print(f"CLEANED: {path}")
@@ -256,7 +256,7 @@ def main() -> int:
             print(f"  [{'OK ' if ok else 'FAIL'}] {name}: {detail}", flush=True)
             failed = failed or not ok
         if failed:
-            print("ENV_CHECK_FAILED — fix the environment or pass --skip-env-check", file=sys.stderr)
+            print("ENV_CHECK_FAILED - fix the environment or pass --skip-env-check", file=sys.stderr)
             return 2
 
     # ---- run cases ----------------------------------------------------------

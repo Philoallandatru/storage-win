@@ -390,7 +390,7 @@ def render_md(scenarios: list[dict], results_root: Path) -> str:
                  if r.get("result") == "PASS" and r.get("duration"))
     if dur:
         add(f"- 最短 {dur[0]}s · 中位 {dur[len(dur)//2]}s · 最长 {dur[-1]}s · 总和 {sum(dur)//60}min")
-        add("- 所有 PASS case 均 ≤ 1.5h 预算" if dur[-1] <= 5400 else "- ⚠️ 存在超过 1.5h 的 case")
+        add("- 所有 PASS case 均在 1.5h 预算内" if dur[-1] <= 5400 else "- ! 存在超过 1.5h 的 case")
     add("")
 
     if failed:
@@ -418,7 +418,7 @@ def main() -> int:
 
     scenarios = load_summaries(args.results_root)
     if not scenarios:
-        print(f"未找到 suite_summary_*.json（results-root: {args.results_root}）——先运行套件脚本。")
+        print(f"no suite_summary_*.json found (results-root: {args.results_root}) - run the suite first.")
         return 2
     if args.format == "html":
         out = args.out or OUT_HTML
@@ -428,7 +428,7 @@ def main() -> int:
         body = render_md(scenarios, args.results_root)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(body, encoding="utf-8")
-    print(f"written: {out} ({out.stat().st_size} bytes, {len(scenarios)} 场景, format={args.format})")
+    print(f"written: {out} ({out.stat().st_size} bytes, {len(scenarios)} scenarios, format={args.format})")
     return 0
 
 
