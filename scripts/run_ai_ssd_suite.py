@@ -230,7 +230,10 @@ def main() -> int:
     parser.add_argument("--family", help="only run cases of this family (Training/Checkpoint/KV Cache/VectorDB/MIX)")
     parser.add_argument("--priority", choices=("P0", "P1", "P2"),
                         help="only run cases of this priority")
-    parser.add_argument("--case-timeout", type=int, default=900, help="per-case timeout in seconds (default 900)")
+    parser.add_argument("--case-timeout", type=int, default=None,
+                        help="per-case timeout in seconds (default: 900, or 1800 "
+                             "for KV Cache cases which run 3 options with fixed "
+                             "90s start/end delays each)")
     parser.add_argument("--keep-data", action="store_true", help="do not delete data after each case")
     parser.add_argument("--keep-results", action="store_true", help="do not clear results before each case")
     parser.add_argument("--skip-env-check", action="store_true")
@@ -278,7 +281,14 @@ def main() -> int:
         cleanup_dir(data_dir, case_id)
         if vdb_data_dir is not None and not args.keep_data:
             cleanup_dir(vdb_data_dir, case_id)
-        rc, duration = run_case(case_id, data_dir, results_dir, args.case_timeout, args.memory, single_drive, args.pressure, args.vdb_drive)
+        # KV Cache runs 3 options, each with a fixed 90s start/end delay in
+        # mlperf_wrapper.py, so it needs a longer budget than other families.
+        # An explicit --case-timeout always wins.
+        fam = case_family(case_id)
+        case_timeout = args.case_timeout
+        if case_timeout is None:
+            case_timeout = 1800 if fam == "KV Cache" else 900
+        rc, duration = run_case(case_id, data_dir, results_dir, case_timeout, args.memory, single_drive, args.pressure, args.vdb_drive)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
             if vdb_data_dir is not None:

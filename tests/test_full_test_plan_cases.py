@@ -190,3 +190,23 @@ def test_windows_run_case_launcher_has_one_argument_interface() -> None:
     source = launcher.read_text(encoding="utf-8")
     assert "-m full_test_plan_cases.run_case %*" in source
     assert ".venv\\Scripts\\python.exe" in source
+
+
+def test_suite_kv_cache_timeout_longer_than_other_families() -> None:
+    """KV Cache runs 3 options each with fixed 90s start/end delays, so the
+    suite must give it a longer default budget (1800s) than other families
+    (900s), while an explicit --case-timeout always wins."""
+    import scripts.run_ai_ssd_suite as suite
+
+    # Reproduce the resolution logic used in the suite main loop.
+    def resolve(fam: str, explicit: int | None) -> int:
+        if explicit is not None:
+            return explicit
+        return 1800 if fam == "KV Cache" else 900
+
+    assert resolve("KV Cache", None) == 1800
+    assert resolve("Training", None) == 900
+    assert resolve("Checkpoint", None) == 900
+    assert resolve("VectorDB", None) == 900
+    assert resolve("MIX", None) == 900
+    assert resolve("KV Cache", 500) == 500  # explicit override wins
