@@ -9,7 +9,7 @@ only needs to repair the data — not work around rule bugs.
 
 Run from anywhere:
 
-    python3 scripts/fix_micron_9550_15tb.py [--root /path/to/sample_data]
+    python3 tools/oneoff/fix_micron_9550_15tb.py [--root /path/to/sample_data]
 """
 
 from __future__ import annotations
