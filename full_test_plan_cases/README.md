@@ -7,11 +7,11 @@
 ## 架构（2026-08 简化后）
 
 ```
-case_catalog.json   ← 唯一数据源：33 个 case 的 native_commands（占位符命令）
+case_catalog.json   ← 唯一数据源：35 个 case 的 native_commands（占位符命令）
 run_case.py         ← 唯一执行器：占位符替换 → init → 逐阶段 mlpstorage 执行 → cleanup
 run_case.cmd        ← Windows 入口：调用 run_case 模块
 scripts/cases/*.cmd ← 每个 case 一个一键脚本（直接运行）
-scripts/smoke_all_cases.py ← 批量缩小版验证
+scripts/run_ai_ssd_suite.py ← 批量入口（容量档 / family / priority 过滤）
 site_config.json    ← 站点配置（每台机器改一次）
 ```
 
@@ -101,19 +101,24 @@ site_config.json    ← 站点配置（每台机器改一次）
 按家族自动套缩小参数：Training 8 文件 + `-aip`；Checkpoint 8 ranks + 零 I/O；
 KV 10s × 1 trial；VDB 需 Milvus server（标注 BLOCKED）。
 
-## 全量入口（`run_all`）
+## 全量入口（`run_ai_ssd_suite.py`）
 
 ```powershell
-.\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
-  --mode plan --data-dir C:\MLPerfStorageTest\data --results-dir C:\MLPerfStorageTest\results
+# 查看计划（不执行）
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --data-drive C: --results-drive D:
+
+# 只跑一个家族 / 一个优先级
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --family 'KV Cache'
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --priority P0
+
+# 只跑指定 case
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --only AI-MIX-001
 
 # 正式执行（需分盘配置）
-.\.venv\Scripts\python.exe -m full_test_plan_cases.run_all `
-  --mode execute --confirm-dut --init-results --cleanup-data --prepare
+.\.venv\Scripts\python.exe scripts/run_ai_ssd_suite.py --capacity 512GB --data-drive C: --results-drive D:
 ```
 
-`run_all` 逐个调用 `run_case`；execute/dry-run/preflight 模式下第一个非零退出码触发
-套件级 fast-fail。
+`run_ai_ssd_suite.py` 逐个调用 `run_case`（唯一执行器），汇总 PASS/FAIL 并生成 HTML 报告。
 
 ## 1TB / 2TB 容量适配压力 case
 

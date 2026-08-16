@@ -15,6 +15,8 @@ Usage:
     python scripts/run_ai_ssd_suite.py --capacity 512GB --data-drive D: --results-drive E:
     python scripts/run_ai_ssd_suite.py --capacity 1TB  --data-drive G: --results-drive G:
     python scripts/run_ai_ssd_suite.py --capacity 4TB  --data-drive D: --results-drive E: --only AI-TRN-003-1TB
+    python scripts/run_ai_ssd_suite.py --capacity 512GB --family 'KV Cache'          # run one family
+    python scripts/run_ai_ssd_suite.py --capacity 512GB --priority P0                # run P0 cases only
 """
 
 from __future__ import annotations
@@ -74,20 +76,42 @@ def load_capacity() -> dict:
         return json.load(fh)
 
 
-def cases_for_tier(tier: str) -> list[str]:
-    """Return the case-id list for a capacity tier.
+def cases_for_tier(tier: str, family: str | None = None,
+                   priority: str | None = None) -> list[str]:
+    """Return the case-id list for a capacity tier, optionally filtered.
 
-    ``512GB`` is the plain catalog (all 34 base cases); the other tiers
-    come from capacity_catalog.json (one representative per family).
+    ``512GB`` is the plain catalog (all base cases); the other tiers come
+    from capacity_catalog.json (one representative per family).  ``family``
+    and ``priority`` filter on the catalog entry's fields (capacity
+    variants inherit their base case's family/priority).
     """
+    catalog = load_catalog()
     if tier == "512GB":
-        return [c["case_id"] for c in load_catalog()]
-    cap = load_capacity()
-    body = cap[tier]
-    entries = body.get("cases", body) if isinstance(body, dict) else body
-    if isinstance(entries, dict):
-        entries = {k: v for k, v in entries.items() if not k.startswith("_")}
-    return [c["case_id"] for c in entries] if isinstance(entries, list) else list(entries.keys())
+        ids = [c["case_id"] for c in catalog]
+    else:
+        cap = load_capacity()
+        body = cap[tier]
+        entries = body.get("cases", body) if isinstance(body, dict) else body
+        if isinstance(entries, dict):
+            entries = {k: v for k, v in entries.items() if not k.startswith("_")}
+        ids = [c["case_id"] for c in entries] if isinstance(entries, list) else list(entries.keys())
+
+    by_id = {c["case_id"]: c for c in catalog}
+    out = []
+    for cid in ids:
+        entry = by_id.get(cid)
+        if entry is None:
+            # Capacity variant (e.g. AI-CKP-001-1TB): inherit base case fields.
+            base = base_case_id(cid)
+            entry = by_id.get(base)
+        if entry is None:
+            continue
+        if family and entry.get("family", "").lower() != family.lower():
+            continue
+        if priority and entry.get("priority") != priority:
+            continue
+        out.append(cid)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +224,9 @@ def main() -> int:
     parser.add_argument("--vdb-drive", default="E:",
                         help="drive for the MIX VectorDB stream data (default E:)")
     parser.add_argument("--only", help="comma-separated case ids to run instead of the full tier set")
+    parser.add_argument("--family", help="only run cases of this family (Training/Checkpoint/KV Cache/VectorDB/MIX)")
+    parser.add_argument("--priority", choices=("P0", "P1", "P2"),
+                        help="only run cases of this priority")
     parser.add_argument("--case-timeout", type=int, default=900, help="per-case timeout in seconds (default 900)")
     parser.add_argument("--keep-data", action="store_true", help="do not delete data after each case")
     parser.add_argument("--keep-results", action="store_true", help="do not clear results before each case")
@@ -208,7 +235,7 @@ def main() -> int:
 
     results_drive = args.results_drive or args.data_drive
     single_drive = args.data_drive.upper().rstrip(":\\") == results_drive.upper().rstrip(":\\")
-    tier_cases = cases_for_tier(args.capacity)
+    tier_cases = cases_for_tier(args.capacity, family=args.family, priority=args.priority)
     if args.only:
         wanted = {c.strip().upper() for c in args.only.split(",")}
         tier_cases = [c for c in tier_cases if c.upper() in wanted]

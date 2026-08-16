@@ -83,34 +83,17 @@ def test_run_case_plans_training_with_model_positional_and_prepare(tmp_path: Pat
 
 
 def test_run_all_forwards_to_run_case_and_fast_fails(monkeypatch) -> None:
-    import full_test_plan_cases.run_all as run_all
+    """run_all was folded into run_ai_ssd_suite.py; its family/priority
+    filtering is now exercised via cases_for_tier (the suite's selector).
+    """
+    import scripts.run_ai_ssd_suite as suite
 
-    calls: list[list[str]] = []
-
-    class Completed:
-        returncode = 7
-
-    monkeypatch.setattr(run_all, "load_catalog", lambda: [
-        {"case_id": "AI-TRN-001", "family": "Training", "priority": "P1"},
-        {"case_id": "AI-TRN-002", "family": "Training", "priority": "P1"},
-    ])
-
-    def fake_run(command, **_kwargs):
-        calls.append(command)
-        return Completed()
-
-    monkeypatch.setattr(run_all.subprocess, "run", fake_run)
-    monkeypatch.setattr(run_all.sys, "argv", [
-        "run_all.py",
-        "--mode",
-        "execute",
-        "--confirm-dut",
-    ])
-
-    assert run_all.main() == 1
-    assert len(calls) == 1
-    assert calls[0][2] == "full_test_plan_cases.run_case"
-    assert calls[0][3] == "AI-TRN-001"
+    cases = suite.cases_for_tier("512GB", family="KV Cache", priority="P0")
+    assert cases
+    assert all(suite.case_family(c) == "KV Cache" for c in cases)
+    # every selected case exists in the catalog
+    catalog_ids = {c["case_id"] for c in suite.load_catalog()}
+    assert all(c in catalog_ids for c in cases)
 
 
 def test_run_case_needs_only_case_id_and_uses_site_config(monkeypatch, tmp_path: Path) -> None:

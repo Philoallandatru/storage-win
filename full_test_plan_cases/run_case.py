@@ -427,7 +427,7 @@ def main() -> int:
     parser.add_argument("--skip-fs-separation-gate", action="store_true", help="Dev: bypass CAP-03 same-filesystem gate")
     parser.add_argument("--keep-data", action="store_true")
     parser.add_argument("--print-command", action="store_true")
-    # site-config overrides (accepted by run_all forwarding)
+    # site-config overrides (accepted by run_ai_ssd_suite.py forwarding)
     parser.add_argument("--launcher", choices=("single", "mpi"), default=None)
     parser.add_argument("--mpi-bin", choices=("mpiexec", "mpirun"), default=None)
     parser.add_argument("--systemname", default=None)
