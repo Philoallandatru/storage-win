@@ -17,6 +17,7 @@ Usage:
     python scripts/run_ai_ssd_suite.py --capacity 4TB  --data-drive D: --results-drive E: --only AI-TRN-003-1TB
     python scripts/run_ai_ssd_suite.py --capacity 512GB --family 'KV Cache'          # run one family
     python scripts/run_ai_ssd_suite.py --capacity 512GB --priority P0                # run P0 cases only
+    python scripts/run_ai_ssd_suite.py --capacity 64GB  --data-drive C: --results-drive C:   # <70GB disk: CKP zero-I/O
 """
 
 from __future__ import annotations
@@ -63,8 +64,12 @@ from mlpstorage_py.cluster_collector import _ascii_safe  # noqa: E402
 DATA_SPACE_FLOOR = 40 * 1024**3
 RESULT_SPACE_FLOOR = 2 * 1024**3
 
-SUPPORTED_TIERS = ("512GB", "1TB", "2TB", "4TB")
+SUPPORTED_TIERS = ("64GB", "512GB", "1TB", "2TB", "4TB")
 SUPPORTED_MEMORY = ("32GB", "64GB", "128GB")
+
+# One llama3-8b checkpoint (8 ranks) is ~105 GB; below this free space the
+# 64GB tier forces Checkpoint cases to zero-I/O link verification.
+CKP_REAL_IO_FLOOR = 110 * 1024**3
 MATRIX = REPO / "full_test_plan_cases" / "matrix_catalog.json"
 
 
@@ -89,6 +94,10 @@ def cases_for_tier(tier: str, family: str | None = None,
     """
     catalog = load_catalog()
     if tier == "512GB":
+        ids = [c["case_id"] for c in catalog]
+    elif tier == "64GB":
+        # Small-disk tier: same base case set as 512GB, but the suite
+        # forces heavier shrinking (CKP zero-I/O if the disk is too small).
         ids = [c["case_id"] for c in catalog]
     else:
         cap = load_capacity()
@@ -164,7 +173,7 @@ def env_checks(data_drive: str, results_drive: str, include_vdb: bool,
 
 def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memory: str = "64GB",
              single_drive: bool = False, pressure: bool = False,
-             vdb_drive: str = MIX_VDB_DRIVE) -> tuple[int, str]:
+             vdb_drive: str = MIX_VDB_DRIVE, ckp_write: int | None = None) -> tuple[int, str]:
     is_mix = case_family(case_id) == "MIX"
     # VectorDB stream of the MIX case runs on the secondary drive (E: by
     # default); run_case substitutes <MIX_VDB_STORAGE_ROOT> from it.
@@ -172,7 +181,7 @@ def run_case(case_id: str, data_dir: Path, results_dir: Path, timeout: int, memo
     argv = [*RUN_CASE, case_id, "--mode", "execute",
             "--data-dir", str(data_dir), "--results-dir", str(results_dir),
             *shrink_args(case_id, data_dir, results_dir, memory, pressure,
-                         vdb_data_dir=mix_vdb_dir)]
+                         vdb_data_dir=mix_vdb_dir, ckp_write=ckp_write)]
     if is_mix:
         argv += ["--mix-vdb-data-dir", str(mix_vdb_dir)]
     if single_drive:
@@ -288,7 +297,19 @@ def main() -> int:
         case_timeout = args.case_timeout
         if case_timeout is None:
             case_timeout = 1800 if fam == "KV Cache" else 900
-        rc, duration = run_case(case_id, data_dir, results_dir, case_timeout, args.memory, single_drive, args.pressure, args.vdb_drive)
+        # 64GB tier: force Checkpoint cases to zero-I/O when the data drive
+        # cannot hold even one real llama3-8b checkpoint (~105 GB).  This
+        # keeps the suite runnable on a <70GB disk (link verification only).
+        ckp_write = None
+        if args.capacity == "64GB" and fam == "Checkpoint":
+            try:
+                free = shutil.disk_usage(data_dir).free
+                ckp_write = 1 if free >= CKP_REAL_IO_FLOOR else 0
+            except OSError:
+                ckp_write = 0
+        rc, duration = run_case(case_id, data_dir, results_dir, case_timeout,
+                                args.memory, single_drive, args.pressure,
+                                args.vdb_drive, ckp_write=ckp_write)
         if not args.keep_data:
             cleanup_dir(data_dir, case_id)
             if vdb_data_dir is not None:

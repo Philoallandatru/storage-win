@@ -150,3 +150,26 @@ def test_gen_case_scripts_mix_cmd_uses_vdb_data_dir(tmp_path):
     assert 'set "VDB_DATA_DIR=E:\MLPerfStorageTest\data\AI-MIX-001"' in text
     assert "--milvus-uri %VDB_DATA_DIR%\milvus_lite.db" in text
     assert "--mix-vdb-data-dir %VDB_DATA_DIR%" in text
+
+
+def test_shrink_ckp_write_zero_for_small_disk():
+    """ckp_write=0 must force zero-I/O checkpoint (write 0/read 0) so a
+    <70GB disk can run link verification without a 105GB llama3-8b write."""
+    from full_test_plan_cases.shrink import shrink_args
+    args = shrink_args("AI-CKP-001", Path("C:/x"), Path("C:/y"), "64GB",
+                       pressure=False, ckp_write=0)
+    wi = args.index("--num-checkpoints-write")
+    assert args[wi + 1] == "0"
+    ri = args.index("--num-checkpoints-read")
+    assert args[ri + 1] == "0"
+
+
+def test_shrink_ckp_write_default_still_real_io():
+    """Default ckp_write=None keeps the real-I/O 1/1 smoke."""
+    from full_test_plan_cases.shrink import shrink_args
+    args = shrink_args("AI-CKP-001", Path("C:/x"), Path("C:/y"), "64GB",
+                       pressure=False, ckp_write=None)
+    wi = args.index("--num-checkpoints-write")
+    assert args[wi + 1] == "1"
+    ri = args.index("--num-checkpoints-read")
+    assert args[ri + 1] == "1"

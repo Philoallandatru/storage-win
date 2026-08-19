@@ -74,7 +74,8 @@ def memory_override_args(family: str, memory: str) -> list[str]:
 
 
 def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "64GB",
-                pressure: bool = False, vdb_data_dir: Path | None = None) -> list[str]:
+                pressure: bool = False, vdb_data_dir: Path | None = None,
+                ckp_write: int | None = None) -> list[str]:
     """Build the dev-shrink run_case flags for a case.
 
     ``pressure=False`` (default): smallest practical workload — pure link
@@ -86,6 +87,12 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
     ``vdb_data_dir`` is used only by MIX cases: the VectorDB stream's data
     (Milvus Lite db + storage root) lives on the secondary drive (E:) while
     KV Cache runs on the primary ``data_dir`` (C:).
+
+    ``ckp_write`` overrides the checkpoint write/read count for Checkpoint
+    cases: None keeps the default (1/1, or 3/3 under pressure); 0 forces a
+    zero-I/O link-verification run (--num-checkpoints-write 0 --read 0)
+    used on small disks where even one llama3-8b checkpoint (~105 GB)
+    cannot fit.
     """
     family = case_family(case_id)
     base = base_case_id(case_id)
@@ -111,8 +118,13 @@ def shrink_args(case_id: str, data_dir: Path, results_dir: Path, memory: str = "
             # Base (512GB) cases: real-I/O smoke. Pressure mode triples the
             # checkpoint count (~340 GB write + read for 8b/70b-class shards)
             # -- the safe max on a 512 GB disk (official 10/10 needs >1 TB).
-            w = 3 if pressure else 1
-            args += ["--num-checkpoints-write", str(w), "--num-checkpoints-read", str(w)]
+            if ckp_write == 0:
+                # Small-disk tier: a single llama3-8b checkpoint (~105 GB)
+                # cannot fit, so run zero-I/O link verification instead.
+                args += ["--num-checkpoints-write", "0", "--num-checkpoints-read", "0"]
+            else:
+                w = 3 if pressure else 1
+                args += ["--num-checkpoints-write", str(w), "--num-checkpoints-read", str(w)]
     elif family == "KV Cache":
         if pressure:
             args += ["--num-users", "50", "--duration-sec", "60", "--trials", "2",
