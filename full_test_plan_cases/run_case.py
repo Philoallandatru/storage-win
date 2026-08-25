@@ -385,8 +385,16 @@ def _run_mlpstorage(cli: Path, argv: list[str]) -> int:
 def _cleanup(data_dir: Path, cleanup_root: Path) -> None:
     data_path = data_dir.resolve()
     root_path = cleanup_root.resolve()
-    if data_path == root_path or root_path not in data_path.parents:
+    if data_path == root_path:
+        print(f"CLEANUP_FAILED: data-dir ({data_path}) is the cleanup root itself")
+        print(f"  Refusing to delete the data root (safety guard). Pass a case subdirectory,")
+        print(f"  e.g. --data-dir {root_path}\\<CASE_ID>, or omit --data-dir to let the case")
+        print(f"  directory be derived automatically.")
+        return
+    if root_path not in data_path.parents:
         print(f"CLEANUP_FAILED: data path is outside cleanup root: {data_path}")
+        print(f"  cleanup root is {root_path}; only paths below it are deleted.")
+        print(f"  Check for stray characters (e.g. '<', '>', '|') in the --data-dir argument.")
         return
     if data_path.exists():
         shutil.rmtree(data_path)
